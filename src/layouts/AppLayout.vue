@@ -1,9 +1,5 @@
 <template>
-  <q-layout
-    view="lHh lpr lFf"
-    class="premium-layout desktop-constrained"
-    container
-  >
+  <q-layout view="lHh lpr lFf" class="premium-layout desktop-constrained" container>
     <!-- Blurry Premium Header -->
     <q-header class="glass-header text-dark q-py-sm q-px-sm">
       <q-toolbar>
@@ -175,10 +171,14 @@
     <q-footer class="transparent q-pb-md q-px-md">
       <div class="glass-nav row items-center justify-around">
         <q-btn
-          flat round dense icon="home"
-          :color="$route.path === '/dashboard' ? 'primary' : 'grey-5'"
-          :class="['nav-btn', { 'active-nav': $route.path === '/dashboard' }]"
-          size="md" to="/dashboard"
+          flat
+          round
+          dense
+          icon="home"
+          :color="$route.path === '/' ? 'primary' : 'grey-5'"
+          :class="['nav-btn', { 'active-nav': $route.path === '/' }]"
+          size="md"
+          to="/"
         />
         <q-btn flat round dense icon="space_dashboard" color="grey-5" class="nav-btn" size="md" />
 
@@ -190,10 +190,14 @@
 
         <q-btn flat round dense icon="calendar_month" color="grey-5" class="nav-btn" size="md" />
         <q-btn
-          flat round dense icon="person_outline"
+          flat
+          round
+          dense
+          icon="person_outline"
           :color="$route.path === '/profile' ? 'primary' : 'grey-5'"
           :class="['nav-btn', { 'active-nav': $route.path === '/profile' }]"
-          size="md" to="/profile"
+          size="md"
+          to="/profile"
         />
       </div>
     </q-footer>

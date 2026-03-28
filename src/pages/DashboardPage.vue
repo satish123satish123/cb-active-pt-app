@@ -9,12 +9,12 @@
         >
           Welcome Back
         </div>
-        <div class="text-h4 text-weight-bolder text-dark tracking-tight q-mt-xs">Dr. Saulihal</div>
+        <div class="text-h4 text-weight-bolder text-dark tracking-tight q-mt-xs">
+          {{ authStore.user?.username || 'Guest' }}
+        </div>
       </div>
       <q-avatar size="64px" class="avatar-glow cursor-pointer">
-        <img
-          src="https://ui-avatars.com/api/?name=Dr+Saulihal&background=0D8ABC&color=fff&size=128"
-        />
+        <img :src="avatarUrl" />
       </q-avatar>
     </div>
 
@@ -36,16 +36,38 @@
           </div>
           <q-circular-progress
             show-value
-            class="text-dark text-weight-bolder"
+            class="text-white"
             :value="75"
-            size="68px"
-            :thickness="0.22"
-            color="amber-6"
-            track-color="grey-3"
-            center-color="white"
-            style="border-radius: 50%; box-shadow: 0 8px 16px rgba(0,0,0,0.15);"
+            size="84px"
+            :thickness="0.18"
+            color="white"
+            track-color="transparent"
+            style="
+              background: rgba(255, 255, 255, 0.15);
+              border-radius: 50%;
+              box-shadow:
+                0 10px 25px rgba(0, 0, 0, 0.1),
+                inset 0 2px 6px rgba(255, 255, 255, 0.3);
+              backdrop-filter: blur(12px);
+              -webkit-backdrop-filter: blur(12px);
+            "
           >
-            75%
+            <div class="column flex-center" style="width: 100%; height: 100%">
+              <span
+                class="text-weight-bolder"
+                style="
+                  font-size: 1.4rem;
+                  line-height: 1;
+                  text-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+                "
+                >75%</span
+              >
+              <span
+                class="text-uppercase text-weight-bolder"
+                style="font-size: 0.55rem; letter-spacing: 1.5px; opacity: 0.95; margin-top: 4px"
+                >Done</span
+              >
+            </div>
           </q-circular-progress>
         </div>
 
@@ -158,7 +180,15 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useAuthStore } from 'src/stores/authStore'
+
+const authStore = useAuthStore()
+
+const avatarUrl = computed(() => {
+  const name = authStore.user?.username || 'Guest'
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D8ABC&color=fff&size=128`
+})
 
 const exercises = ref([
   {

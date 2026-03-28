@@ -8,15 +8,15 @@
       <!-- Avatar hanging off the background -->
       <div class="avatar-wrapper flex flex-center">
         <q-avatar size="100px" class="avatar-glow">
-          <img src="https://ui-avatars.com/api/?name=Dr+Saulihal&background=0D8ABC&color=fff&size=200" />
+          <img :src="avatarUrl" />
         </q-avatar>
       </div>
     </div>
 
     <!-- User Info Card -->
     <div class="q-pt-xl q-mt-md text-center scale-in-delay-1">
-      <div class="text-h4 text-weight-bolder text-dark tracking-tight">Dr. Saulihal</div>
-      <div class="text-subtitle1 text-grey-6 text-weight-medium q-mt-xs">Patient ID: #209485</div>
+      <div class="text-h4 text-weight-bolder text-dark tracking-tight">{{ authStore.user?.username || 'Guest' }}</div>
+      <div class="text-subtitle1 text-grey-6 text-weight-medium q-mt-xs">Patient ID: #{{ authStore.user?.patient || 'Unknown' }}</div>
       <q-badge color="green-1" text-color="positive" class="q-mt-md text-weight-bold q-px-sm q-py-xs" rounded>Active Plan: Pro</q-badge>
     </div>
 
@@ -99,7 +99,7 @@
         class="full-width logout-btn scale-in-delay-3"
         size="lg"
         no-caps
-        to="/"
+        @click="onLogout"
       >
         <div class="row flex-center">
           <q-icon name="logout" color="negative" class="q-mr-sm" size="20px" />
@@ -115,13 +115,28 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from 'src/stores/authStore'
+
+const router = useRouter()
+const authStore = useAuthStore()
 
 const stats = ref([
   { label: 'Workouts', value: '42' },
   { label: 'Active Mins', value: '840' },
   { label: 'Level', value: 'Pro' }
 ])
+
+const avatarUrl = computed(() => {
+  const name = authStore.user?.username || 'Guest'
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D8ABC&color=fff&size=200`
+})
+
+const onLogout = async () => {
+  await authStore.logout()
+  router.push('/login')
+}
 </script>
 
 <style scoped>

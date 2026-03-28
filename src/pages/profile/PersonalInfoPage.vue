@@ -10,7 +10,7 @@
     <!-- Avatar Picker -->
     <div class="flex flex-center q-mb-xl scale-in-delay-1 relative-position">
       <q-avatar size="100px" class="avatar-glow cursor-pointer">
-        <img src="https://ui-avatars.com/api/?name=Dr+Saulihal&background=0D8ABC&color=fff&size=200" />
+        <img :src="avatarUrl" />
         <div class="edit-overlay flex flex-center">
           <q-icon name="photo_camera" color="white" size="28px" />
         </div>
@@ -77,18 +77,25 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, computed } from 'vue'
 import { useQuasar } from 'quasar'
+import { useAuthStore } from 'src/stores/authStore'
 
 const $q = useQuasar()
+const authStore = useAuthStore()
+
+const avatarUrl = computed(() => {
+  const name = authStore.user?.username || 'Guest'
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D8ABC&color=fff&size=200`
+})
 
 const form = reactive({
-  firstName: 'Dr.',
-  lastName: 'Saulihal',
-  email: 'saulihal@activept.com',
-  phone: '+1 (555) 123-4567',
-  dob: '1985-10-24',
-  gender: 'Male'
+  firstName: authStore.user?.first_name || '',
+  lastName: authStore.user?.last_name || '',
+  email: authStore.user?.email || '',
+  phone: authStore.user?.phone || '',
+  dob: '',
+  gender: ''
 })
 
 const saveInfo = () => {
