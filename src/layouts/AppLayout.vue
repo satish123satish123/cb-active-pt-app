@@ -197,7 +197,16 @@
           </q-btn>
         </div>
 
-        <q-btn flat round dense icon="calendar_month" color="grey-5" class="nav-btn" size="md" />
+        <q-btn
+          flat
+          round
+          dense
+          icon="calendar_month"
+          :color="$route.path === '/appointments' ? 'primary' : 'grey-5'"
+          :class="['nav-btn', { 'active-nav': $route.path === '/appointments' }]"
+          size="md"
+          to="/appointments"
+        />
         <q-btn
           flat
           round
