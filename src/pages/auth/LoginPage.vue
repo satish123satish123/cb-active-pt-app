@@ -48,9 +48,9 @@
           </template>
         </q-input>
 
-        <div class="row justify-end q-mt-sm">
+        <!-- <div class="row justify-end q-mt-sm">
           <a href="#" class="forgot-link text-primary text-weight-medium">Forgot Password?</a>
-        </div>
+        </div> -->
 
         <q-btn
           unelevated
@@ -63,8 +63,9 @@
         />
 
         <div class="text-center q-mt-xl">
-          <span class="text-grey-7 text-body2">New to Active PT? </span>
-          <a href="#" class="signup-link text-primary text-weight-bold">Create an account</a>
+          <span class="text-grey-7 text-body2">Facing issue in login? </span>
+          <a href="tel:01142249910" class="signup-link text-primary text-weight-bold"> Contact </a>
+          <span class="text-grey-7 text-body2"> our support team for assistance</span>
         </div>
       </q-form>
     </div>
