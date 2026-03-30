@@ -168,7 +168,7 @@
     </q-page-container>
 
     <!-- Floating Glass Bottom Nav -->
-    <q-footer class="transparent q-pb-md q-px-md">
+    <q-footer class="transparent q-px-md safe-bottom">
       <div class="glass-nav row items-center justify-around">
         <q-btn
           flat
@@ -207,9 +207,14 @@
 <script setup></script>
 
 <style scoped>
+.safe-bottom {
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+
 .premium-layout {
   background: radial-gradient(circle at top left, #f0fdf4 0%, #e0f2fe 100%);
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .glass-header {

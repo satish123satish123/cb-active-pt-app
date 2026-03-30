@@ -12,11 +12,13 @@ body {
   align-items: center;
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* App window constraints */
 .desktop-constrained {
   height: 100vh;
+  height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
   background-color: #fff;
