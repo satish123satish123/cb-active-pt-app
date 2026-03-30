@@ -16,13 +16,15 @@
   },
   "dependencies": {
     "@quasar/extras": "^1.16.4",
+    "apexcharts": "^5.10.4",
     "axios": "^1.13.6",
     "dotenv": "^17.3.1",
     "pinia": "^3.0.1",
     "quasar": "^2.16.0",
     "vue": "^3.5.22",
     "vue-i18n": "^11.3.0",
-    "vue-router": "^5.0.3"
+    "vue-router": "^5.0.3",
+    "vue3-apexcharts": "^1.11.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
