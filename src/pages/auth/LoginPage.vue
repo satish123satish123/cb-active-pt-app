@@ -125,7 +125,12 @@
             label="Edit"
             no-caps
             class="font-inter text-weight-bold"
-            style="background: rgba(10, 126, 110, 0.1); padding: 4px 12px; font-size: 11px; flex-shrink: 0;"
+            style="
+              background: rgba(10, 126, 110, 0.1);
+              padding: 4px 12px;
+              font-size: 11px;
+              flex-shrink: 0;
+            "
             @click="editPhone"
           />
         </div>
@@ -396,7 +401,7 @@ const isConfirmStep = computed(() => step.value === 'setpin-confirm')
 const whatsappLink = computed(() => {
   const phone = authStore.loginData.username || '_______'
   const message = `Hello Support Team, I am facing an issue while trying to log in to the Active PT app. My registered phone number is ${phone}. Kindly assist me.`
-  return `https://wa.me/919624936146?text=${encodeURIComponent(message)}`
+  return `https://wa.me/919797885719?text=${encodeURIComponent(message)}`
 })
 
 const formatPhone = (phone) => {

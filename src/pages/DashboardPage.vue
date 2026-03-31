@@ -1,7 +1,7 @@
 <template>
   <q-page class="q-pa-md q-pb-xl">
     <!-- Header Greeting -->
-    <div class="row justify-between items-center q-mb-xl q-mt-sm scale-in">
+    <div class="row justify-between items-center q-mb-md q-mt-sm scale-in">
       <div>
         <div
           class="text-caption text-uppercase text-grey-6 text-weight-bold"
@@ -16,6 +16,11 @@
       <q-avatar size="64px" class="avatar-glow cursor-pointer">
         <img :src="avatarUrl" />
       </q-avatar>
+    </div>
+
+    <!-- Development Toggle -->
+    <div class="row justify-end q-mb-lg scale-in">
+      <q-toggle v-model="hasExercises" label="Toggle Exercise View (Dev)" color="secondary" dense />
     </div>
 
     <!-- ============================================================ -->
