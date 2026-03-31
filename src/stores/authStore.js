@@ -68,6 +68,7 @@ export const useAuthStore = defineStore('backend_auth', {
             Notify.create({
               type: 'negative',
               message: response.data.message || 'Invalid response structure.',
+              html: true,
             })
           }
         })
