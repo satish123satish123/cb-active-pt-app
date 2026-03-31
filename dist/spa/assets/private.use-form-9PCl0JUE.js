@@ -1,0 +1,1 @@
+import{u as e,y as t}from"./vue.runtime.esm-bundler-D1AeD4rU.js";var n={name:String};function r(e={}){return(n,r,i)=>{n[r](t(`input`,{class:`hidden`+(i||``),...e.value}))}}function i(t){return e(()=>t.name||t.for)}export{i as n,n as r,r as t};
