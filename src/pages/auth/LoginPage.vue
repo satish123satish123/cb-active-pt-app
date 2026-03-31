@@ -11,54 +11,98 @@
       </div>
 
       <!-- Form Section -->
-      <q-form @submit.prevent="onSubmit" class="login-form q-gutter-y-md">
-        <q-input
-          v-model="authStore.loginData.username"
-          filled
-          type="text"
-          label="Username"
-          class="custom-input"
-          lazy-rules
-          :rules="[(val) => !!val || 'Username is required']"
-        >
-          <template v-slot:prepend>
-            <q-icon name="person_outline" color="primary" />
-          </template>
-        </q-input>
+      <q-form @submit.prevent="handleFormSubmit" class="login-form q-gutter-y-md">
+        
+        <!-- Standard Login / OTP Step -->
+        <template v-if="!authStore.requiresPasswordReset">
+          <q-input
+            v-model="authStore.loginData.username"
+            filled
+            type="text"
+            label="Phone Number"
+            class="custom-input"
+            lazy-rules
+            :rules="[(val) => !!val || 'Phone Number is required']"
+          >
+            <template v-slot:prepend>
+              <q-icon name="phone_android" color="primary" />
+            </template>
+          </q-input>
 
-        <q-input
-          v-model="authStore.loginData.password"
-          filled
-          :type="isPasswordVisible ? 'text' : 'password'"
-          label="Password"
-          class="custom-input q-mt-md"
-          lazy-rules
-          :rules="[(val) => !!val || 'Password is required']"
-        >
-          <template v-slot:prepend>
-            <q-icon name="lock_outline" color="primary" />
-          </template>
-          <template v-slot:append>
-            <q-icon
-              :name="isPasswordVisible ? 'visibility_off' : 'visibility'"
-              class="cursor-pointer"
-              color="grey-5"
-              @click="isPasswordVisible = !isPasswordVisible"
-            />
-          </template>
-        </q-input>
+          <q-input
+            v-model="authStore.loginData.password"
+            filled
+            :type="isPasswordVisible ? 'text' : 'password'"
+            label="Password or OTP"
+            class="custom-input q-mt-md"
+            lazy-rules
+            :rules="[(val) => !!val || 'Password or OTP is required']"
+          >
+            <template v-slot:prepend>
+              <q-icon name="lock_outline" color="primary" />
+            </template>
+            <template v-slot:append>
+              <q-icon
+                :name="isPasswordVisible ? 'visibility_off' : 'visibility'"
+                class="cursor-pointer"
+                color="grey-5"
+                @click="isPasswordVisible = !isPasswordVisible"
+              />
+            </template>
+          </q-input>
+        </template>
 
-        <!-- <div class="row justify-end q-mt-sm">
-          <a href="#" class="forgot-link text-primary text-weight-medium">Forgot Password?</a>
-        </div> -->
+        <!-- Set Permanent Password Step -->
+        <template v-else>
+          <div class="text-subtitle1 text-center text-dark text-weight-bold q-mb-md">Set Your Permanent Password</div>
+          
+          <q-input
+            v-model="newPassword"
+            filled
+            :type="isPasswordVisible ? 'text' : 'password'"
+            label="New Password"
+            class="custom-input"
+            lazy-rules
+            :rules="[(val) => !!val || 'Password is required', (val) => val.length >= 6 || 'Minimum 6 characters']"
+          >
+            <template v-slot:prepend>
+              <q-icon name="lock" color="primary" />
+            </template>
+            <template v-slot:append>
+              <q-icon
+                :name="isPasswordVisible ? 'visibility_off' : 'visibility'"
+                class="cursor-pointer"
+                color="grey-5"
+                @click="isPasswordVisible = !isPasswordVisible"
+              />
+            </template>
+          </q-input>
+
+          <q-input
+            v-model="confirmPassword"
+            filled
+            type="password"
+            label="Confirm New Password"
+            class="custom-input"
+            lazy-rules
+            :rules="[
+              (val) => !!val || 'Please confirm your password',
+              (val) => val === newPassword || 'Passwords do not match'
+            ]"
+          >
+            <template v-slot:prepend>
+              <q-icon name="check_circle" color="primary" />
+            </template>
+          </q-input>
+        </template>
 
         <q-btn
           unelevated
           rounded
           color="primary"
           size="lg"
-          class="full-width q-mt-xl login-btn text-weight-bold"
-          label="Sign In"
+          class="full-width q-mt-lg login-btn text-weight-bold"
+          :label="authStore.requiresPasswordReset ? 'Set Password' : 'Sign In'"
           type="submit"
         />
 
@@ -76,14 +120,27 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from 'src/stores/authStore'
+import { Notify } from 'quasar'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const isPasswordVisible = ref(false)
 
-const onSubmit = () => {
+const newPassword = ref('')
+const confirmPassword = ref('')
+
+const handleFormSubmit = () => {
   authStore.router = router
-  authStore.login()
+  
+  if (authStore.requiresPasswordReset) {
+    if (newPassword.value !== confirmPassword.value) {
+      Notify.create({ type: 'negative', message: 'Passwords do not match' })
+      return
+    }
+    authStore.resetPassword(newPassword.value)
+  } else {
+    authStore.login()
+  }
 }
 </script>
 

@@ -180,15 +180,33 @@
           size="md"
           to="/"
         />
-        <q-btn flat round dense icon="space_dashboard" color="grey-5" class="nav-btn" size="md" />
+        <q-btn
+          flat
+          round
+          dense
+          icon="description"
+          :color="$route.path === '/report' ? 'primary' : 'grey-5'"
+          :class="['nav-btn', { 'active-nav': $route.path === '/report' }]"
+          size="md"
+          to="/report"
+        />
 
         <div class="center-play-wrapper">
-          <q-btn round color="primary" class="center-play-btn shadow-vibrant">
+          <q-btn round color="primary" class="center-play-btn shadow-vibrant" to="/session">
             <q-icon name="play_arrow" size="32px" />
           </q-btn>
         </div>
 
-        <q-btn flat round dense icon="calendar_month" color="grey-5" class="nav-btn" size="md" />
+        <q-btn
+          flat
+          round
+          dense
+          icon="calendar_month"
+          :color="$route.path === '/appointments' ? 'primary' : 'grey-5'"
+          :class="['nav-btn', { 'active-nav': $route.path === '/appointments' }]"
+          size="md"
+          to="/appointments"
+        />
         <q-btn
           flat
           round

@@ -23,6 +23,8 @@ export const useAuthStore = defineStore('backend_auth', {
       username: null,
       password: null,
     },
+    requiresPasswordReset: false,
+    resetEmail: null,
   }),
   getters: {
     isServeError: (state) => {
@@ -34,39 +36,85 @@ export const useAuthStore = defineStore('backend_auth', {
       this.resetServerError()
       Loading.show()
       api
-        .post('login', this.loginData)
+        .post('authenticateCredentials', this.loginData)
         .then((response) => {
-          this.setUserData(response)
-          Notify.create({
-            type: 'positive',
-            message: response.data.message,
-          })
-          this.pushWithPromise(this.router, '/')
-            .then(() => {
-              this.resetAction()
+          const userData = response.data?.user
+
+          if (userData && userData.token) {
+            this.setUserData(response)
+            Notify.create({
+              type: 'positive',
+              message: response.data.message || 'Login successful',
             })
-            .catch((e) => {
-              console.log(e)
+            this.pushWithPromise(this.router, '/')
+              .then(() => {
+                this.resetAction()
+              })
+              .catch((e) => {
+                console.log(e)
+              })
+          } else if (userData && !userData.is_password_generated) {
+            Loading.hide()
+            this.resetEmail = userData.email
+            this.requiresPasswordReset = true
+            this.loginData.password = null // clear OTP out
+            Notify.create({
+              type: 'info',
+              message: 'OTP verified. Please set your permanent password.',
             })
+          } else {
+            Loading.hide()
+            this.serverError = 'Invalid response structure.'
+            Notify.create({
+              type: 'negative',
+              message: response.data.message || 'Invalid response structure.',
+            })
+          }
         })
         .catch((e) => {
           Loading.hide()
           console.log(e)
-          this.serverError = e.response?.data?.message || 'An error occurred during login. Please try again.'
+          this.serverError =
+            e.response?.data?.message || 'An error occurred during login. Please try again.'
+        })
+    },
+    resetPassword(newPassword) {
+      this.resetServerError()
+      Loading.show()
+      api
+        .post('resetPassword', {
+          username: this.resetEmail,
+          password: newPassword,
+        })
+        .then((response) => {
+          Loading.hide()
+          Notify.create({
+            type: 'positive',
+            message: response.data.message || 'Password reset successfully',
+          })
+          this.requiresPasswordReset = false
+          this.resetEmail = null
+          this.loginData.password = newPassword
+          this.login() // Automatically log them in with the new credentials
+        })
+        .catch((e) => {
+          Loading.hide()
+          console.log(e)
+          this.serverError = e.response?.data?.message || 'Failed to set password.'
         })
     },
     setUserData(response) {
       Loading.hide()
       const userData = response.data.user
-      
+
       this.user = userData
       this.user_id = userData.id || userData.user_id
       this.token_id = userData.token
-      
+
       LocalStorage.set('user', JSON.stringify(userData))
       LocalStorage.set('user_id', JSON.stringify(this.user_id))
       LocalStorage.set('token_id', this.token_id)
-      
+
       this.setTokenInApi(this.token_id)
     },
     setTokenInApi(payload) {

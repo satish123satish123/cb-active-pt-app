@@ -104,7 +104,7 @@
     </div>
 
     <!-- Start Button -->
-    <q-btn unelevated class="full-width start-btn q-mb-xl scale-in-delay-2" no-caps>
+    <q-btn unelevated class="full-width start-btn q-mb-xl scale-in-delay-2" no-caps to="/session">
       <div class="row items-center justify-center full-width">
         <div class="btn-icon-wrapper q-mr-md">
           <q-icon name="play_arrow" size="24px" color="dark" />
