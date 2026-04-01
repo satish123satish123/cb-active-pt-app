@@ -199,14 +199,14 @@
           <!-- Feature Icons Row -->
           <div class="program-features-row row justify-around items-center q-pa-md q-pt-lg">
             <div class="feature-item text-center">
+              <q-icon name="my_location" color="primary" size="28px" />
+              <div class="feature-text">TARGETED</div>
+            </div>
+            <div class="feature-item text-center">
               <q-icon name="settings" color="primary" size="28px" />
               <div class="feature-text">CUSTOMIZED</div>
             </div>
             <div class="feature-divider"></div>
-            <div class="feature-item text-center">
-              <q-icon name="my_location" color="primary" size="28px" />
-              <div class="feature-text">TARGETED</div>
-            </div>
             <div class="feature-divider"></div>
             <div class="feature-item text-center">
               <q-icon name="check" color="primary" size="28px" />
