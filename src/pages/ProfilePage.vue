@@ -46,6 +46,17 @@
         </q-item>
         <q-separator inset />
         
+        <q-item clickable v-ripple class="q-pa-md" to="/profile/reset-pin">
+          <q-item-section avatar>
+            <q-avatar color="cyan-1" text-color="cyan-8" icon="lock_reset" size="md" />
+          </q-item-section>
+          <q-item-section class="text-weight-bold text-dark text-body1">Reset PIN</q-item-section>
+          <q-item-section side>
+            <q-icon name="chevron_right" color="grey-5" />
+          </q-item-section>
+        </q-item>
+        <q-separator inset />
+
         <q-item clickable v-ripple class="q-pa-md">
           <q-item-section avatar>
             <q-avatar color="green-1" text-color="positive" icon="medical_information" size="md" />

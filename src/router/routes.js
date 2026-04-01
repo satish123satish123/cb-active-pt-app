@@ -28,6 +28,10 @@ const routes = [
         path: '/profile/personal-info',
         component: () => import('pages/profile/PersonalInfoPage.vue'),
       },
+      {
+        path: '/profile/reset-pin',
+        component: () => import('pages/profile/ResetPinPage.vue'),
+      },
     ],
   },
   // Always leave this as last one,
