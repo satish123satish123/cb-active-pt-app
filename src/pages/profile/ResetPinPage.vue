@@ -7,59 +7,11 @@
       <div class="text-h5 text-weight-bolder text-dark tracking-tight">Reset PIN</div>
     </div>
 
-    <!-- ── STEP 1: Verify current PIN ── -->
-    <template v-if="step === 'verify'">
+    <!-- ── STEP 1: Set New PIN ── -->
+    <template v-if="step === 'newpin'">
 
-      <!-- Icon Banner -->
       <div class="flex flex-center q-mb-lg scale-in-delay-1">
         <div class="pin-icon-wrapper flex flex-center">
-          <q-icon name="lock" size="44px" color="white" />
-        </div>
-      </div>
-
-      <div class="text-center q-mb-xl scale-in-delay-1">
-        <div class="text-h6 text-weight-bold text-dark tracking-tight">Verify Your Identity</div>
-        <div class="text-body2 text-grey-6 q-mt-xs">
-          Enter your current 4-digit PIN to continue
-        </div>
-        <div v-if="serverError" class="text-caption text-negative q-mt-sm text-weight-bold">
-          {{ serverError }}
-        </div>
-      </div>
-
-      <!-- PIN Dots -->
-      <div class="flex justify-center q-mb-xl" :class="{ 'shake-anim': shake }">
-        <div
-          v-for="i in 4"
-          :key="i"
-          class="pin-dot"
-          :class="currentPin.length >= i ? 'dot-filled' : 'dot-empty'"
-        ></div>
-      </div>
-
-      <!-- Numpad -->
-      <div v-if="loading" class="flex justify-center q-py-md">
-        <q-circular-progress indeterminate color="primary" size="40px" />
-      </div>
-      <div v-else class="numpad-grid">
-        <div v-for="(row, ri) in numKeys" :key="ri" class="numpad-row">
-          <template v-for="(k, ki) in row" :key="ki">
-            <div v-if="k === null" class="numpad-spacer"></div>
-            <button v-else-if="k === 'del'" @click="delKey('verify')" class="numpad-btn del-btn">
-              <q-icon name="backspace" size="22px" color="primary" />
-            </button>
-            <button v-else @click="pressKey(k, 'verify')" class="numpad-btn">{{ k }}</button>
-          </template>
-        </div>
-      </div>
-
-    </template>
-
-    <!-- ── STEP 2: Set New PIN ── -->
-    <template v-else-if="step === 'newpin'">
-
-      <div class="flex flex-center q-mb-lg scale-in-delay-1">
-        <div class="pin-icon-wrapper flex flex-center" style="background: linear-gradient(135deg, #10b981, #059669);">
           <q-icon name="lock_open" size="44px" color="white" />
         </div>
       </div>
@@ -67,6 +19,13 @@
       <div class="text-center q-mb-xl scale-in-delay-1">
         <div class="text-h6 text-weight-bold text-dark tracking-tight">Set New PIN</div>
         <div class="text-body2 text-grey-6 q-mt-xs">Choose a new 4-digit PIN</div>
+      </div>
+
+      <!-- Step Progress -->
+      <div class="step-progress row items-center justify-center q-mb-lg">
+        <div class="step-dot active"></div>
+        <div class="step-line"></div>
+        <div class="step-dot"></div>
       </div>
 
       <div class="flex justify-center q-mb-xl" :class="{ 'shake-anim': shake }">
@@ -176,18 +135,15 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 // ── State ──
-const step      = ref('verify')   // verify → newpin → confirm → success
+// Flow: newpin → confirm → success
+// No need to verify current PIN — user is already authenticated via token
+const step      = ref('newpin')
 const loading   = ref(false)
 const shake     = ref(false)
 const errorText = ref('')
-const serverError = ref('')
 
-const currentPin  = ref('')
-const newPin      = ref('')
-const confirmPin  = ref('')
-
-// email from authenticateCredentials response (used as username in resetPassword)
-let verifiedEmail = ''
+const newPin     = ref('')
+const confirmPin = ref('')
 
 // ── Numpad layout ──
 const numKeys = [
@@ -201,14 +157,8 @@ const numKeys = [
 const pressKey = (k, forStep) => {
   if (loading.value) return
   errorText.value = ''
-  serverError.value = ''
 
-  if (forStep === 'verify') {
-    if (currentPin.value.length >= 4) return
-    currentPin.value += k
-    if (currentPin.value.length === 4) setTimeout(verifyCurrentPin, 160)
-
-  } else if (forStep === 'newpin') {
+  if (forStep === 'newpin') {
     if (newPin.value.length >= 4) return
     newPin.value += k
     if (newPin.value.length === 4) setTimeout(() => { step.value = 'confirm' }, 160)
@@ -223,9 +173,8 @@ const pressKey = (k, forStep) => {
 const delKey = (forStep) => {
   if (loading.value) return
   errorText.value = ''
-  if (forStep === 'verify')  currentPin.value  = currentPin.value.slice(0, -1)
-  if (forStep === 'newpin')  newPin.value      = newPin.value.slice(0, -1)
-  if (forStep === 'confirm') confirmPin.value  = confirmPin.value.slice(0, -1)
+  if (forStep === 'newpin')  newPin.value     = newPin.value.slice(0, -1)
+  if (forStep === 'confirm') confirmPin.value = confirmPin.value.slice(0, -1)
 }
 
 const triggerShake = () => {
@@ -233,38 +182,9 @@ const triggerShake = () => {
   setTimeout(() => { shake.value = false }, 520)
 }
 
-// ── Step 1: Verify current PIN via authenticateCredentials ──
-const verifyCurrentPin = async () => {
-  loading.value = true
-  serverError.value = ''
-
-  try {
-    const phone = authStore.user?.phone || authStore.loginData?.username
-    const response = await api.post('authenticateCredentials', {
-      username: phone,
-      password: currentPin.value,
-    })
-
-    const userData = response.data?.user
-
-    if (response.data?.status === 'success' && userData) {
-      // Save hidden email for resetPassword call
-      verifiedEmail = userData.email
-      step.value = 'newpin'
-      currentPin.value = ''
-    } else {
-      throw new Error(response.data?.message || 'Verification failed')
-    }
-  } catch (e) {
-    serverError.value = e.response?.data?.message || 'Incorrect PIN. Please try again.'
-    currentPin.value = ''
-    triggerShake()
-  } finally {
-    loading.value = false
-  }
-}
-
-// ── Step 3: Submit new PIN via resetPassword ──
+// ── Submit: resetPassword API ──
+// username = email stored in authStore.user.email (set during login)
+// password = new PIN chosen by user
 const submitResetPin = async () => {
   // Client-side confirm check
   if (confirmPin.value !== newPin.value) {
@@ -277,8 +197,9 @@ const submitResetPin = async () => {
   loading.value = true
 
   try {
+    const userEmail = authStore.user?.email
     const response = await api.post('resetPassword', {
-      username: verifiedEmail,
+      username: userEmail,
       password: newPin.value,
     })
 
@@ -291,10 +212,14 @@ const submitResetPin = async () => {
         icon: 'check_circle',
       })
     } else {
-      throw new Error(response.data?.message || 'Reset failed')
+      // API returned 200 but with error status
+      errorText.value = response.data?.message || 'Reset failed. Try again.'
+      confirmPin.value = ''
+      triggerShake()
     }
   } catch (e) {
-    errorText.value = e.response?.data?.message || 'Failed to reset PIN. Try again.'
+    // Network / 4xx / 5xx error
+    errorText.value = e.response?.data?.message || e.message || 'Failed to reset PIN. Try again.'
     confirmPin.value = ''
     triggerShake()
   } finally {
@@ -302,13 +227,10 @@ const submitResetPin = async () => {
   }
 }
 
-// ── Step 4: Go to login (logout first) ──
+// ── Go to Login after success ──
 const goToLogin = async () => {
-  // Update authStore login data so login page pre-fills phone
   authStore.loginData.username = authStore.user?.phone || ''
   authStore.loginData.password = null
-
-  // Clear session
   await authStore.logout()
   router.replace('/login')
 }
