@@ -113,12 +113,7 @@
       </div>
 
       <!-- Start Button -->
-      <q-btn
-        unelevated
-        class="full-width start-btn q-mb-xl scale-in-delay-2"
-        no-caps
-        to="/session"
-      >
+      <q-btn unelevated class="full-width start-btn q-mb-xl scale-in-delay-2" no-caps to="/session">
         <div class="row items-center justify-center full-width">
           <div class="btn-icon-wrapper q-mr-md">
             <q-icon name="play_arrow" size="24px" color="dark" />
@@ -191,12 +186,6 @@
     <!-- ============================================================ -->
     <template v-else>
       <div class="empty-dashboard scale-in-delay-1">
-
-        <!-- Welcome Banner -->
-        <div class="welcome-banner q-mb-lg">
-          Welcome! {{ authStore.user?.username || 'Guest' }}
-        </div>
-
         <!-- Program Card -->
         <div class="program-card q-mb-xl">
           <!-- Hero Image with title overlay -->
@@ -227,11 +216,7 @@
         </div>
 
         <!-- Package Cards -->
-        <div
-          v-for="(pkg, index) in packages"
-          :key="index"
-          class="package-card q-mb-md"
-        >
+        <div v-for="(pkg, index) in packages" :key="index" class="package-card q-mb-md">
           <div class="row items-center no-wrap">
             <!-- Package Thumbnail -->
             <div class="package-thumb q-mr-md flex-shrink-0">
@@ -250,7 +235,6 @@
 
           <div class="package-days">{{ pkg.duration }}</div>
         </div>
-
       </div>
     </template>
 
@@ -344,8 +328,14 @@ const packages = ref([
 }
 
 @keyframes slideUpFade {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ── Welcome Banner ── */
@@ -388,7 +378,7 @@ const packages = ref([
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(22, 151, 230, 0.72) 0%, rgba(0,0,0,0.08) 100%);
+  background: linear-gradient(135deg, rgba(22, 151, 230, 0.72) 0%, rgba(0, 0, 0, 0.08) 100%);
   display: flex;
   align-items: flex-start;
   padding: 20px 18px;
@@ -400,7 +390,7 @@ const packages = ref([
   line-height: 1.2;
   font-weight: 900;
   max-width: 200px;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   letter-spacing: -0.3px;
 }
 
@@ -434,7 +424,9 @@ const packages = ref([
   border-radius: 24px;
   padding: 18px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .package-card:hover {
@@ -495,10 +487,22 @@ const packages = ref([
 
 /* ── Responsive ── */
 @media (max-width: 600px) {
-  .welcome-banner { font-size: 1.1rem; }
-  .program-title  { font-size: 1.15rem; max-width: 160px; }
-  .program-image-wrapper { height: 180px; }
-  .package-thumb  { width: 72px; height: 72px; }
-  .new-price      { font-size: 1.1rem; }
+  .welcome-banner {
+    font-size: 1.1rem;
+  }
+  .program-title {
+    font-size: 1.15rem;
+    max-width: 160px;
+  }
+  .program-image-wrapper {
+    height: 180px;
+  }
+  .package-thumb {
+    width: 72px;
+    height: 72px;
+  }
+  .new-price {
+    font-size: 1.1rem;
+  }
 }
 </style>

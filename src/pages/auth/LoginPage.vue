@@ -33,7 +33,7 @@
             Welcome Back
           </div>
           <div class="font-inter" style="font-size: 13px; color: #9dbdb8; margin-top: 4px">
-            Enter your phone number to continue
+            Enter your registered number to continue
           </div>
         </div>
 
@@ -44,22 +44,18 @@
           class="custom-phone-input font-sora q-mb-xl"
           filled
           :rules="[(val) => !!val || 'Required']"
+          :error="!!phoneError"
+          :error-message="phoneError"
+          @update:model-value="phoneError = ''"
         >
-          <template v-slot:prepend>
-            <div class="text-weight-bold text-dark q-ml-sm">+91</div>
-            <div
-              class="q-ml-sm q-mr-xs"
-              style="width: 1px; height: 24px; background: rgba(10, 126, 110, 0.2)"
-            ></div>
-          </template>
         </q-input>
 
         <button
           @click="submitPhone"
           class="primary-btn q-mt-md"
-          :disabled="!authStore.loginData.username"
+          :disabled="!authStore.loginData.username || loadingPhone"
         >
-          Continue
+          {{ loadingPhone ? 'Verifying...' : 'Continue' }}
         </button>
       </div>
 
@@ -113,7 +109,7 @@
               class="font-sora text-weight-bold"
               style="font-size: 15.5px; color: #0d2922; margin-top: 1px; letter-spacing: 0.3px"
             >
-              +91 {{ formatPhone(authStore.loginData.username) }}
+              {{ formatPhone(authStore.loginData.username) }}
             </div>
           </div>
           <q-btn
@@ -160,7 +156,7 @@
               v-for="i in 4"
               :key="i"
               class="pin-dot"
-              :class="i <= activePin.length ? 'filled' : 'empty'"
+              :class="i <= loginPin.length ? 'filled' : 'empty'"
             ></div>
           </div>
         </div>
@@ -194,160 +190,15 @@
         </div>
       </div>
 
-      <!-- Step 3: Set PIN (New & Confirm) -->
-      <div v-if="step.startsWith('setpin')" class="full-width flex column">
-        <!-- Info banner -->
-        <div
-          class="flex"
-          style="
-            gap: 11px;
-            align-items: flex-start;
-            background: linear-gradient(135deg, rgba(10, 126, 110, 0.07), rgba(10, 126, 110, 0.04));
-            border: 1px solid rgba(10, 126, 110, 0.14);
-            border-radius: 14px;
-            padding: 13px 15px;
-            margin-bottom: 28px;
-          "
-        >
-          <div
-            style="
-              width: 34px;
-              height: 34px;
-              border-radius: 9px;
-              flex-shrink: 0;
-              background: rgba(10, 126, 110, 0.1);
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 16px;
-            "
-          >
-            👋
-          </div>
-          <div>
-            <div class="font-sora text-weight-bold" style="font-size: 13.5px; color: #0d2922">
-              Set Permanent PIN
-            </div>
-            <div
-              class="font-inter"
-              style="font-size: 12.5px; color: #5a9e93; margin-top: 3px; line-height: 1.5"
-            >
-              Create a personal PIN to replace your temporary access PIN.
-            </div>
-          </div>
-        </div>
-
-        <div class="flex items-center q-mb-lg" style="gap: 0">
-          <div class="flex items-center" style="flex: 1">
-            <div class="flex items-center" style="gap: 7px">
-              <div
-                :style="getSetPinStepStyle(0)"
-                style="
-                  width: 24px;
-                  height: 24px;
-                  border-radius: 50%;
-                  font-size: 11px;
-                  font-weight: 700;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  transition: all 0.25s;
-                "
-              >
-                {{ isConfirmStep ? '✓' : '1' }}
-              </div>
-              <span class="font-inter" :style="getSetPinTextStyle(0)">Set PIN</span>
-            </div>
-            <div
-              style="
-                flex: 1;
-                height: 2px;
-                margin: 0 10px;
-                border-radius: 2px;
-                transition: background 0.25s;
-              "
-              :style="{ background: isConfirmStep ? '#0A7E6E' : 'rgba(0,0,0,0.08)' }"
-            ></div>
-          </div>
-          <div class="flex items-center" style="flex: none">
-            <div class="flex items-center" style="gap: 7px">
-              <div
-                :style="getSetPinStepStyle(1)"
-                style="
-                  width: 24px;
-                  height: 24px;
-                  border-radius: 50%;
-                  font-size: 11px;
-                  font-weight: 700;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  transition: all 0.25s;
-                "
-              >
-                2
-              </div>
-              <span class="font-inter" :style="getSetPinTextStyle(1)">Confirm PIN</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex column items-center q-mb-lg" style="gap: 14px">
-          <div class="text-center">
-            <div class="font-sora text-weight-bold" style="font-size: 15px; color: #0d2922">
-              {{ isConfirmStep ? 'Confirm your new PIN' : 'Choose your new PIN' }}
-            </div>
-            <div
-              class="font-inter"
-              :style="{ color: errorText ? '#d95858' : '#9dbdb8' }"
-              style="font-size: 12.5px; margin-top: 4px; transition: color 0.2s"
-            >
-              {{
-                errorText ||
-                (isConfirmStep
-                  ? 'Enter the same PIN again'
-                  : "Pick 4 digits you'll easily remember")
-              }}
-            </div>
-          </div>
-          <div class="flex justify-center" :class="{ 'shake-anim': shake }" style="gap: 14px">
-            <div
-              v-for="i in 4"
-              :key="i"
-              class="pin-dot"
-              :class="i <= activePin.length ? 'filled' : 'empty'"
-            ></div>
-          </div>
-        </div>
-
-        <div v-if="loading" class="flex justify-center q-py-md">
-          <div class="spinner"></div>
-        </div>
-        <div v-else class="column" style="gap: 10px">
-          <div v-for="(row, ri) in numKeys" :key="ri" class="flex justify-center" style="gap: 10px">
-            <template v-for="(k, ki) in row" :key="ki">
-              <div v-if="k === null" style="width: 76px; height: 76px"></div>
-              <button v-else-if="k === 'del'" @click="delKey" class="numpad-btn del-btn">
-                <svg
-                  width="22"
-                  height="22"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#0A7E6E"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
-                  <line x1="18" y1="9" x2="12" y2="15" />
-                  <line x1="12" y1="9" x2="18" y2="15" />
-                </svg>
-              </button>
-              <button v-else @click="pressKey(k)" class="numpad-btn">{{ k }}</button>
-            </template>
-          </div>
-        </div>
-      </div>
+      <!-- Step 3: Set PIN (New & Confirm) abstracted via SetPin Component -->
+      <SetPin
+        v-if="step.startsWith('setpin')"
+        icon="👋"
+        title="Set Permanent PIN"
+        subtitle="Create a personal PIN to replace your temporary access PIN."
+        :show-success-screen="false"
+        :submit-function="handleSetPinSubmit"
+      />
 
       <!-- Support Footer -->
       <div class="text-center q-mt-xl">
@@ -368,18 +219,21 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from 'src/stores/authStore'
+import { api } from 'src/boot/axios'
+import SetPin from 'src/components/SetPin.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
-const step = ref('phone') // phone, pin, setpin-new, setpin-confirm
+const step = ref('phone') // phone, pin, setpin-new
 const loading = ref(false)
 const errorText = ref('')
 const shake = ref(false)
 
+const phoneError = ref('')
+const loadingPhone = ref(false)
+
 const loginPin = ref('')
-const newPin = ref('')
-const confirmPin = ref('')
 
 const numKeys = [
   ['1', '2', '3'],
@@ -387,15 +241,6 @@ const numKeys = [
   ['7', '8', '9'],
   [null, '0', 'del'],
 ]
-
-const activePin = computed(() => {
-  if (step.value === 'pin') return loginPin.value
-  if (step.value === 'setpin-new') return newPin.value
-  if (step.value === 'setpin-confirm') return confirmPin.value
-  return ''
-})
-
-const isConfirmStep = computed(() => step.value === 'setpin-confirm')
 
 // WhatsApp Link
 const whatsappLink = computed(() => {
@@ -413,13 +258,28 @@ const formatPhone = (phone) => {
   return str
 }
 
-const submitPhone = () => {
+const submitPhone = async () => {
   if (authStore.loginData.username) {
-    // Reset any old pin data upon re-entering phone step
-    loginPin.value = ''
-    newPin.value = ''
-    confirmPin.value = ''
-    step.value = 'pin'
+    phoneError.value = ''
+    loadingPhone.value = true
+    try {
+      const response = await api.post('authenticatePhoneNumber', {
+        phone: authStore.loginData.username,
+      })
+
+      if (response.data && response.data.exists) {
+        // Reset any old pin data upon re-entering phone step
+        loginPin.value = ''
+        step.value = 'pin'
+      } else {
+        phoneError.value = response.data.message || 'Phone number is not registered with Active PT.'
+      }
+    } catch (e) {
+      phoneError.value =
+        e.response?.data?.message || 'Phone number is not registered with Active PT.'
+    } finally {
+      loadingPhone.value = false
+    }
   }
 }
 
@@ -428,22 +288,12 @@ const editPhone = () => {
 }
 
 const pressKey = (k) => {
-  if (activePin.value.length >= 4 || loading.value) return
+  if (loginPin.value.length >= 4 || loading.value) return
   errorText.value = ''
 
   if (step.value === 'pin') {
     loginPin.value += k
     if (loginPin.value.length === 4) handleLogin()
-  } else if (step.value === 'setpin-new') {
-    newPin.value += k
-    if (newPin.value.length === 4) {
-      setTimeout(() => {
-        step.value = 'setpin-confirm'
-      }, 160)
-    }
-  } else if (step.value === 'setpin-confirm') {
-    confirmPin.value += k
-    if (confirmPin.value.length === 4) handleConfirmPin()
   }
 }
 
@@ -453,10 +303,6 @@ const delKey = () => {
 
   if (step.value === 'pin') {
     loginPin.value = loginPin.value.slice(0, -1)
-  } else if (step.value === 'setpin-new') {
-    newPin.value = newPin.value.slice(0, -1)
-  } else if (step.value === 'setpin-confirm') {
-    confirmPin.value = confirmPin.value.slice(0, -1)
   }
 }
 
@@ -465,11 +311,6 @@ const handleLogin = () => {
   authStore.loginData.password = loginPin.value
   authStore.router = router
 
-  // Custom interception to show error immediately if login fails
-  const originalServerError = authStore.serverError
-
-  // Because authStore.login() doesn't return a promise but fires synchronously its catch,
-  // we will simply trigger it and wait securely using standard timeouts since we don't own its internals
   authStore.login()
 
   setTimeout(() => {
@@ -482,36 +323,12 @@ const handleLogin = () => {
     }
 
     // Check for error via authStore's server error
-    if (authStore.serverError !== originalServerError && authStore.serverError) {
-      errorText.value = 'Incorrect PIN or User not found'
+    if (authStore.serverError || !authStore.token_id) {
+      errorText.value = 'Invalid PIN'
       triggerShake()
-      loginPin.value = ''
-    } else if (!authStore.token_id) {
-      // login failed but maybe not yet captured error fully
       loginPin.value = ''
     }
   }, 1200) // generous timeout to let Store perform API calls and loading hides
-}
-
-const handleConfirmPin = () => {
-  if (confirmPin.value === newPin.value) {
-    loading.value = true
-    authStore.router = router
-    authStore.resetPassword(newPin.value)
-
-    setTimeout(() => {
-      loading.value = false
-      if (authStore.serverError) {
-        errorText.value = 'Failed to reset PIN. Try again.'
-        triggerShake()
-        confirmPin.value = ''
-      }
-    }, 1200)
-  } else {
-    errorText.value = "PINs don't match. Try again."
-    triggerShake()
-    confirmPin.value = ''
-  }
 }
 
 const triggerShake = () => {
@@ -521,42 +338,19 @@ const triggerShake = () => {
   }, 520)
 }
 
-const getSetPinStepStyle = (idx) => {
-  if (idx === 0) {
-    // Set PIN circle
-    if (isConfirmStep.value) {
-      // done
-      return { background: '#0A7E6E', border: '2px solid transparent', color: 'white' }
-    } else {
-      // active
-      return { background: 'rgba(10,126,110,0.12)', border: '2px solid #0A7E6E', color: '#0A7E6E' }
-    }
-  } else {
-    // Confirm PIN circle
-    if (isConfirmStep.value) {
-      // active
-      return { background: 'rgba(10,126,110,0.12)', border: '2px solid #0A7E6E', color: '#0A7E6E' }
-    } else {
-      // future
-      return { background: 'rgba(0,0,0,0.06)', border: '2px solid transparent', color: '#bbb' }
-    }
-  }
-}
+const handleSetPinSubmit = (pin) => {
+  return new Promise((resolve) => {
+    authStore.router = router
+    authStore.resetPassword(pin)
 
-const getSetPinTextStyle = (idx) => {
-  if (idx === 0) {
-    if (isConfirmStep.value) {
-      return { fontWeight: 400, color: '#0A7E6E' }
-    } else {
-      return { fontWeight: 600, color: '#0A7E6E' }
-    }
-  } else {
-    if (isConfirmStep.value) {
-      return { fontWeight: 600, color: '#0A7E6E' }
-    } else {
-      return { fontWeight: 400, color: '#aaa' }
-    }
-  }
+    setTimeout(() => {
+      if (authStore.serverError) {
+        resolve({ success: false, message: 'Failed to reset PIN. Try again.' })
+      } else {
+        resolve({ success: true })
+      }
+    }, 1200)
+  })
 }
 </script>
 
