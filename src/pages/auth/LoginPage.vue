@@ -18,7 +18,7 @@
             class="text-h5 font-sora text-weight-bold"
             style="color: #0d2922; letter-spacing: -0.3px"
           >
-            Active PT
+            Activ PT
           </div>
           <div class="font-inter" style="color: #6b9e94; font-size: 13px; margin-top: 3px">
             Your daily physiotherapy guide
@@ -245,7 +245,7 @@ const numKeys = [
 // WhatsApp Link
 const whatsappLink = computed(() => {
   const phone = authStore.loginData.username || '_______'
-  const message = `Hello Support Team, I am facing an issue while trying to log in to the Active PT app. My registered phone number is ${phone}. Kindly assist me.`
+  const message = `Hello Support Team, I am facing an issue while trying to log in to the Activ PT app. My registered phone number is ${phone}. Kindly assist me.`
   return `https://wa.me/919797885719?text=${encodeURIComponent(message)}`
 })
 
@@ -272,11 +272,11 @@ const submitPhone = async () => {
         loginPin.value = ''
         step.value = 'pin'
       } else {
-        phoneError.value = response.data.message || 'Phone number is not registered with Active PT.'
+        phoneError.value = response.data.message || 'Phone number is not registered with Activ PT.'
       }
     } catch (e) {
       phoneError.value =
-        e.response?.data?.message || 'Phone number is not registered with Active PT.'
+        e.response?.data?.message || 'Phone number is not registered with Activ PT.'
     } finally {
       loadingPhone.value = false
     }
