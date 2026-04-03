@@ -6,7 +6,7 @@
         <div class="logo-container q-mx-auto q-mb-md">
           <q-icon name="healing" size="48px" color="white" />
         </div>
-        <h1 class="text-h4 text-weight-bold q-ma-none title-text">Active PT</h1>
+        <h1 class="text-h4 text-weight-bold q-ma-none title-text">Activ PT</h1>
         <p class="text-subtitle1 text-grey-6 q-mt-sm">Your daily physiotherapy guide</p>
       </div>
 
@@ -19,7 +19,7 @@
           label="Email Address"
           class="custom-input"
           lazy-rules
-          :rules="[val => !!val || 'Email is required']"
+          :rules="[(val) => !!val || 'Email is required']"
         >
           <template v-slot:prepend>
             <q-icon name="mail_outline" color="primary" />
@@ -33,7 +33,7 @@
           label="Password"
           class="custom-input q-mt-md"
           lazy-rules
-          :rules="[val => !!val || 'Password is required']"
+          :rules="[(val) => !!val || 'Password is required']"
         >
           <template v-slot:prepend>
             <q-icon name="lock_outline" color="primary" />
@@ -61,9 +61,9 @@
           label="Sign In"
           type="submit"
         />
-        
+
         <div class="text-center q-mt-xl">
-          <span class="text-grey-7 text-body2">New to Active PT? </span>
+          <span class="text-grey-7 text-body2">New to Activ PT? </span>
           <a href="#" class="signup-link text-primary text-weight-bold">Create an account</a>
         </div>
       </q-form>
