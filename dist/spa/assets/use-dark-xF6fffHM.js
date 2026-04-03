@@ -1,0 +1,1 @@
+import{u as e}from"./vue.runtime.esm-bundler-D1AeD4rU.js";var t={dark:{type:Boolean,default:null}};function n(t,n){return e(()=>t.dark===null?n.dark.isActive:t.dark)}export{t as n,n as t};
