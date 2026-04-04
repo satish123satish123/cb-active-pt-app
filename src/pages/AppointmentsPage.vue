@@ -415,7 +415,7 @@
                 </div>
               </div>
               <div class="info-cell info-cell--full">
-                <div class="info-lbl">Treatment Given</div>
+                <div class="info-lbl">Modalities Given</div>
                 <div class="info-val" style="font-size: 12px">
                   <svg
                     width="13"
@@ -445,11 +445,11 @@
                 <div class="charge-amt">₹{{ appt.charges.toLocaleString() }}</div>
               </div>
               <!-- Follow-up -->
-              <div class="followup-row row items-center" style="gap: 10px">
+              <!-- <div class="followup-row row items-center" style="gap: 10px">
                 <span class="followup-dot"></span>
                 <span class="followup-txt">Next Follow-up</span>
                 <span class="followup-date">{{ appt.nextFollowup }}</span>
-              </div>
+              </div> -->
             </div>
 
             <!-- Actions -->
@@ -533,10 +533,11 @@ const getInitials = (name = '') => {
   return (parts[0]?.[0] || '') + (parts[1]?.[0] || '')
 }
 
-// Slot "11:00 AM To 11:15 AM" → "11:00 AM" or " - " → "—"
+// Slot — return as-is (full range like "05:00 PM To 05:45 PM" or "11:04 - 11:04")
 const parseSlot = (slot = '') => {
-  if (!slot || slot.trim() === '-' || slot.trim() === '') return '—'
-  return slot.split(/\s+[Tt]o\s+/)[0].trim()
+  const s = slot?.trim()
+  if (!s || s === '-') return '—'
+  return s
 }
 
 // Map one API appointment object → UI object
@@ -548,11 +549,11 @@ const mapAppt = (item, index) => ({
   date: formatDate(item.date),
   time: parseSlot(item.scheduled_slot),
   status: item.status || 'Pending',
-  clinic: authStore.user?.hospital_name || authStore.user?.clinic_name || 'CB Physiotherapy',
+  clinic: item.hospital_name || 'CB Physiotherapy',
   // Upcoming fields
-  expectedTreatment: item.treatment || item.modalities || 'Physiotherapy Session',
-  // Past fields
-  treatmentGiven: item.treatment || item.modalities || 'Physiotherapy Session',
+  expectedTreatment: item.modalities || item.treatment || 'Physiotherapy Session',
+  // Past fields — modalities first, treatment as fallback
+  treatmentGiven: item.modalities || item.treatment || '—',
   charges: parseFloat(item.charges) || 0,
   nextFollowup: '—',
 })
@@ -577,17 +578,8 @@ const fetchAppointments = async () => {
     const upcomingRaw = data.upcoming_appointments || []
     upcoming.value = upcomingRaw.map(mapAppt)
 
-    // appointments → Past tab
-    const allRaw = data.appointments || []
-    // To avoid duplicates, we show all appointments except those already listed in 'upcoming'
-    const upcomingHashes = new Set(upcomingRaw.map((a) => `${a.date}|${a.doctor_name}|${a.scheduled_slot}`))
-
-    past.value = allRaw
-      .filter((a) => {
-        const hash = `${a.date}|${a.doctor_name}|${a.scheduled_slot}`
-        return !upcomingHashes.has(hash)
-      })
-      .map(mapAppt)
+    // appointments → Past tab (backend already separates past from upcoming)
+    past.value = (data.appointments || []).map(mapAppt)
   } catch (e) {
     error.value = e.response?.data?.message || e.message || 'Failed to load appointments.'
   } finally {
