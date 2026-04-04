@@ -562,15 +562,13 @@ const fetchAppointments = async () => {
   loading.value = true
   error.value = ''
   try {
-    const patientId = authStore.user_id || authStore.user?.id
+    const patientId = authStore.user?.patient
     const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
 
-    // Using FormData to avoid CORS preflight (OPTIONS) issues
-    const formData = new FormData()
-    formData.append('patient_id', patientId)
-    formData.append('hospital_id', hospitalId)
-
-    const response = await api.post('getAllAppointmentsForPatient', formData)
+    const response = await api.post('getAllAppointmentsForPatient', {
+      patient_id: patientId,
+      hospital_id: hospitalId,
+    })
 
     const data = response.data?.response
     if (!data) throw new Error('Invalid response')
@@ -579,12 +577,16 @@ const fetchAppointments = async () => {
     const upcomingRaw = data.upcoming_appointments || []
     upcoming.value = upcomingRaw.map(mapAppt)
 
-    // appointments → Past tab (exclude items already in upcoming by matching status)
+    // appointments → Past tab
     const allRaw = data.appointments || []
-    // Past = appointments whose status is NOT Confirmed / Scheduled
-    const upcomingStatuses = new Set(['confirmed', 'scheduled', 'rescheduled'])
+    // To avoid duplicates, we show all appointments except those already listed in 'upcoming'
+    const upcomingHashes = new Set(upcomingRaw.map((a) => `${a.date}|${a.doctor_name}|${a.scheduled_slot}`))
+
     past.value = allRaw
-      .filter((a) => !upcomingStatuses.has((a.status || '').toLowerCase()))
+      .filter((a) => {
+        const hash = `${a.date}|${a.doctor_name}|${a.scheduled_slot}`
+        return !upcomingHashes.has(hash)
+      })
       .map(mapAppt)
   } catch (e) {
     error.value = e.response?.data?.message || e.message || 'Failed to load appointments.'
