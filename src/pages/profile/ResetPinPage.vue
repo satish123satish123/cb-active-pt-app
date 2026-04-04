@@ -13,7 +13,9 @@
       subtitle="Create a new personal PIN to securely access your app."
       :show-success-screen="true"
       :submit-function="handlePinSubmit"
-      @success-action="goToLogin"
+      successButtonText="Go to Home"
+      successSubtitle="Your PIN has been updated successfully"
+      @success-action="goToDashboard"
     />
 
   </q-page>
@@ -40,7 +42,7 @@ const handlePinSubmit = async (pin) => {
     if (response.data?.status === 'success') {
       Notify.create({
         type: 'positive',
-        message: response.data.message || 'PIN reset successfully!',
+        message: 'PIN reset successfully!',
         position: 'top',
         icon: 'check_circle',
       })
@@ -53,11 +55,8 @@ const handlePinSubmit = async (pin) => {
   }
 }
 
-const goToLogin = async () => {
-  authStore.loginData.username = authStore.user?.phone || ''
-  authStore.loginData.password = null
-  await authStore.logout()
-  router.replace('/login')
+const goToDashboard = () => {
+  router.replace('/')
 }
 </script>
 
