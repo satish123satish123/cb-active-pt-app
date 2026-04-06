@@ -187,7 +187,7 @@
               <div class="doc-avatar flex flex-center">{{ appt.doctorInitials }}</div>
               <div class="doc-info">
                 <div class="doc-name">{{ appt.doctor }}</div>
-                <div class="doc-spec">{{ appt.speciality }}</div>
+                <div class="doc-spec">{{ appt.clinic }}</div>
               </div>
               <span class="status-badge" :class="'badge--' + appt.status.toLowerCase()">
                 {{ appt.status }}
@@ -236,28 +236,9 @@
                   {{ appt.time }}
                 </div>
               </div>
-              <div class="info-cell">
-                <div class="info-lbl">Clinic</div>
-                <div class="info-val">
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#0A7E6E"
-                    stroke-width="2.2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
-                  {{ appt.clinic }}
-                </div>
-              </div>
-              <div class="info-cell">
+              <div class="info-cell info-cell--full">
                 <div class="info-lbl">Expected Treatment</div>
-                <div class="info-val" style="font-size: 12px">{{ appt.expectedTreatment }}</div>
+                <div class="info-val info-val--wrap">{{ appt.expectedTreatment }}</div>
               </div>
             </div>
 
@@ -280,7 +261,7 @@
                 </svg>
                 Contact Clinic
               </button>
-              <button class="btn-ghost flex flex-center">
+              <!-- <button class="btn-ghost flex flex-center">
                 <svg
                   width="16"
                   height="16"
@@ -297,7 +278,7 @@
                   <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
                   <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
                 </svg>
-              </button>
+              </button> -->
             </div>
           </div>
         </div>
@@ -346,7 +327,7 @@
               </div>
               <div class="doc-info">
                 <div class="doc-name">{{ appt.doctor }}</div>
-                <div class="doc-spec">{{ appt.speciality }}</div>
+                <div class="doc-spec">{{ appt.clinic }}</div>
               </div>
               <span class="status-badge" :class="'badge--' + appt.status.toLowerCase()">
                 {{ appt.status }}
@@ -396,27 +377,8 @@
                 </div>
               </div>
               <div class="info-cell info-cell--full">
-                <div class="info-lbl">Clinic</div>
-                <div class="info-val">
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#0A7E6E"
-                    stroke-width="2.2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
-                  {{ appt.clinic }}
-                </div>
-              </div>
-              <div class="info-cell info-cell--full">
                 <div class="info-lbl">Modalities Given</div>
-                <div class="info-val" style="font-size: 12px">
+                <div class="info-val info-val--wrap">
                   <svg
                     width="13"
                     height="13"
@@ -454,7 +416,7 @@
 
             <!-- Actions -->
             <div class="card-actions">
-              <button class="btn-primary btn-primary--past">
+              <!-- <button class="btn-primary btn-primary--past">
                 <svg
                   width="14"
                   height="14"
@@ -471,8 +433,8 @@
                   <line x1="16" y1="17" x2="8" y2="17" />
                 </svg>
                 View Summary
-              </button>
-              <button class="btn-ghost flex flex-center">
+              </button> -->
+              <!-- <button class="btn-ghost flex flex-center">
                 <svg
                   width="16"
                   height="16"
@@ -487,7 +449,7 @@
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-              </button>
+              </button> -->
             </div>
           </div>
         </div>
@@ -895,6 +857,11 @@ button {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+.info-val--wrap {
+  align-items: flex-start;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* Card Actions */
