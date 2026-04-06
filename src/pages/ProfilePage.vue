@@ -1,30 +1,40 @@
 <template>
-  <q-page class="q-pa-md q-pb-xl">
+  <q-page class="profile-page q-pa-md q-pb-xl">
     
-    <!-- Profile Backing Gradient & Avatar -->
-    <div class="profile-header-container scale-in q-mb-xl">
-      <div class="profile-gradient-bg"></div>
+    <!-- Profile Banner & Avatar -->
+    <div class="hero-profile-banner scale-in">
+      <div class="banner-bg">
+        <div class="deco-circle circle-1"></div>
+        <div class="deco-circle circle-2"></div>
+        <div class="deco-circle circle-3"></div>
+      </div>
       
-      <!-- Avatar hanging off the background -->
       <div class="avatar-wrapper flex flex-center">
-        <q-avatar size="100px" class="avatar-glow">
-          <img :src="avatarUrl" />
-        </q-avatar>
+        <div class="avatar-ring-container">
+          <q-avatar size="105px" class="avatar-glow">
+            <img :src="avatarUrl" />
+          </q-avatar>
+          <div class="avatar-ring"></div>
+        </div>
       </div>
     </div>
 
     <!-- User Info Card -->
-    <div class="q-pt-xl q-mt-md text-center scale-in-delay-1">
-      <div class="text-h4 text-weight-bolder text-dark tracking-tight">{{ authStore.user?.username || 'Guest' }}</div>
-      <div class="text-subtitle1 text-grey-6 text-weight-medium q-mt-xs">Patient ID: #{{ authStore.user?.patient || 'Unknown' }}</div>
-      <q-badge color="green-1" text-color="positive" class="q-mt-md text-weight-bold q-px-sm q-py-xs" rounded>Active Plan: Pro</q-badge>
+    <div class="user-info-section text-center scale-in-delay-1">
+      <div class="user-name">{{ authStore.user?.username || 'Guest' }}</div>
+      <div class="user-id">Patient ID: <span>#{{ authStore.user?.patient || 'Unknown' }}</span></div>
+      
+      <div class="active-plan-pill q-mt-sm">
+        <span class="pulse-dot"></span>
+        <span class="pill-text">Active Plan: Pro</span>
+      </div>
     </div>
 
     <!-- Stats Row -->
     <div class="row justify-between q-mt-xl q-mb-lg scale-in-delay-2 q-gutter-x-sm">
       <div class="col" v-for="(stat, index) in stats" :key="index">
         <div class="glass-stat-card text-center q-pa-md">
-          <div class="text-h5 text-weight-bolder text-primary tracking-tight">{{ stat.value }}</div>
+          <div class="text-h5 text-weight-bolder tracking-tight" style="color: #0A7E6E">{{ stat.value }}</div>
           <div class="text-caption text-grey-7 text-uppercase text-weight-bold q-mt-xs" style="font-size: 0.65rem;">{{ stat.label }}</div>
         </div>
       </div>
@@ -34,10 +44,10 @@
     <div class="q-mt-xl scale-in-delay-3">
       <div class="text-subtitle2 text-grey-6 text-uppercase text-weight-bold q-mb-md" style="letter-spacing: 1px;">My Account</div>
       
-      <q-list class="glass-list-card q-mb-lg">
+      <q-list class="glass-list-card q-mb-xl">
         <q-item clickable v-ripple class="q-pa-md" to="/profile/personal-info">
           <q-item-section avatar>
-            <q-avatar color="blue-1" text-color="primary" icon="person" size="md" />
+            <q-avatar style="background: rgba(10,126,110,0.1); color: #0A7E6E" icon="person" size="md" />
           </q-item-section>
           <q-item-section class="text-weight-bold text-dark text-body1">Personal Information</q-item-section>
           <q-item-section side>
@@ -48,56 +58,9 @@
         
         <q-item clickable v-ripple class="q-pa-md" to="/profile/reset-pin">
           <q-item-section avatar>
-            <q-avatar color="cyan-1" text-color="cyan-8" icon="lock_reset" size="md" />
+            <q-avatar style="background: rgba(10,126,110,0.1); color: #0A7E6E" icon="lock_reset" size="md" />
           </q-item-section>
           <q-item-section class="text-weight-bold text-dark text-body1">Reset PIN</q-item-section>
-          <q-item-section side>
-            <q-icon name="chevron_right" color="grey-5" />
-          </q-item-section>
-        </q-item>
-        <q-separator inset />
-
-        <q-item clickable v-ripple class="q-pa-md">
-          <q-item-section avatar>
-            <q-avatar color="green-1" text-color="positive" icon="medical_information" size="md" />
-          </q-item-section>
-          <q-item-section class="text-weight-bold text-dark text-body1">Diagnosis & Program</q-item-section>
-          <q-item-section side>
-            <q-icon name="chevron_right" color="grey-5" />
-          </q-item-section>
-        </q-item>
-        <q-separator inset />
-
-        <q-item clickable v-ripple class="q-pa-md">
-          <q-item-section avatar>
-            <q-avatar color="purple-1" text-color="purple-8" icon="trending_up" size="md" />
-          </q-item-section>
-          <q-item-section class="text-weight-bold text-dark text-body1">Progress History</q-item-section>
-          <q-item-section side>
-            <q-icon name="chevron_right" color="grey-5" />
-          </q-item-section>
-        </q-item>
-      </q-list>
-
-      <div class="text-subtitle2 text-grey-6 text-uppercase text-weight-bold q-mb-md" style="letter-spacing: 1px;">Preferences</div>
-      
-      <q-list class="glass-list-card q-mb-xl">
-        <q-item clickable v-ripple class="q-pa-md">
-          <q-item-section avatar>
-            <q-avatar color="orange-1" text-color="orange-8" icon="notifications_active" size="md" />
-          </q-item-section>
-          <q-item-section class="text-weight-bold text-dark text-body1">Notification Settings</q-item-section>
-          <q-item-section side>
-            <q-icon name="chevron_right" color="grey-5" />
-          </q-item-section>
-        </q-item>
-        <q-separator inset />
-        
-        <q-item clickable v-ripple class="q-pa-md">
-          <q-item-section avatar>
-            <q-avatar color="indigo-1" text-color="indigo-8" icon="dark_mode" size="md" />
-          </q-item-section>
-          <q-item-section class="text-weight-bold text-dark text-body1">Theme Preferences</q-item-section>
           <q-item-section side>
             <q-icon name="chevron_right" color="grey-5" />
           </q-item-section>
@@ -141,7 +104,7 @@ const stats = ref([
 
 const avatarUrl = computed(() => {
   const name = authStore.user?.username || 'Guest'
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D8ABC&color=fff&size=200`
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0A7E6E&color=fff&size=200`
 })
 
 const onLogout = async () => {
@@ -151,6 +114,14 @@ const onLogout = async () => {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap');
+
+.profile-page {
+  font-family: 'Sora', sans-serif;
+  background: linear-gradient(170deg, #eaf8f3 0%, #f4fbf8 50%, #edf9f5 100%);
+  min-height: 100vh;
+}
+
 /* Typography */
 .tracking-tight {
   letter-spacing: -0.5px;
@@ -187,85 +158,177 @@ const onLogout = async () => {
   opacity: 0;
 }
 
-/* Hero Section */
-.profile-header-container {
+/* Hero Profile Banner */
+.hero-profile-banner {
   position: relative;
-  height: 120px;
+  height: 140px;
+  margin-top: 10px;
 }
 
-.profile-gradient-bg {
+.banner-bg {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   border-radius: 32px;
-  background: linear-gradient(135deg, #0ea5e9, #10b981);
-  box-shadow: 0 15px 35px rgba(16, 185, 129, 0.2);
+  background: linear-gradient(145deg, #0c9b80 0%, #0A7E6E 60%, #087a68 100%);
+  box-shadow: 0 18px 40px rgba(10, 126, 110, 0.25);
+  overflow: hidden;
 }
 
+.deco-circle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.circle-1 { top: -60px; right: -40px; width: 180px; height: 180px; background: rgba(255,255,255,0.06); }
+.circle-2 { bottom: -40px; left: -20px; width: 120px; height: 120px; background: rgba(255,255,255,0.04); }
+.circle-3 { top: 20px; left: 60px; width: 50px; height: 50px; background: rgba(255,255,255,0.08); }
+
+/* Avatar Focus */
 .avatar-wrapper {
   position: absolute;
-  bottom: -50px;
+  bottom: -55px;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 10;
+}
+
+.avatar-ring-container {
+  position: relative;
+  border-radius: 50%;
+  padding: 6px;
+  background: white;
+  box-shadow: 0 16px 35px rgba(10, 126, 110, 0.2);
 }
 
 .avatar-glow {
-  box-shadow: 0 12px 30px rgba(13, 138, 188, 0.3);
-  border: 4px solid white;
-  background-color: white;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.avatar-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px dashed rgba(10, 126, 110, 0.3);
+  animation: spinSlow 20s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes spinSlow {
+  100% { transform: rotate(360deg); }
+}
+
+/* User Info Section */
+.user-info-section {
+  padding-top: 64px;
+  margin-bottom: 24px;
+}
+
+.user-name {
+  font-family: 'Sora', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: #0d2922;
+  letter-spacing: -0.6px;
+  line-height: 1.2;
+}
+
+.user-id {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: #6a9e96;
+  margin-top: 2px;
+  font-weight: 500;
+}
+.user-id span {
+  color: #0A7E6E;
+  font-weight: 700;
+}
+
+/* Plan Pill */
+.active-plan-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10,126,110,0.04);
+  border: 1.5px solid rgba(10,126,110,0.12);
+  padding: 8px 16px 8px 14px;
+  border-radius: 30px;
+  box-shadow: 0 4px 14px rgba(10,126,110,0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: default;
+}
+.active-plan-pill:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(10,126,110,0.08);
+  background: rgba(10,126,110,0.06);
+}
+.pill-text {
+  font-family: 'Sora', sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0A7E6E;
+  letter-spacing: 0.2px;
+}
+.pulse-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  animation: pulseRing 2s infinite cubic-bezier(0.66, 0, 0, 1);
+}
+@keyframes pulseRing {
+  100% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
 }
 
 /* Glass Stat Cards */
 .glass-stat-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.88);
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 1);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.03);
-  transition: transform 0.3s ease;
+  border: 1.5px solid rgba(10, 126, 110, 0.08);
+  box-shadow: 0 2px 16px rgba(10, 126, 110, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .glass-stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.05);
-  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(10, 126, 110, 0.1);
+  background: white;
 }
 
 /* List Menu */
 .glass-list-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 1);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 22px;
+  border: 1.5px solid rgba(10, 126, 110, 0.08);
+  box-shadow: 0 2px 16px rgba(10, 126, 110, 0.05);
   overflow: hidden;
 }
 
 .glass-list-card .q-item {
-  transition: background 0.3s ease;
+  transition: background 0.2s ease;
+  padding: 16px 20px;
 }
 
 .glass-list-card .q-item:hover {
-  background: rgba(255, 255, 255, 1);
+  background: white;
 }
 
 /* Logout Button */
 .logout-btn {
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.8) !important;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  height: 64px;
-  box-shadow: 0 10px 25px rgba(239, 68, 68, 0.05);
-  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.88) !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.15);
+  height: 60px;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.05);
+  transition: all 0.2s ease;
 }
 
 .logout-btn:hover {
-  background: rgba(254, 242, 242, 1) !important;
-  box-shadow: 0 12px 30px rgba(239, 68, 68, 0.1);
+  background: white !important;
+  border-color: rgba(239, 68, 68, 0.3);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.1);
   transform: translateY(-2px);
 }
 </style>
