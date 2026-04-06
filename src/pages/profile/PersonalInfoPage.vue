@@ -86,7 +86,7 @@ const authStore = useAuthStore()
 
 const avatarUrl = computed(() => {
   const name = authStore.user?.username || 'Guest'
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D8ABC&color=fff&size=200`
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0A7E6E&color=fff&size=200`
 })
 
 const form = reactive({
@@ -109,7 +109,19 @@ const saveInfo = () => {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap');
+
+.premium-layout {
+  font-family: 'Sora', sans-serif;
+  background: linear-gradient(170deg, #eaf8f3 0%, #f4fbf8 50%, #edf9f5 100%);
+  min-height: 100vh;
+}
+
 /* Typography */
+.text-caption {
+  font-family: 'DM Sans', sans-serif;
+}
+
 .tracking-tight {
   letter-spacing: -0.5px;
 }
@@ -145,10 +157,6 @@ const saveInfo = () => {
   opacity: 0;
 }
 
-.premium-layout {
-  min-height: calc(100vh - 80px); /* header adjust */
-}
-
 .action-btn {
   background: white;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -156,7 +164,7 @@ const saveInfo = () => {
 }
 
 .avatar-glow {
-  box-shadow: 0 12px 30px rgba(13, 138, 188, 0.2);
+  box-shadow: 0 12px 30px rgba(10, 126, 110, 0.25);
   border: 4px solid white;
   background-color: white;
   position: relative;
@@ -177,18 +185,16 @@ const saveInfo = () => {
 
 /* Form Styles */
 .glass-form-card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.88);
   border-radius: 28px;
-  border: 1px solid rgba(255, 255, 255, 1);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+  border: 1.5px solid rgba(10, 126, 110, 0.08);
+  box-shadow: 0 10px 40px rgba(10, 126, 110, 0.05);
 }
 
 .custom-input :deep(.q-field__control) {
   border-radius: 12px;
-  background: rgba(240, 246, 250, 0.6);
-  border: 1px solid rgba(0, 0, 0, 0.03);
+  background: rgba(10, 126, 110, 0.04);
+  border: 1.5px solid rgba(10, 126, 110, 0.06);
   transition: all 0.3s ease;
 }
 
@@ -199,24 +205,24 @@ const saveInfo = () => {
 
 .custom-input :deep(.q-field--focused .q-field__control) {
   background: white;
-  border-color: #0ea5e9;
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+  border-color: #0A7E6E;
+  box-shadow: 0 4px 16px rgba(10, 126, 110, 0.15);
 }
 
 /* Save Button */
 .save-btn {
   border-radius: 20px;
-  background: linear-gradient(135deg, #0ea5e9, #10b981) !important;
+  background: linear-gradient(145deg, #0c9b80 0%, #0A7E6E 60%, #087a68 100%) !important;
   color: white;
-  font-weight: bold;
+  font-weight: 800;
   letter-spacing: 0.5px;
-  box-shadow: 0 12px 28px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 12px 28px rgba(10, 126, 110, 0.25);
   transition: all 0.3s ease;
 }
 
 .save-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 15px 35px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 15px 35px rgba(10, 126, 110, 0.35);
 }
 
 .save-btn:active {
