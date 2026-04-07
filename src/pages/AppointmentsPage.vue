@@ -238,7 +238,9 @@
               </div>
               <div class="info-cell info-cell--full">
                 <div class="info-lbl">Expected Treatment</div>
-                <div class="info-val info-val--wrap">{{ appt.expectedTreatment }}</div>
+                <div class="info-val info-val--wrap">
+                  {{ formatTreatmentText(appt.expectedTreatment) }}
+                </div>
               </div>
             </div>
 
@@ -392,7 +394,7 @@
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                     <polyline points="22 4 12 14.01 9 11.01" />
                   </svg>
-                  {{ appt.treatmentGiven }}
+                  {{ formatTreatmentText(appt.treatmentGiven) }}
                 </div>
               </div>
             </div>
@@ -500,6 +502,25 @@ const parseSlot = (slot = '') => {
   const s = slot?.trim()
   if (!s || s === '-') return '—'
   return s
+}
+
+// Render treatments as: "• TENS | • IFT | • Mobilisation"
+const formatTreatmentText = (value = '') => {
+  const raw = String(value || '').trim()
+  if (!raw || raw === '—') return '—'
+
+  const normalized = raw
+    .replace(/\r?\n/g, '|')
+    .replace(/^\s*[-•.]\s*/g, '')
+    .replace(/\s+-\s+/g, '|')
+
+  const items = normalized
+    .split(/[|,]+/)
+    .map((part) => part.replace(/^\s*[-•.]\s*/g, '').trim())
+    .filter(Boolean)
+
+  if (!items.length) return raw
+  return items.map((item) => `• ${item}`).join(' | ')
 }
 
 // Map one API appointment object → UI object
