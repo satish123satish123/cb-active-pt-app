@@ -90,7 +90,7 @@
             <div class="ex-name" :class="{ muted: ex.done }">{{ ex.name }}</div>
             <div class="ex-meta">
               <span class="ex-reps">{{ ex.reps }} Reps · {{ ex.sets }} Set</span>
-              <span class="ex-tag" :class="ex.equipment.toLowerCase()">{{ ex.equipment }}</span>
+              <span class="ex-tag" :class="getEquipmentClass(ex.equipment)">{{ ex.equipment }}</span>
             </div>
           </div>
           <div class="ex-action">
@@ -110,39 +110,94 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from 'src/stores/authStore'
+
+const props = defineProps({
+  dashboardData: {
+    type: Object,
+    default: () => ({}),
+  },
+})
 
 const authStore = useAuthStore()
 const router = useRouter()
 
 const patientName = computed(() => authStore.user?.username || 'Rahul Sharma')
 
-const program = ref({
-  name:           'Shoulder Rehab',
-  daysLeft:       18,
-  progressPct:    75,
-  totalExercises: 8,
-  session:        1,
-  mins:           11,
-})
+const secondsToMinutes = (seconds) => Math.max(0, Math.ceil((parseInt(seconds, 10) || 0) / 60))
+
+const isDoneStatus = (status = '') => {
+  const normalized = String(status).trim().toLowerCase()
+  return ['treated', 'completed', 'done'].includes(normalized)
+}
+
+const normalizeEquipment = (equipment = '') => {
+  const value = String(equipment || '').trim()
+  return value || 'NO EQUIPMENT'
+}
+
+const program = computed(() => ({
+  name: props.dashboardData?.subscription_name || 'Recovery Program',
+  daysLeft: parseInt(props.dashboardData?.remaining_days, 10) || 0,
+  progressPct: parseInt(props.dashboardData?.progress_percentage, 10) || 0,
+  totalExercises: parseInt(props.dashboardData?.total_exercises, 10) || 0,
+  session: parseInt(props.dashboardData?.completed_count, 10) || 0,
+  mins: secondsToMinutes(props.dashboardData?.session_total_time),
+}))
 
 const circumference = computed(() => 2 * Math.PI * 28)
 const dashOffset    = computed(() =>
   circumference.value * (1 - program.value.progressPct / 100)
 )
 
-const exercises = ref([
-  { id:1, name:'Shoulder Shrugs',        reps:10, sets:1, equipment:'CHAIR',  done:true  },
-  { id:2, name:'Row Scapular Retraction', reps:10, sets:1, equipment:'CHAIR',  done:false },
-  { id:3, name:'Facial Eyebrows Raise',   reps:10, sets:1, equipment:'MIRROR', done:false },
-  { id:4, name:'Neck Stretches',          reps:5,  sets:2, equipment:'CHAIR',  done:false },
-])
+const mapExercises = () => {
+  const details = props.dashboardData?.performance_tracking_details
+  if (!Array.isArray(details)) return []
+
+  return details.map((item, index) => ({
+    id: item.id || index + 1,
+    name: item.selected_exercises || 'Exercise',
+    reps: parseInt(item.reps, 10) || 0,
+    sets: parseInt(item.sets, 10) || 0,
+    equipment: normalizeEquipment(item.equipment),
+    done: isDoneStatus(item.status),
+  }))
+}
+
+const exercises = ref([])
+
+watch(
+  () => props.dashboardData,
+  () => {
+    exercises.value = mapExercises()
+  },
+  { immediate: true, deep: true },
+)
 
 const completedCount = computed(() => exercises.value.filter(e => e.done).length)
 
-function toggleDone(ex) { ex.done = !ex.done; }
+const getEquipmentClass = (equipment = '') => {
+  const value = String(equipment || '').toLowerCase()
+  if (value.includes('chair')) return 'chair'
+  if (value.includes('mirror')) return 'mirror'
+  if (value.includes('mat')) return 'mat'
+  if (value.includes('wall')) return 'wall'
+  if (value.includes('band') || value.includes('theraband') || value.includes('theraloop')) {
+    return 'band'
+  }
+  if (value.includes('kettlebell') || value.includes('dumbbell') || value.includes('weight')) {
+    return 'weight'
+  }
+  if (value.includes('roller')) return 'roller'
+  return 'default'
+}
+
+function toggleDone(ex) {
+  ex.done = !ex.done
+}
+
 function startSession() { 
   router.push('/session')
 }
@@ -295,6 +350,10 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
 .ex-tag.mirror { background:rgba(13,122,156,0.1);  color:#0d7a9c; }
 .ex-tag.mat    { background:rgba(120,80,180,0.1);  color:#7850b4; }
 .ex-tag.wall   { background:rgba(200,120,30,0.1);  color:#c87820; }
+.ex-tag.band   { background:rgba(15,110,185,0.12); color:#0f6eb9; }
+.ex-tag.weight { background:rgba(173,104,0,0.12);  color:#ad6800; }
+.ex-tag.roller { background:rgba(95,95,140,0.12); color:#5f5f8c; }
+.ex-tag.default { background:rgba(100,120,130,0.12); color:#617985; }
 
 .ex-action { flex-shrink:0; }
 .done-badge {
