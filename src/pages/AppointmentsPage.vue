@@ -554,7 +554,7 @@ const fetchAppointments = async () => {
       hospital_id: hospitalId,
     })
 
-    const data = response.data?.response
+    const data = response.data?.response ?? {} 
     if (!data) throw new Error('Invalid response')
 
     // upcoming_appointments → Upcoming tab
