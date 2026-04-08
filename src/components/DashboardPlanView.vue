@@ -119,8 +119,13 @@
                 </div>
                 <span class="feature-text">{{ feat }}</span>
               </div>
-              <button class="cta-btn full-width" :class="plan.recommended ? 'is-recommended' : 'is-normal'" @click.stop="selectPlan(plan)">
-                {{ plan.free ? 'View My Plan' : 'Get ' + plan.name }}
+              <button
+                class="cta-btn full-width"
+                :class="plan.isRequested ? 'is-requested' : (plan.recommended ? 'is-recommended' : 'is-normal')"
+                :disabled="plan.isRequested"
+                @click.stop="handlePlanAction(plan)"
+              >
+                {{ plan.isRequested ? 'Requested' : (plan.free ? 'View My Plan' : 'Get ' + plan.name) }}
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
                 </svg>
@@ -154,6 +159,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { api } from 'src/boot/axios'
+import { useAuthStore } from 'src/stores/authStore'
+
+const authStore = useAuthStore()
 
 // ── Hero chips ──
 const svgSettings = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`
@@ -198,6 +206,7 @@ const mapPlan = (item) => {
   const days  = parseInt(item.duration)
   const price = parseInt(item.c_price)
   const isRecommended = days >= 90
+  const isRequested = String(item.status || '').trim().toLowerCase() === 'requested'
 
   return {
     id:            item.id,
@@ -209,6 +218,7 @@ const mapPlan = (item) => {
     free:          false,
     recommended:   isRecommended,
     badge:         isRecommended ? 'Best Value' : null,
+    isRequested,
     features:      featuresByDuration[days] || [
       'Personalised exercise program',
       'In-app physio guidance',
@@ -227,6 +237,7 @@ const starterPlan = {
   free:          true,
   recommended:   false,
   badge:         null,
+  isRequested:   false,
   features: [
     'Access to basic exercises',
     'Guided by your physio',
@@ -239,7 +250,12 @@ const fetchPlans = async () => {
   plansLoading.value = true
   plansError.value   = ''
   try {
-    const response = await api.get('getPhysioGymPackagePlans')
+    const patientId = authStore.user?.patient || authStore.user_id || ''
+    const response = await api.get('getPhysioGymPackagePlans', {
+      params: {
+        patient_id: patientId,
+      },
+    })
     if (response.data?.status === 'success' && Array.isArray(response.data.data)) {
       const sorted = [...response.data.data].sort(
         (a, b) => parseInt(a.duration) - parseInt(b.duration)
@@ -281,6 +297,11 @@ const cardStyle = (plan) => {
 
 const toastPlan = ref(null)
 let toastTimer = null
+const handlePlanAction = (plan) => {
+  if (plan.isRequested) return
+  selectPlan(plan)
+}
+
 const selectPlan = (plan) => {
   toastPlan.value = plan
   clearTimeout(toastTimer)
@@ -467,6 +488,14 @@ button { font-family: 'Sora', sans-serif; cursor: pointer; border: none; outline
   color: white; box-shadow: 0 4px 16px rgba(10,126,110,0.28);
 }
 .cta-btn.is-normal { background: rgba(10,126,110,0.08); color: #0A7E6E; }
+.cta-btn.is-requested {
+  background: rgba(240, 165, 0, 0.12);
+  color: #c17a00;
+  cursor: default;
+}
+.cta-btn:disabled {
+  opacity: 1;
+}
 
 /* Footer Note */
 .footer-note {
