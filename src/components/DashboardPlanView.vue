@@ -51,9 +51,26 @@
     <!-- ── Loading Skeleton ── -->
     <div v-if="plansLoading" class="plans-list q-px-md">
       <div v-for="n in 3" :key="n" class="plan-card-skeleton q-mb-md">
-        <div class="skeleton-line" style="width:40%;height:14px;margin-bottom:10px;"></div>
-        <div class="skeleton-line" style="width:65%;height:10px;margin-bottom:14px;"></div>
-        <div class="skeleton-line" style="width:30%;height:20px;"></div>
+        <div class="skeleton-shimmer-bar"></div>
+        <div class="plan-card-skeleton-body">
+          <div class="skeleton-top row items-start" style="gap:14px;">
+            <div class="skeleton-duration"></div>
+            <div class="col">
+              <div class="skeleton-line" style="width:58%;height:14px;margin-bottom:8px;"></div>
+              <div class="skeleton-line" style="width:82%;height:10px;margin-bottom:14px;"></div>
+              <div class="skeleton-line" style="width:34%;height:18px;"></div>
+            </div>
+          </div>
+
+          <div class="skeleton-features">
+            <div class="skeleton-feature-row" v-for="i in 3" :key="i">
+              <div class="skeleton-feature-icon"></div>
+              <div class="skeleton-line" style="flex:1;height:10px;"></div>
+            </div>
+          </div>
+
+          <div class="skeleton-cta"></div>
+        </div>
       </div>
     </div>
 
@@ -452,6 +469,7 @@ button { font-family: 'Sora', sans-serif; cursor: pointer; border: none; outline
 .price-free   {
   font-size: 18px; font-weight: 800; font-family: 'Sora', sans-serif;
   background: linear-gradient(135deg, #0A7E6E, #3dba8a);
+  background-clip: text;
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
 .price-main   { font-size: 21px; font-weight: 800; font-family: 'Sora', sans-serif; }
@@ -534,9 +552,57 @@ button { font-family: 'Sora', sans-serif; cursor: pointer; border: none; outline
 .plan-card-skeleton {
   background: white;
   border-radius: 20px;
-  padding: 20px 18px;
   border: 1.5px solid rgba(10,126,110,0.08);
   box-shadow: 0 2px 16px rgba(10,126,110,0.05);
+  overflow: hidden;
+}
+.skeleton-shimmer-bar {
+  height: 3px;
+  background: linear-gradient(90deg, #0A7E6E, #3dba8a, #0A7E6E);
+  background-size: 200% auto;
+  animation: shimmer 2.5s linear infinite;
+}
+.plan-card-skeleton-body {
+  padding: 20px 18px 18px;
+}
+.skeleton-duration {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 800px 100%;
+  animation: skeletonShimmer 1.4s ease infinite;
+}
+.skeleton-features {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(10,126,110,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.skeleton-feature-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.skeleton-feature-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 800px 100%;
+  animation: skeletonShimmer 1.4s ease infinite;
+}
+.skeleton-cta {
+  margin-top: 14px;
+  height: 46px;
+  border-radius: 13px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 800px 100%;
+  animation: skeletonShimmer 1.4s ease infinite;
 }
 .skeleton-line {
   border-radius: 8px;
