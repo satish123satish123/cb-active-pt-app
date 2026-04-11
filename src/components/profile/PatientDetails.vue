@@ -16,19 +16,19 @@
       <div class="kv" style="margin-top:4px;">
         <div class="kv-row">
           <div class="kv-key">Phone</div>
-          <div class="kv-val">+91 98100 86624</div>
+          <div class="kv-val">+{{ authStore.user?.country_code || '91' }} {{ authStore.user?.phone || 'Not provided' }}</div>
         </div>
         <div class="kv-row">
           <div class="kv-key">Email</div>
-          <div class="kv-val">priya@email.com</div>
+          <div class="kv-val">{{ authStore.user?.email || 'Not provided' }}</div>
         </div>
         <div class="kv-row">
           <div class="kv-key">Preferred Clinic</div>
-          <div class="kv-val">CB Physiotherapy - GK II</div>
+          <div class="kv-val">{{ authStore.user?.clinic_name || 'CB Physiotherapy' }}</div>
         </div>
         <div class="kv-row">
           <div class="kv-key">Address</div>
-          <div class="kv-val">South Delhi, New Delhi</div>
+          <div class="kv-val">{{ authStore.user?.address || 'Not provided' }}</div>
         </div>
       </div>
     </div>
@@ -36,7 +36,9 @@
 </template>
 
 <script setup>
-// no props needed – static data in original
+import { useAuthStore } from 'src/stores/authStore'
+
+const authStore = useAuthStore()
 </script>
 
 <style scoped>

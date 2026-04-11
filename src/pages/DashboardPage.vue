@@ -7,7 +7,9 @@
           <div class="subtle">Welcome back,</div>
           <h5 class="q-ma-none text-weight-bold">{{ authStore.user.username }}</h5>
         </div>
-        <button class="icon-btn">🔔<span class="pill-count">3</span></button>
+        <button class="icon-btn" @click="$router.push('/support')">
+          🔔<span class="pill-count">3</span>
+        </button>
       </div>
     </div>
 

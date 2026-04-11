@@ -15,7 +15,7 @@
       <!-- List rows -->
       <div class="list" style="gap: 0">
         <!-- Reset PIN -->
-        <div class="flat-row" style="border-bottom: 1px solid var(--line)">
+        <div class="flat-row cursor-pointer" @click="$router.push('/profile/reset-pin')" style="border-bottom: 1px solid var(--line)">
           <div class="row-left">
             <div class="row-icon" style="background: #edf5f3; color: var(--brand)">🔒</div>
             <div>
