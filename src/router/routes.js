@@ -15,12 +15,21 @@ const routes = [
     component: () => import('layouts/AppLayout.vue'),
     meta: { requiresAuth: true },
     children: [
-      { path: '/', component: () => import('pages/DashboardPage.vue') },
-      { path: '/report', component: () => import('pages/ReportPage.vue') },
-      { path: '/appointments', component: () => import('pages/AppointmentsPage.vue') },
       {
-        path: '/session',
-        component: () => import('pages/SessionPage.vue'),
+        path: '/',
+        component: () => import('pages/DashboardPage.vue'),
+      },
+      {
+        path: '/progress',
+        component: () => import('pages/ProgressPage.vue'),
+      },
+      {
+        path: '/appointments',
+        component: () => import('pages/AppointmentsPage.vue'),
+      },
+      {
+        path: '/exercises',
+        component: () => import('pages/ExercisesPage.vue'),
         meta: { requiresAuth: true },
       },
       { path: '/profile', component: () => import('pages/ProfilePage.vue') },

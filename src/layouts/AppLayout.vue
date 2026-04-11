@@ -5,31 +5,47 @@
     </q-page-container>
 
     <nav class="bottom-nav">
-      <router-link class="nav-btn" to="/">
+      <button class="nav-btn" :class="{ active: $route.path === '/' }" @click="$router.push('/')">
         <span class="ni">🏠</span>
         <span class="nl">Home</span>
-      </router-link>
+      </button>
 
-      <router-link class="nav-btn" to="/appointments">
+      <button
+        class="nav-btn"
+        :class="{ active: $route.path === '/appointments' }"
+        @click="$router.push('/appointments')"
+      >
         <span class="ni">📅</span>
         <span class="nl">Visits</span>
-      </router-link>
+      </button>
 
-      <router-link class="nav-btn" to="/session">
+      <button
+        class="nav-btn"
+        :class="{ active: $route.path === '/progress' }"
+        @click="$router.push('/progress')"
+      >
         <span class="ni">📊</span>
         <span class="nl">Progress</span>
-      </router-link>
+      </button>
 
-      <router-link class="nav-btn" to="/exercises">
+      <button
+        class="nav-btn"
+        :class="{ active: $route.path === '/exercises' }"
+        @click="$router.push('/exercises')"
+      >
         <span class="ni">💪</span>
         <span class="nl">Exercises</span>
-      </router-link>
+      </button>
 
-      <router-link class="nav-btn" to="/profile">
+      <button
+        class="nav-btn"
+        :class="{ active: $route.path === '/profile' }"
+        @click="$router.push('/profile')"
+      >
         <span class="ni">👤</span>
         <span class="nl">Profile</span>
         <span class="dot"></span>
-      </router-link>
+      </button>
     </nav>
   </q-layout>
 </template>

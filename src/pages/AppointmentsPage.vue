@@ -1,7 +1,7 @@
 <template>
   <section class="screen">
     <div class="topbar">
-      <q-btn class="back-btn" flat round dense icon="arrow_back" to="/"></q-btn>
+      <q-btn class="back-btn" flat round dense icon="arrow_back" @click="$router.back()"></q-btn>
       <div>
         <div class="screen-title">Appointments</div>
         <div class="screen-sub">Manage your clinic visits</div>
