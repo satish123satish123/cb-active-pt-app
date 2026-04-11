@@ -11,11 +11,6 @@ const routes = [
     ],
   },
   {
-    path: '/session',
-    component: () => import('pages/SessionPage.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
     path: '/',
     component: () => import('layouts/AppLayout.vue'),
     meta: { requiresAuth: true },
@@ -23,6 +18,11 @@ const routes = [
       { path: '/', component: () => import('pages/DashboardPage.vue') },
       { path: '/report', component: () => import('pages/ReportPage.vue') },
       { path: '/appointments', component: () => import('pages/AppointmentsPage.vue') },
+      {
+        path: '/session',
+        component: () => import('pages/SessionPage.vue'),
+        meta: { requiresAuth: true },
+      },
       { path: '/profile', component: () => import('pages/ProfilePage.vue') },
       {
         path: '/profile/personal-info',
