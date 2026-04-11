@@ -1,12 +1,6 @@
 <template>
   <section class="screen">
-    <div class="topbar">
-      <q-btn class="back-btn" flat round dense icon="arrow_back" @click="$router.back()"></q-btn>
-      <div>
-        <div class="screen-title">My Exercises</div>
-        <div class="screen-sub">Your guided home recovery plan</div>
-      </div>
-    </div>
+    <ScreenHeader title="My Exercises" sub="Your guided home recovery plan" />
 
     <!-- Completion summary -->
     <div class="section">
@@ -22,10 +16,10 @@
           <div class="progress-rail"><div class="progress-fill" style="width: 68%"></div></div>
         </div>
         <div style="margin-top: 12px; display: flex; gap: 10px">
-          <button class="btn secondary small" @click="store.navigate('exercise-history')">
+          <button class="btn secondary small" @click="$router.push('/exercise-history')">
             Previous Days
           </button>
-          <button class="btn ghost small" @click="store.navigate('progress')">
+          <button class="btn ghost small" @click="$router.push('/progress')">
             Overall Progress
           </button>
         </div>
@@ -58,7 +52,7 @@
             v-for="ex in exerciseList"
             :key="ex.id"
             class="list-item press"
-            @click="store.openExercise(ex.id)"
+            @click="$router.push(`/exercise-player/${ex.id}`)"
           >
             <div class="exercise-row">
               <div class="thumb">{{ ex.icon }}</div>
@@ -108,6 +102,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import ScreenHeader from 'src/components/ScreenHeader.vue'
 
 const exerciseList = computed(() => getExerciseList())
 const exerciseFilter = ref('today')

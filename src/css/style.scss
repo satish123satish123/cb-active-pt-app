@@ -799,9 +799,9 @@ summary::-webkit-details-marker {
 
 /* ─── Responsive ────────────────────────────────────────── */
 @media (min-width: 461px) {
-  body {
-    padding: 16px 0;
-  }
+  // body {
+  //   padding: 16px 0;
+  // }
   #q-app {
     border-radius: 28px;
     box-shadow: 0 20px 60px rgba(16, 33, 42, 0.12);

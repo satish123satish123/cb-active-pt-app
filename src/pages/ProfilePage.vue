@@ -1,12 +1,6 @@
 <template>
   <section class="screen">
-    <div class="topbar">
-      <q-btn class="back-btn" flat round dense icon="arrow_back" @click="$router.back()"></q-btn>
-      <div>
-        <div class="screen-title">Profile & Settings</div>
-        <div class="screen-sub">Manage your account, records, and preferences</div>
-      </div>
-    </div>
+    <ScreenHeader title="Profile & Settings" sub="Manage your account, records, and preferences" />
 
     <ProfileHero />
     <PatientDetails />
@@ -21,6 +15,7 @@
 </template>
 
 <script setup>
+import ScreenHeader from 'src/components/ScreenHeader.vue'
 import ProfileHero from 'src/components/profile/ProfileHero.vue'
 import PatientDetails from 'src/components/profile/PatientDetails.vue'
 import HealthInformation from 'src/components/profile/HealthInformation.vue'

@@ -34,7 +34,9 @@
                   </div>
                 </div>
               </div>
-              <button class="btn primary small">Resume Session</button>
+              <button class="btn primary small" @click="$router.push('/exercises')">
+                Resume Session
+              </button>
             </div>
             <div class="todo-item">
               <div class="todo-left">
@@ -51,7 +53,9 @@
                   </div>
                 </div>
               </div>
-              <button class="btn secondary small">View</button>
+              <button class="btn secondary small" @click="$router.push('/session-timeline')">
+                View
+              </button>
             </div>
           </div>
         </div>
@@ -82,7 +86,7 @@
             <button
               class="btn"
               style="background: #fff; color: var(--brand)"
-              @click="store.navigate('support')"
+              @click="$router.push('/support')"
             >
               Request Reschedule
             </button>
@@ -110,8 +114,8 @@
             </div>
           </div>
           <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
-            <button class="btn secondary">View Progress</button>
-            <button class="btn ghost">View Plan</button>
+            <button class="btn secondary" @click="$router.push('/progress')">View Progress</button>
+            <button class="btn ghost" @click="$router.push('/treatment-plan')">View Plan</button>
           </div>
         </div>
       </div>
@@ -138,8 +142,10 @@
             </div>
           </div>
           <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
-            <button class="btn secondary">View Exercise History</button>
-            <button class="btn ghost">Open Exercises</button>
+            <button class="btn secondary" @click="$router.push('/exercise-history')">
+              View Exercise History
+            </button>
+            <button class="btn ghost" @click="$router.push('/exercises')">Open Exercises</button>
           </div>
         </div>
       </div>
@@ -147,12 +153,12 @@
       <!-- Quick Tiles -->
       <div class="section">
         <div class="grid-2">
-          <button class="tile">
+          <button class="tile" @click="$router.push('/payments-packages')">
             <div class="tile-icon">📝</div>
             <div class="tile-title">Due || Advance ₹1,000</div>
             <div class="tile-sub">Manage your Payments/packages</div>
           </button>
-          <button class="tile">
+          <button class="tile" @click="$router.push('/education')">
             <div class="tile-icon">📝</div>
             <div class="tile-title">Do's and Don'ts</div>
             <div class="tile-sub">Care guidance for recovery</div>
