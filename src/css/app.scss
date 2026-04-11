@@ -1,7 +1,7 @@
 // app global css in SCSS form
 
 body {
-  background-color: #e2e8f0; 
+  background-color: var(--bg);
   background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
   background-size: 20px 20px;
 }
@@ -21,7 +21,7 @@ body {
   height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
-  background-color: #fff;
+  background-color: var(--bg);
   width: 100%;
   max-width: 100%;
   box-shadow: none;
@@ -31,7 +31,7 @@ body {
 @media (min-width: 1024px) {
   .desktop-constrained {
     max-width: 800px; /* Tablet width on large monitors */
-    height: 95vh;     /* Slight top/bottom margin for floating frame effect on desktop */
+    height: 95vh; /* Slight top/bottom margin for floating frame effect on desktop */
     border-radius: 24px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   }
@@ -39,6 +39,6 @@ body {
 
 @media (max-width: 1023px) {
   body {
-    background: white; /* No dashed pattern needed on native mobile/tablet size */
+    background: var(--bg); /* No dashed pattern needed on native mobile/tablet size */
   }
 }

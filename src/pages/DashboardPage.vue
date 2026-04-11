@@ -1,118 +1,212 @@
 <template>
-  <q-page class="dashboard-page q-pb-xl">
-    <div v-if="loading" class="q-px-md" style="padding-top: 14px">
-      <div v-for="n in 3" :key="n" class="dashboard-skeleton q-mb-md">
-        <div class="dashboard-skeleton-bar"></div>
-        <div class="dashboard-skeleton-body">
-          <div class="skeleton-line" style="width: 56%; height: 14px; margin-bottom: 8px"></div>
-          <div class="skeleton-line" style="width: 38%; height: 10px; margin-bottom: 16px"></div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
-            <div class="skeleton-line" style="height: 48px; border-radius: 12px"></div>
-            <div class="skeleton-line" style="height: 48px; border-radius: 12px"></div>
+  <section class="screen">
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-row">
+        <div>
+          <div class="subtle">Welcome back,</div>
+          <h5 class="q-ma-none text-weight-bold">{{ authStore.user.username }}</h5>
+        </div>
+        <button class="icon-btn" @click="$router.push('/support')">
+          🔔<span class="pill-count">3</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="stack">
+      <!-- Today's Tasks -->
+      <div class="section">
+        <div class="card">
+          <div class="title-row">
+            <div>
+              <div class="eyebrow">Today</div>
+              <div class="title">Your recovery tasks</div>
+              <div class="muted">Keep today simple. Focus on the next right step.</div>
+            </div>
+            <span class="badge brand">On Track</span>
+          </div>
+          <div class="today-main">
+            <div class="todo-item">
+              <div class="todo-left">
+                <div class="todo-icon">💪</div>
+                <div>
+                  <div class="todo-label">{{ exercises_data.pending_count }} exercises pending</div>
+                  <div class="todo-sub">
+                    Approx. {{ exercises_data.pending_exercises_time }} minutes left for today
+                  </div>
+                </div>
+              </div>
+              <button class="btn primary small" @click="$router.push('/exercises')">
+                Resume Session
+              </button>
+            </div>
+            <div class="todo-item">
+              <div class="todo-left">
+                <div class="todo-icon">📅</div>
+                <div>
+                  <div class="todo-label">Session timeline</div>
+                  <div class="todo-sub">
+                    {{ treatment_sessions_data?.treated_sessions }}/{{
+                      treatment_sessions_data?.total_sessions
+                    }}
+                    Sessions Done, Next Appointment
+                    {{ treatment_sessions_data?.next_appointment_details?.date }},
+                    {{ treatment_sessions_data?.next_appointment_details?.s_time }}
+                  </div>
+                </div>
+              </div>
+              <button class="btn secondary small" @click="$router.push('/session-timeline')">
+                View
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- Next Appointment -->
+      <div class="section">
+        <div class="card appointment">
+          <div class="title-row">
+            <div>
+              <div class="eyebrow" style="color: rgba(255, 255, 255, 0.72)">Next Appointment</div>
+              <div class="title" style="color: #fff; font-size: 24px">Tomorrow, 10:30 AM</div>
+              <div class="muted">April 10, 2026 With Dr. Sharma</div>
+            </div>
+            <span class="badge" style="background: rgba(255, 255, 255, 0.16); color: #fff"
+              >CB Physiotherapy - GK II</span
+            >
+          </div>
+          <div>
+            <div class="appt-box">
+              <div class="label">Treatment Planned</div>
+              <div class="value">
+                • TENS • SOFT TISSUE MOBILISATION • JOINT MOBILISATION • MAITLAND
+              </div>
+            </div>
+          </div>
+          <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+            <button
+              class="btn"
+              style="background: #fff; color: var(--brand)"
+              @click="$router.push('/support')"
+            >
+              Request Reschedule
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recovery Progress -->
+      <div class="section">
+        <div class="card soft">
+          <div class="title-row">
+            <div>
+              <div class="title">Recovery progress</div>
+              <div class="muted">5/8 Sessions Completed • 62% Recovery</div>
+            </div>
+            <span class="badge success">Doing Well</span>
+          </div>
+          <div class="progress-wrap">
+            <div class="split">
+              <span class="muted">Milestones completed</span>
+              <strong>3/5</strong>
+            </div>
+            <div class="progress-rail" style="margin-top: 8px">
+              <div class="progress-fill" :style="`width:65%`"></div>
+            </div>
+          </div>
+          <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+            <button class="btn secondary" @click="$router.push('/progress')">View Progress</button>
+            <button class="btn ghost" @click="$router.push('/treatment-plan')">View Plan</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Home Exercise Progress -->
+      <div class="section">
+        <div class="card">
+          <div class="title-row">
+            <div>
+              <div class="title">Home exercise progress</div>
+              <div class="muted">
+                Track previous days, completion history, and overall adherence.
+              </div>
+            </div>
+            <span class="badge brand">68% Done</span>
+          </div>
+          <div class="progress-wrap">
+            <div class="split">
+              <span class="muted">Program adherence</span>
+              <strong>14/20 days completed</strong>
+            </div>
+            <div class="progress-rail" style="margin-top: 8px">
+              <div class="progress-fill" :style="`width:70%`"></div>
+            </div>
+          </div>
+          <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+            <button class="btn secondary" @click="$router.push('/exercise-history')">
+              View Exercise History
+            </button>
+            <button class="btn ghost" @click="$router.push('/exercises')">Open Exercises</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Tiles -->
+      <div class="section">
+        <div class="grid-2">
+          <button class="tile" @click="$router.push('/payments-packages')">
+            <div class="tile-icon">📝</div>
+            <div class="tile-title">Due || Advance ₹1,000</div>
+            <div class="tile-sub">Manage your Payments/packages</div>
+          </button>
+          <button class="tile" @click="$router.push('/education')">
+            <div class="tile-icon">📝</div>
+            <div class="tile-title">Do's and Don'ts</div>
+            <div class="tile-sub">Care guidance for recovery</div>
+          </button>
+        </div>
+      </div>
+
+      <div class="foot-gap"></div>
     </div>
-    <div v-else-if="error" class="q-pa-lg text-center text-negative">{{ error }}</div>
-
-    <!-- Toggle Content -->
-    <template v-else-if="hasExercises">
-      <DashboardExerciseView :dashboard-data="dashboardData" />
-    </template>
-    <template v-else>
-      <DashboardPlanView />
-    </template>
-  </q-page>
+  </section>
 </template>
-
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import DashboardExerciseView from 'src/components/DashboardExerciseView.vue'
-import DashboardPlanView from 'src/components/DashboardPlanView.vue'
 import { useAuthStore } from 'src/stores/authStore'
 import { api } from 'src/boot/axios'
+import { ref, onMounted } from 'vue'
 
 const authStore = useAuthStore()
 
-const loading = ref(true)
-const error = ref('')
-const dashboardData = ref(null)
+const exercises_data = ref([])
+const treatment_sessions_data = ref(null)
 
-const hasExercises = computed(() => {
-  const details = dashboardData.value?.performance_tracking_details
-  return Array.isArray(details) && details.length > 0
-})
-
-const fetchDashboardData = async () => {
-  loading.value = true
-  error.value = ''
+const getRecoveryTasks = async () => {
   try {
     const patientId = authStore.user?.patient
     const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
 
-    const response = await api.post('getPatientPhysioGymSubscriptionDetails', {
+    const response = await api.post('get_recovery_tasks', {
       patient_id: patientId,
       hospital_id: hospitalId,
     })
 
     if (response.data?.status === 'success') {
-      dashboardData.value = response.data
+      exercises_data.value = response.data.exercises_data
+      treatment_sessions_data.value = response.data.treatment_sessions_data
     } else {
-      dashboardData.value = null
-      error.value = response.data?.message || 'Failed to load dashboard data.'
+      exercises_data.value = []
+      treatment_sessions_data.value = null
     }
   } catch (e) {
-    dashboardData.value = null
-    error.value = e.response?.data?.message || 'Failed to load dashboard data.'
-  } finally {
-    loading.value = false
+    exercises_data.value = []
+    treatment_sessions_data.value = null
+    console.error(e)
   }
 }
 
 onMounted(() => {
-  fetchDashboardData()
+  getRecoveryTasks()
 })
 </script>
-
-<style scoped>
-.dashboard-page {
-  background: linear-gradient(170deg, #eaf8f3 0%, #f4fbf8 50%, #edf9f5 100%);
-  min-height: 100vh;
-  position: relative;
-}
-
-@keyframes skeletonShimmer {
-  0% {
-    background-position: -400px 0;
-  }
-  100% {
-    background-position: 400px 0;
-  }
-}
-
-.dashboard-skeleton {
-  border-radius: 20px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1.5px solid rgba(0, 0, 0, 0.055);
-  box-shadow: 0 3px 14px rgba(10, 126, 110, 0.07);
-}
-
-.dashboard-skeleton-bar {
-  height: 3.5px;
-  background: linear-gradient(90deg, #0c9b80, #3dba8a, #0c9b80);
-  background-size: 200% auto;
-  animation: skeletonShimmer 1.4s ease infinite;
-}
-
-.dashboard-skeleton-body {
-  padding: 16px;
-}
-
-.skeleton-line {
-  border-radius: 8px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 800px 100%;
-  animation: skeletonShimmer 1.4s ease infinite;
-}
-</style>

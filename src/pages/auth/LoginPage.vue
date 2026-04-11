@@ -156,7 +156,7 @@
               v-for="i in 4"
               :key="i"
               class="pin-dot"
-              :class="i <= loginPin.length ? 'filled' : 'empty'"
+              :class="i <= loginPin.length ? 'filled' : 'empty-dot'"
             ></div>
           </div>
         </div>

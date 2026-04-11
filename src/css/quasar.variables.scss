@@ -12,14 +12,41 @@
 // to match your app's branding.
 // Tip: Use the "Theme Builder" on Quasar's documentation website.
 
-$primary: #1976d2;
-$secondary: #26a69a;
-$accent: #9c27b0;
+$primary: #0a7e6e;
+$secondary: #0f9886;
+$accent: #d8f1eb;
 
-$dark: #1d1d1d;
-$dark-page: #121212;
+$dark: #10212a;
+$dark-page: #f4f8f8;
 
-$positive: #21ba45;
-$negative: #c10015;
-$info: #31ccec;
-$warning: #f2c037;
+$positive: #1f8a4d;
+$negative: #d9485f;
+$info: #2a7da8;
+$warning: #c78810;
+
+/* ─── Design Tokens ─────────────────────────────────────── */
+:root {
+  --bg: #f4f8f8;
+  --bg-soft: #eef5f5;
+  --card: #ffffff;
+  --card-2: #f8fbfb;
+  --text: #10212a;
+  --text-2: #5a6c76;
+  --text-3: #8da0aa;
+  --line: #dce7ea;
+  --brand: #0a7e6e;
+  --brand-2: #0f9886;
+  --brand-3: #d8f1eb;
+  --danger: #d9485f;
+  --warning: #c78810;
+  --success: #1f8a4d;
+  --shadow-sm: 0 6px 16px rgba(16, 33, 42, 0.06);
+  --shadow-md: 0 14px 34px rgba(16, 33, 42, 0.1);
+  --shadow-lg: 0 22px 50px rgba(16, 33, 42, 0.14);
+  --radius-xl: 26px;
+  --radius-lg: 20px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --grad: linear-gradient(135deg, #0a7e6e 0%, #109885 100%);
+  --grad-soft: linear-gradient(135deg, #edf9f6 0%, #e5f3f5 100%);
+}

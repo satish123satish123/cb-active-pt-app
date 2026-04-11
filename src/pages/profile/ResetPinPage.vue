@@ -1,24 +1,21 @@
 <template>
-  <q-page class="q-pa-md q-pb-xl premium-layout" style="background: #ffffff;">
-
-    <!-- Top Header -->
-    <div class="row items-center q-mb-xl q-mt-sm">
-      <q-btn flat round dense icon="arrow_back_ios_new" color="dark" class="action-btn q-mr-md" to="/profile" />
-      <div class="text-h5 font-sora text-weight-bolder tracking-tight" style="color: #0d2922;">Reset PIN</div>
+  <section class="screen">
+    <ScreenHeader title="Reset PIN" sub="Create a new personal PIN to securely access your app." />
+    <div class="section">
+      <div class="card">
+        <SetPin
+          icon="🔑"
+          title="Reset Personal PIN"
+          subtitle="Create a new personal PIN to securely access your app."
+          :show-success-screen="true"
+          :submit-function="handlePinSubmit"
+          successButtonText="Go to Home"
+          successSubtitle="Your PIN has been updated successfully"
+          @success-action="goToDashboard"
+        />
+      </div>
     </div>
-
-    <SetPin
-      icon="🔑"
-      title="Reset Personal PIN"
-      subtitle="Create a new personal PIN to securely access your app."
-      :show-success-screen="true"
-      :submit-function="handlePinSubmit"
-      successButtonText="Go to Home"
-      successSubtitle="Your PIN has been updated successfully"
-      @success-action="goToDashboard"
-    />
-
-  </q-page>
+  </section>
 </template>
 
 <script setup>
@@ -27,6 +24,7 @@ import { useAuthStore } from 'src/stores/authStore'
 import { api } from 'src/boot/axios'
 import { Notify } from 'quasar'
 import SetPin from 'src/components/SetPin.vue'
+import ScreenHeader from 'src/components/ScreenHeader.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -51,7 +49,10 @@ const handlePinSubmit = async (pin) => {
       return { success: false, message: response.data?.message || 'Reset failed. Try again.' }
     }
   } catch (e) {
-    return { success: false, message: e.response?.data?.message || e.message || 'Failed to reset PIN. Try again.' }
+    return {
+      success: false,
+      message: e.response?.data?.message || e.message || 'Failed to reset PIN. Try again.',
+    }
   }
 }
 
@@ -63,7 +64,7 @@ const goToDashboard = () => {
 <style scoped>
 .action-btn {
   background: white;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  border: 1px solid rgba(0,0,0,0.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.02);
 }
 </style>
