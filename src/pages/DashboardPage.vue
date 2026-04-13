@@ -36,9 +36,7 @@
                   </div>
                 </div>
               </div>
-              <button class="btn primary small" @click="$router.push('/exercises')">
-                Resume Session
-              </button>
+              <button class="btn primary small" @click="$router.push('/exercises')">View</button>
             </div>
             <div class="todo-item">
               <div class="todo-left">
@@ -162,8 +160,8 @@
           </button>
           <button class="tile" @click="$router.push('/education')">
             <div class="tile-icon">📝</div>
-            <div class="tile-title">Do's and Don'ts</div>
-            <div class="tile-sub">Care guidance for recovery</div>
+            <div class="tile-title">Recovery Guide</div>
+            <div class="tile-sub">Condition-based care guidance for each recovery phase</div>
           </button>
         </div>
       </div>

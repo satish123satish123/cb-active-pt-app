@@ -1,44 +1,66 @@
 // app global css in SCSS form
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
 
 body {
-  background-color: var(--bg);
-  background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
-  background-size: 20px 20px;
+  -webkit-font-smoothing: antialiased;
 }
 
 #q-app {
-  display: flex;
-  justify-content: center;
-  align-items: center;
   width: 100%;
+  max-width: 460px;
   min-height: 100vh;
-  min-height: 100dvh;
+  margin: 0 auto;
+  background: var(--bg);
+  position: relative;
+  overflow-x: hidden;
 }
-
 /* App window constraints */
 .desktop-constrained {
-  height: 100vh;
-  height: 100dvh;
-  margin: 0 auto;
-  overflow: hidden;
-  background-color: var(--bg);
   width: 100%;
-  max-width: 100%;
-  box-shadow: none;
+  max-width: 460px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: var(--bg);
+  position: relative;
+  overflow-x: hidden;
 }
 
 /* On desktop monitors, constrain to a comfortable tablet size instead of stretching endlessly */
-@media (min-width: 1024px) {
-  .desktop-constrained {
-    max-width: 800px; /* Tablet width on large monitors */
-    height: 95vh; /* Slight top/bottom margin for floating frame effect on desktop */
-    border-radius: 24px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  }
-}
+// @media (min-width: 1024px) {
+//   .desktop-constrained {
+//     max-width: 800px;
+//     height: 95vh;
+//     border-radius: 24px;
+//     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+//   }
+// }
 
-@media (max-width: 1023px) {
-  body {
-    background: var(--bg); /* No dashed pattern needed on native mobile/tablet size */
-  }
-}
+// @media (max-width: 1023px) {
+//   body {
+//     background: var(--bg);
+//   }
+// }
