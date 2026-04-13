@@ -5,8 +5,8 @@
       sub="A clear record of your assessment, treatment, and progress reviews"
     />
 
-    <q-card class="bg-grey-2">
-      <q-card-section>
+    <q-card class="card soft">
+      <q-card-section class="q-pa-none">
         <q-timeline color="teal-8" class="q-pl-sm">
           <q-timeline-entry v-for="(s, index) in sessions" :key="index">
             <q-card flat bordered class="session-card q-mb-md" :class="`border-${s.kind}`">
@@ -89,14 +89,12 @@
                     <div
                       v-for="(d, dIdx) in s.diagnoses"
                       :key="'diag-' + dIdx"
-                      class="diagnosis-card bg-grey-1"
+                      class="diagnosis-card"
                     >
-                      <div
-                        class="text-caption text-weight-bold text-blue-grey-6 text-uppercase q-mb-xs"
-                      >
+                      <div class="text-caption text-weight-bold text-blue-grey-6 text-uppercase">
                         {{ d.label }}
                       </div>
-                      <div class="text-subtitle1 text-weight-bold text-grey-10 q-mb-xs">
+                      <div class="text-subtitle1 text-weight-bold text-grey-10">
                         {{ d.name }}
                       </div>
                       <div class="text-body2 text-grey-7">{{ d.inference }}</div>
@@ -110,13 +108,25 @@
                       SMART Goals
                     </div>
                     <div class="goal-list">
-                      <div
-                        v-for="(goal, gIdx) in s.smartGoals"
-                        :key="'g-' + gIdx"
-                        class="row no-wrap items-start q-mb-xs"
-                      >
-                        <q-icon name="check" color="green" size="xs" class="q-mr-sm q-mt-xs" />
-                        <div class="text-body2">{{ goal }}</div>
+                      <div class="goal-item">
+                        <div class="goal-mark">✓</div>
+                        <div class="goal-text">
+                          Reduce pain during daily reaching and dressing activities.
+                        </div>
+                      </div>
+
+                      <div class="goal-item">
+                        <div class="goal-mark">✓</div>
+                        <div class="goal-text">
+                          Improve shoulder range of motion for overhead function.
+                        </div>
+                      </div>
+
+                      <div class="goal-item">
+                        <div class="goal-mark">✓</div>
+                        <div class="goal-text">
+                          Restore strength and control for regular work and home tasks.
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -281,8 +291,18 @@ const sessions = ref([
         inference:
           'Findings suggest overload of the rotator cuff with pain during active elevation and resisted testing.',
       },
+      {
+        label: 'Secondary Diagnosis',
+        name: 'Scapular Dyskinesis',
+        inference:
+          'Scapular movement pattern showed reduced control, contributing to poor shoulder mechanics during overhead activity.',
+      },
     ],
-    smartGoals: [],
+    smartGoals: [
+      'Reduce pain during daily reaching and dressing activities.',
+      'Improve shoulder range of motion for overhead function.',
+      'Restore strength and control for regular work and home tasks.',
+    ],
   },
 ])
 </script>
@@ -308,7 +328,7 @@ const sessions = ref([
 }
 
 .session-card {
-  border-radius: 16px;
+  /* border-radius: 16px; */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
   border: 1px solid #eef0f2;
 }
@@ -345,6 +365,7 @@ const sessions = ref([
   border: 1px solid #e8e8e8;
   border-radius: 12px;
   padding: 16px;
+  background: #fbfdfd;
 }
 
 .w-100 {
@@ -359,5 +380,48 @@ const sessions = ref([
 
 .milestone-header {
   padding: 12px 16px;
+}
+
+:deep(.q-timeline--dense--right .q-timeline__entry) {
+  padding-left: 20px;
+}
+.card {
+  padding: 10px;
+  margin: 10px;
+}
+.goal-list {
+  display: grid;
+  gap: 8px;
+}
+.goal-item {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: #f8fbfb;
+  border: 1px solid #e3ebee;
+}
+
+.goal-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: #e9f5f1;
+  color: var(--brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.goal-text {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  font-weight: 400;
 }
 </style>
