@@ -6,107 +6,105 @@
     />
 
     <div class="q-px-md q-py-sm">
-      <q-card flat bordered class="rounded-16 q-mb-md">
-        <q-card-section>
-          <div class="row justify-between items-start q-mb-lg">
-            <div class="col">
-              <div class="text-h6 text-weight-bold text-grey-10">Treatment phases</div>
-              <div class="text-caption text-grey-7 q-mt-xs" style="line-height: 1.3">
-                Your care progresses step by step, with the current phase highlighted.
-              </div>
+      <div flat bordered class="card soft q-mb-md">
+        <div class="row justify-between items-start q-mb-lg">
+          <div class="col">
+            <div class="text-h6 text-weight-bold text-grey-10">Treatment phases</div>
+            <div class="text-caption text-grey-7 q-mt-xs" style="line-height: 1.3">
+              Your care progresses step by step, with the current phase highlighted.
             </div>
-            <q-chip
-              size="sm"
-              class="bg-teal-1 text-teal-8 text-weight-bold q-ma-none q-mt-xs q-px-sm"
-              square
-              style="border-radius: 12px"
-            >
-              {{ totalSessions }} Total Sessions
-            </q-chip>
           </div>
+          <q-chip
+            size="sm"
+            class="bg-teal-1 text-teal-8 text-weight-bold q-ma-none q-mt-xs q-px-sm"
+            square
+            style="border-radius: 12px"
+          >
+            {{ totalSessions }} Total Sessions
+          </q-chip>
+        </div>
 
-          <q-timeline class="q-pl-sm custom-timeline">
-            <q-timeline-entry
-              v-for="(phase, index) in treatmentPhases"
-              :key="index"
-              :color="phase.dotColor"
-            >
-              <q-card flat bordered class="phase-card q-mb-md" :class="phase.cardClass">
-                <q-card-section class="q-pa-md">
-                  <div class="row justify-between items-start q-mb-md">
-                    <div>
-                      <div class="text-subtitle1 text-weight-bold text-grey-10 leading-tight">
-                        {{ phase.range }}
-                      </div>
-                      <div class="text-caption text-grey-7">{{ phase.frequency }}</div>
+        <q-timeline class="q-pl-sm custom-timeline">
+          <q-timeline-entry
+            v-for="(phase, index) in treatmentPhases"
+            :key="index"
+            :color="phase.dotColor"
+          >
+            <q-card flat bordered class="phase-card q-mb-md" :class="phase.cardClass">
+              <q-card-section class="q-pa-md">
+                <div class="row justify-between items-start q-mb-md">
+                  <div>
+                    <div class="text-subtitle1 text-weight-bold text-grey-10 leading-tight">
+                      {{ phase.range }}
                     </div>
-                    <q-chip
-                      size="sm"
-                      square
-                      class="text-weight-bold q-ma-none"
-                      :class="phase.statusClass"
-                      style="border-radius: 12px; font-size: 11px"
-                    >
-                      {{ phase.status }}
-                    </q-chip>
+                    <div class="text-caption text-grey-7">{{ phase.frequency }}</div>
                   </div>
+                  <q-chip
+                    size="sm"
+                    square
+                    class="text-weight-bold q-ma-none"
+                    :class="phase.statusClass"
+                    style="border-radius: 12px; font-size: 11px"
+                  >
+                    {{ phase.status }}
+                  </q-chip>
+                </div>
 
-                  <!-- Milestones -->
-                  <div class="metric-box q-mb-sm">
+                <!-- Milestones -->
+                <div class="metric-box q-mb-sm">
+                  <div
+                    class="text-caption text-weight-bold text-blue-grey-6 text-uppercase q-mb-sm letter-spacing-1"
+                    style="font-size: 10px"
+                  >
+                    Milestones
+                  </div>
+                  <div class="milestones-list">
                     <div
-                      class="text-caption text-weight-bold text-blue-grey-6 text-uppercase q-mb-sm letter-spacing-1"
-                      style="font-size: 10px"
+                      class="row no-wrap items-start q-mb-sm"
+                      v-for="(m, mIdx) in phase.milestones"
+                      :key="'m-' + mIdx"
+                      :class="{ 'q-mb-none': mIdx === phase.milestones.length - 1 }"
                     >
-                      Milestones
-                    </div>
-                    <div class="milestones-list">
-                      <div
-                        class="row no-wrap items-start q-mb-sm"
-                        v-for="(m, mIdx) in phase.milestones"
-                        :key="'m-' + mIdx"
-                        :class="{ 'q-mb-none': mIdx === phase.milestones.length - 1 }"
-                      >
-                        <q-icon
-                          name="circle"
-                          :color="phase.dotColor"
-                          size="8px"
-                          class="q-mr-sm q-mt-xs"
-                        />
-                        <div>
-                          <div class="text-subtitle2 text-weight-bold text-teal-10 leading-tight">
-                            {{ m.title }}
-                          </div>
-                          <div
-                            class="text-caption text-grey-7"
-                            style="font-size: 12px; margin-top: 2px"
-                          >
-                            Base: {{ m.base }} · Target: {{ m.target }}
-                          </div>
+                      <q-icon
+                        name="circle"
+                        :color="phase.dotColor"
+                        size="8px"
+                        class="q-mr-sm q-mt-xs"
+                      />
+                      <div>
+                        <div class="text-subtitle2 text-weight-bold text-teal-10 leading-tight">
+                          {{ m.title }}
+                        </div>
+                        <div
+                          class="text-caption text-grey-7"
+                          style="font-size: 12px; margin-top: 2px"
+                        >
+                          Base: {{ m.base }} · Target: {{ m.target }}
                         </div>
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  <!-- Modalities -->
-                  <div class="metric-box">
-                    <div
-                      class="text-caption text-weight-bold text-blue-grey-6 text-uppercase q-mb-sm letter-spacing-1"
-                      style="font-size: 10px"
-                    >
-                      Modalities
-                    </div>
-                    <div class="modalities-container">
-                      <div v-for="mod in phase.modalities" :key="mod" class="modality-chip">
-                        <span class="text-blue-grey-8">{{ mod }}</span>
-                      </div>
+                <!-- Modalities -->
+                <div class="metric-box">
+                  <div
+                    class="text-caption text-weight-bold text-blue-grey-6 text-uppercase q-mb-sm letter-spacing-1"
+                    style="font-size: 10px"
+                  >
+                    Modalities
+                  </div>
+                  <div class="modalities-container">
+                    <div v-for="mod in phase.modalities" :key="mod" class="modality-chip">
+                      <span class="text-blue-grey-8">{{ mod }}</span>
                     </div>
                   </div>
-                </q-card-section>
-              </q-card>
-            </q-timeline-entry>
-          </q-timeline>
-        </q-card-section>
-      </q-card>
+                </div>
+              </q-card-section>
+            </q-card>
+          </q-timeline-entry>
+        </q-timeline>
+      </div>
 
       <q-card flat bordered class="rounded-16 q-mb-xl clinical-summary-card">
         <q-card-section class="q-pa-lg">
@@ -136,9 +134,9 @@
 
         <q-separator color="grey-3" />
 
-        <q-card-section class="q-pa-lg q-pt-lg">
-          <q-card flat bordered class="rounded-12 q-mb-lg">
-            <q-card-section class="q-pa-md">
+        <q-card-section class="q-pa-md q-pt-lg">
+          <q-card flat bordered class="rounded-12 q-mb-lg condition-panel">
+            <q-card-section class="q-pa-none">
               <div
                 class="text-caption text-weight-bold text-blue-grey-6 text-uppercase q-mb-sm letter-spacing-1"
                 style="font-size: 10px"
@@ -152,7 +150,7 @@
           </q-card>
 
           <div class="row q-col-gutter-sm">
-            <div class="col-12 col-sm-6" v-if="primaryDiagnosis">
+            <div class="col-6 col-sm-6" v-if="primaryDiagnosis">
               <q-card flat bordered class="rounded-12 h-100">
                 <q-card-section class="q-pa-md">
                   <div
@@ -170,7 +168,7 @@
                 </q-card-section>
               </q-card>
             </div>
-            <div class="col-12 col-sm-6" v-if="secondaryDiagnosis">
+            <div class="col-6 col-sm-6" v-if="secondaryDiagnosis">
               <q-card flat bordered class="rounded-12 h-100">
                 <q-card-section class="q-pa-md">
                   <div
@@ -302,8 +300,8 @@ const secondaryDiagnosis = ref({
   padding: 4px 10px;
   font-size: 11px;
   color: #555;
-  background-color: #f8f9fa;
-  font-weight: 500;
+  background-color: #f0f6f6;
+  font-weight: 700;
   display: inline-block;
 }
 .modalities-container {
@@ -320,11 +318,29 @@ const secondaryDiagnosis = ref({
   font-size: 16px;
 }
 .metric-box {
+  background: #f8fbfb;
   border: 1px solid #eef0f2;
   border-radius: 12px;
   padding: 12px 16px;
 }
 .clinical-summary-card {
   border-top: 5px solid #00605a !important;
+  background: linear-gradient(180deg, #fcfefe 0%, #f3f8f8 100%);
+}
+:deep(.custom-timeline .q-timeline__dot) {
+  background-color: #f8fbfb !important;
+}
+:deep(.q-timeline--dense--right .q-timeline__entry) {
+  padding-left: 20px;
+}
+:deep(.bg-teal-1) {
+  background: linear-gradient(180deg, #f6fcfa 0%, #eef8f5 100%) !important;
+}
+.condition-panel {
+  padding: 15px 16px;
+  border-radius: 18px;
+  border: 1px solid #dfe9ec;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfb 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 </style>
