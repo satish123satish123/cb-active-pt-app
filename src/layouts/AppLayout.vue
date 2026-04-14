@@ -4,7 +4,7 @@
   <router-view />
   <!-- </q-page-container> -->
 
-  <nav class="bottom-nav">
+  <nav class="bottom-nav" v-if="!$route.path.startsWith('/exercise-player')">
     <button class="nav-btn" :class="{ active: $route.path === '/' }" @click="$router.push('/')">
       <span class="ni">🏠</span>
       <span class="nl">Home</span>
