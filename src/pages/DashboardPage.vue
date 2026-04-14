@@ -26,7 +26,7 @@
             <span class="badge brand">On Track</span>
           </div>
           <div class="today-main">
-            <div class="todo-item">
+            <div v-if="exercises_data.total_exercises > 0" class="todo-item">
               <div class="todo-left">
                 <div class="todo-icon">💪</div>
                 <div>
@@ -38,7 +38,18 @@
               </div>
               <button class="btn primary small" @click="$router.push('/exercises')">View</button>
             </div>
-            <div class="todo-item">
+            <div v-else class="todo-item">
+              <div class="todo-left">
+                <div class="todo-icon">💪</div>
+                <div>
+                  <div class="todo-label">Get Started with exercises</div>
+                  <div class="todo-sub">Connect with your therapist to get started</div>
+                </div>
+              </div>
+              <button class="btn primary small" @click="$router.push('/support')">Connect</button>
+            </div>
+
+            <div v-if="treatment_sessions_data?.total_sessions > 0" class="todo-item">
               <div class="todo-left">
                 <div class="todo-icon">📅</div>
                 <div>
@@ -47,9 +58,12 @@
                     {{ treatment_sessions_data?.treated_sessions }}/{{
                       treatment_sessions_data?.total_sessions
                     }}
-                    Sessions Done, Next Appointment
-                    {{ treatment_sessions_data?.next_appointment_details?.date }},
-                    {{ treatment_sessions_data?.next_appointment_details?.s_time }}
+                    Sessions Done.
+                    <span v-if="treatment_sessions_data?.next_appointment_details">
+                      Next Appointment
+                      {{ treatment_sessions_data?.next_appointment_details?.date }},
+                      {{ treatment_sessions_data?.next_appointment_details?.s_time }}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -57,12 +71,22 @@
                 View
               </button>
             </div>
+            <div v-else class="todo-item">
+              <div class="todo-left">
+                <div class="todo-icon">📅</div>
+                <div>
+                  <div class="todo-label">Get Started with sessions</div>
+                  <div class="todo-sub">Connect with your therapist to get started</div>
+                </div>
+              </div>
+              <button class="btn primary small" @click="$router.push('/support')">Connect</button>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Next Appointment -->
-      <div class="section">
+      <div v-if="treatment_sessions_data?.next_appointment_details" class="section">
         <div class="card appointment">
           <div class="title-row">
             <div>
@@ -95,22 +119,34 @@
       </div>
 
       <!-- Recovery Progress -->
-      <div class="section">
+      <div v-if="recovery_progress_data?.total_sessions > 0" class="section">
         <div class="card soft">
           <div class="title-row">
             <div>
               <div class="title">Recovery progress</div>
-              <div class="muted">5/8 Sessions Completed • 62% Recovery</div>
+              <div class="muted">
+                {{ recovery_progress_data?.treated_sessions }}/{{
+                  recovery_progress_data?.total_sessions
+                }}
+                Sessions Completed • {{ recovery_progress_data?.recovery_percentage }}% Recovery
+              </div>
             </div>
             <span class="badge success">Doing Well</span>
           </div>
           <div class="progress-wrap">
             <div class="split">
               <span class="muted">Milestones completed</span>
-              <strong>3/5</strong>
+              <strong
+                >{{ recovery_progress_data?.milestones_completed || 0 }}/{{
+                  recovery_progress_data?.total_milestones || 0
+                }}</strong
+              >
             </div>
             <div class="progress-rail" style="margin-top: 8px">
-              <div class="progress-fill" :style="`width:65%`"></div>
+              <div
+                class="progress-fill"
+                :style="`width:${recovery_progress_data?.overall_milestones_progress_percentage || 0}%`"
+              ></div>
             </div>
           </div>
           <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
@@ -179,6 +215,7 @@ const authStore = useAuthStore()
 
 const exercises_data = ref([])
 const treatment_sessions_data = ref(null)
+const recovery_progress_data = ref(null)
 
 const getRecoveryTasks = async () => {
   try {
@@ -204,7 +241,29 @@ const getRecoveryTasks = async () => {
   }
 }
 
+const getRecoveryProgress = async () => {
+  try {
+    const patientId = authStore.user?.patient
+    const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
+
+    const response = await api.post('getRecoveryProgress', {
+      patient_id: patientId,
+      hospital_id: hospitalId,
+    })
+
+    if (response.data?.status === 'success') {
+      recovery_progress_data.value = response.data.data
+    } else {
+      recovery_progress_data.value = null
+    }
+  } catch (e) {
+    recovery_progress_data.value = null
+    console.error(e)
+  }
+}
+
 onMounted(() => {
   getRecoveryTasks()
+  getRecoveryProgress()
 })
 </script>
