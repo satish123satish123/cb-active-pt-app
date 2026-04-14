@@ -1,1 +1,0 @@
-import{t as e}from"./authStore-CcHL7fxK.js";import{t}from"./axios-C1hysW-r.js";function n(e){return e}var r=n(async({router:n,store:r})=>{let i=e(r);n.beforeEach(async e=>{let n=e.matched.some(e=>e.meta.requiresAuth),r=i.token_id;if(n&&!r)return`/login`;if(e.path===`/login`&&r)return`/`;r&&(t.defaults.headers.common.Authorization=`Bearer ${r}`)})});export{r as default};
