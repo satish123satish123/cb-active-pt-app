@@ -188,13 +188,23 @@ function openInvoicePdf(id) {
   gap: 12px;
 }
 .visit-card {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(10, 126, 110, 0.1);
-  border-radius: 20px;
-  padding: 16px;
-  box-shadow: 0 3px 14px rgba(10, 126, 110, 0.05);
+  position: relative;
+  background: linear-gradient(180deg, #f8fbfb 0%, #f2f7f7 100%);
+  border: 1px solid #dbe6e8;
+  border-radius: 24px;
+  padding: 18px;
+  box-shadow:
+    0 10px 24px rgba(16, 33, 42, 0.045),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 .visit-card.upcoming {
+  background: linear-gradient(180deg, #f6fbfa 0%, #eef5f4 100%);
+  border-color: #d6e4e5;
+}
+.visit-card.cancelled {
+  background: linear-gradient(180deg, #fafcfc 0%, #f3f6f7 100%);
+  border-color: #e0e8eb;
+  opacity: 1; /* Removing old opacity to emphasize the new gradient */
 }
 .visit-top {
   display: flex;
@@ -203,11 +213,11 @@ function openInvoicePdf(id) {
   margin-bottom: 12px;
 }
 .visit-kicker {
-  font-size: 9.5px;
-  font-weight: 700;
-  color: #8ab5ae;
+  font-size: 10px;
+  font-weight: 800;
+  color: #80929b;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.14em;
   margin-bottom: 4px;
 }
 .visit-title {
@@ -233,12 +243,9 @@ function openInvoicePdf(id) {
   background: #fde8ec;
   color: #c0392b;
 }
-.visit-card.cancelled {
-  opacity: 0.8;
-}
 .visit-date-line {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: bold;
   color: #0d2922;
   margin-bottom: 14px;
   line-height: 1.4;
@@ -251,9 +258,9 @@ function openInvoicePdf(id) {
   padding-top: 14px;
 }
 .visit-time-range {
-  font-size: 11px;
-  font-weight: 600;
-  color: #8ab5ae;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--text-2);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -282,7 +289,7 @@ function openInvoicePdf(id) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(255, 255, 255, 0.9);
+  background: linear-gradient(180deg, #f8fbfb 0%, #f1f6f6 100%);
   border: 1px solid rgba(10, 126, 110, 0.1);
   border-radius: 16px;
   padding: 16px;
