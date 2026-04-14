@@ -20,7 +20,7 @@
             square
             style="border-radius: 12px"
           >
-            {{ totalSessions }} Total Sessions
+            {{ milestones_data?.total_sessions }} Total Sessions
           </q-chip>
         </div>
 
@@ -30,23 +30,23 @@
             :key="index"
             :color="phase.dotColor"
           >
-            <q-card flat bordered class="phase-card q-mb-md" :class="phase.cardClass">
+            <q-card bordered class="phase-card q-mb-md" :class="phase.cardClass">
               <q-card-section class="q-pa-md">
                 <div class="row justify-between items-start q-mb-md">
                   <div>
                     <div class="text-subtitle1 text-weight-bold text-grey-10 leading-tight">
-                      {{ phase.range }}
+                      Sessions {{ phase.session }}
                     </div>
-                    <div class="text-caption text-grey-7">{{ phase.frequency }}</div>
+                    <div class="text-caption text-grey-7">3 sessions/week</div>
                   </div>
                   <q-chip
                     size="sm"
                     square
                     class="text-weight-bold q-ma-none"
-                    :class="phase.statusClass"
+                    :class="phase.statusClass || 'bg-teal-1 text-teal-8'"
                     style="border-radius: 12px; font-size: 11px"
                   >
-                    {{ phase.status }}
+                    {{ phase.status || 'Completed' }}
                   </q-chip>
                 </div>
 
@@ -61,9 +61,9 @@
                   <div class="milestones-list">
                     <div
                       class="row no-wrap items-start q-mb-sm"
-                      v-for="(m, mIdx) in phase.milestones"
+                      v-for="(m, mIdx) in phase.goal_progress"
                       :key="'m-' + mIdx"
-                      :class="{ 'q-mb-none': mIdx === phase.milestones.length - 1 }"
+                      :class="{ 'q-mb-none': mIdx === phase.goal_progress.length - 1 }"
                     >
                       <q-icon
                         name="circle"
@@ -73,13 +73,13 @@
                       />
                       <div>
                         <div class="text-subtitle2 text-weight-bold text-teal-10 leading-tight">
-                          {{ m.title }}
+                          {{ m.written_goal }}
                         </div>
                         <div
                           class="text-caption text-grey-7"
                           style="font-size: 12px; margin-top: 2px"
                         >
-                          Base: {{ m.base }} · Target: {{ m.target }}
+                          Base: {{ m.base_value }} · Target: {{ m.target_value }}
                         </div>
                       </div>
                     </div>
@@ -95,7 +95,11 @@
                     Modalities
                   </div>
                   <div class="modalities-container">
-                    <div v-for="mod in phase.modalities" :key="mod" class="modality-chip">
+                    <div
+                      v-for="mod in phase.modalities || ['Manual Therapy', 'TENS']"
+                      :key="mod"
+                      class="modality-chip"
+                    >
                       <span class="text-blue-grey-8">{{ mod }}</span>
                     </div>
                   </div>
@@ -106,7 +110,7 @@
         </q-timeline>
       </div>
 
-      <q-card flat bordered class="rounded-16 q-mb-xl clinical-summary-card">
+      <q-card bordered class="rounded-16 q-mb-xl clinical-summary-card">
         <q-card-section class="q-pa-lg">
           <div class="row justify-between items-start q-mb-xs">
             <div
@@ -194,59 +198,16 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import ScreenHeader from 'src/components/ScreenHeader.vue'
+import { useAuthStore } from 'src/stores/authStore'
+import { api } from 'src/boot/axios'
 
-const totalSessions = 8
+const authStore = useAuthStore()
 
-const treatmentPhases = ref([
-  {
-    range: 'Sessions 1-2',
-    frequency: '3 sessions/week',
-    status: 'Completed',
-    statusClass: 'bg-green-1 text-green-8',
-    cardClass: 'bg-white',
-    dotColor: 'green-8',
-    milestones: [
-      { title: 'Pain during daily reaching', base: '6/10', target: '3/10' },
-      { title: 'Shoulder flexion', base: '90°', target: '110°' },
-      { title: 'Sleep interruption per week', base: '4 times/week', target: '2 times/week' },
-    ],
-    modalities: ['Manual Therapy', 'TENS', 'Ice Therapy'],
-  },
-  {
-    range: 'Sessions 3-4',
-    frequency: '3 sessions/week',
-    status: 'Current Phase',
-    statusClass: 'bg-teal-1 text-teal-9',
-    cardClass: 'bg-teal-1 active-phase-border',
-    dotColor: 'teal-8',
-    milestones: [
-      { title: 'Pain during overhead reach', base: '6/10', target: '2/10' },
-      { title: 'Shoulder flexion', base: '110°', target: '140°' },
-      { title: 'Overhead reach comfort', base: '40%', target: '75%' },
-    ],
-    modalities: ['Joint Mobilization', 'Stretching', 'Band Work'],
-  },
-  {
-    range: 'Sessions 5-8',
-    frequency: '2-3 sessions/week',
-    status: 'Upcoming',
-    statusClass: 'bg-orange-1 text-orange-9',
-    cardClass: 'bg-white',
-    dotColor: 'grey-4',
-    milestones: [
-      { title: 'Shoulder flexion', base: '140°', target: '160°' },
-      { title: 'Shoulder strength', base: '3+/5', target: '5/5' },
-      {
-        title: 'Return to functional activity',
-        base: 'Limited',
-        target: 'Independent & pain-controlled',
-      },
-    ],
-    modalities: ['Strength Training', 'Functional Drills', 'Return to Sport'],
-  },
-])
+const milestones_data = ref(null)
+
+const treatmentPhases = ref([])
 
 const assessmentSession = ref({
   chiefComplaint: 'Pain while lifting the right arm and difficulty reaching overhead.',
@@ -262,6 +223,32 @@ const secondaryDiagnosis = ref({
   name: 'Scapular Dyskinesis',
   inference:
     'Scapular movement pattern showed reduced control, contributing to poor shoulder mechanics during overhead activity.',
+})
+
+const getRecoveryProgress = async () => {
+  try {
+    const patientId = authStore.user?.patient
+    const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
+
+    const response = await api.post('getRecoveryProgress', {
+      patient_id: patientId,
+      hospital_id: hospitalId,
+    })
+
+    if (response.data?.status === 'success') {
+      milestones_data.value = response.data.data
+      treatmentPhases.value = response.data.data.milestones
+    } else {
+      milestones_data.value = null
+    }
+  } catch (e) {
+    milestones_data.value = null
+    console.error(e)
+  }
+}
+
+onMounted(() => {
+  getRecoveryProgress()
 })
 </script>
 
@@ -324,14 +311,19 @@ const secondaryDiagnosis = ref({
   padding: 12px 16px;
 }
 .clinical-summary-card {
+  border: 1px solid #dbe7ea;
   border-top: 5px solid #00605a !important;
   background: linear-gradient(180deg, #fcfefe 0%, #f3f8f8 100%);
+  box-shadow: 0 12px 28px rgba(16, 33, 42, 0.06);
 }
 :deep(.custom-timeline .q-timeline__dot) {
   background-color: #f8fbfb !important;
 }
 :deep(.q-timeline--dense--right .q-timeline__entry) {
   padding-left: 20px;
+}
+:deep(.q-timeline__content) {
+  padding-bottom: 0px !important;
 }
 :deep(.bg-teal-1) {
   background: linear-gradient(180deg, #f6fcfa 0%, #eef8f5 100%) !important;

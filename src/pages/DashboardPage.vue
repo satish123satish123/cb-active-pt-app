@@ -128,7 +128,8 @@
                 {{ recovery_progress_data?.treated_sessions }}/{{
                   recovery_progress_data?.total_sessions
                 }}
-                Sessions Completed • {{ recovery_progress_data?.recovery_percentage }}% Recovery
+                Sessions Completed •
+                {{ recovery_progress_data?.overall_milestones_progress_percentage }}% Recovery
               </div>
             </div>
             <span class="badge success">Doing Well</span>
@@ -137,8 +138,8 @@
             <div class="split">
               <span class="muted">Milestones completed</span>
               <strong
-                >{{ recovery_progress_data?.milestones_completed || 0 }}/{{
-                  recovery_progress_data?.total_milestones || 0
+                >{{ recovery_progress_data?.completed_milestones_count || 0 }}/{{
+                  recovery_progress_data?.unique_milestones_count || 0
                 }}</strong
               >
             </div>
