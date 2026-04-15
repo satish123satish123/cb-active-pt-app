@@ -37,7 +37,9 @@
                     <div class="text-subtitle1 text-weight-bold text-grey-10 leading-tight">
                       Sessions {{ phase.session }}
                     </div>
-                    <div class="text-caption text-grey-7">3 sessions/week</div>
+                    <div class="text-caption text-grey-7">
+                      {{ formattedFrequency(phase.session_frequency) }}
+                    </div>
                   </div>
                   <q-chip
                     size="sm"
@@ -96,7 +98,10 @@
                   </div>
                   <div class="modalities-container">
                     <div
-                      v-for="mod in phase.modalities || ['Manual Therapy', 'TENS']"
+                      v-for="mod in phase.modalities.split(',').map((item) => item.trim()) || [
+                        'Manual Therapy',
+                        'TENS',
+                      ]"
                       :key="mod"
                       class="modality-chip"
                     >
@@ -245,6 +250,16 @@ const getRecoveryProgress = async () => {
     milestones_data.value = null
     console.error(e)
   }
+}
+
+function formattedFrequency(frequency) {
+  if (!frequency) return ''
+
+  const [number, period] = frequency.split('/').map((s) => s.trim())
+
+  if (!number || !period) return frequency
+
+  return `${number} session${number === '1' ? '' : 's'}/${period}`
 }
 
 onMounted(() => {
