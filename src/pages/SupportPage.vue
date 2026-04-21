@@ -14,9 +14,9 @@
 
     <div class="section">
       <div class="card support-box">
-        <button class="btn primary contact-btn">💬 WhatsApp Clinic</button>
-        <button class="btn secondary contact-btn">📞 Call Clinic</button>
-        <button class="btn ghost contact-btn">📍 Get Directions</button>
+        <button class="btn primary contact-btn" @click="openWhatsApp" :disabled="!hospitalInfo?.phone">💬 WhatsApp Clinic</button>
+        <button class="btn secondary contact-btn" @click="callClinic" :disabled="!hospitalInfo?.phone">📞 Call Clinic</button>
+        <button class="btn ghost contact-btn" @click="getDirections" :disabled="!hospitalInfo?.address">📍 Get Directions</button>
       </div>
     </div>
 
@@ -50,6 +50,46 @@
 
 <script setup>
 import ScreenHeader from 'src/components/ScreenHeader.vue'
+import { useAuthStore } from 'src/stores/authStore'
+import { api } from 'src/boot/axios'
+import { ref, onMounted } from 'vue'
+
+const authStore = useAuthStore()
+const hospitalInfo = ref(null)
+
+const getGuide = async () => {
+  try {
+    const patientId = authStore.user?.patient
+    const response = await api.post('getPatientRecoveryGuide', { patient_id: patientId })
+    if (response.data?.status === 'success') {
+      hospitalInfo.value = response.data.hospital_info
+    }
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+const openWhatsApp = () => {
+  if (hospitalInfo.value?.phone) {
+    window.open(`https://wa.me/91${hospitalInfo.value.phone}`, "_blank")
+  }
+}
+
+const callClinic = () => {
+  if (hospitalInfo.value?.phone) {
+    window.location.href = `tel:${hospitalInfo.value.phone}`
+  }
+}
+
+const getDirections = () => {
+  if (hospitalInfo.value?.address) {
+    window.open(`https://maps.google.com/?q=${encodeURIComponent(hospitalInfo.value.address)}`, "_blank")
+  }
+}
+
+onMounted(() => {
+  getGuide()
+})
 </script>
 
 <style scoped>

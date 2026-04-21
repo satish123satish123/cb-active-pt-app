@@ -1,9 +1,9 @@
 <template>
   <section class="screen">
-    <ScreenHeader title="Do's & Don'ts" sub="Simple care guidance for better recovery" />
+    <ScreenHeader title="Recovery Guide" sub="Condition-based care guidance for each recovery phase" />
 
-    <!-- Do's -->
-    <div class="section">
+    <!-- Care Guidance -->
+    <div class="section" v-if="educationList.length">
       <div class="card">
         <div class="title-row">
           <div>
@@ -16,16 +16,15 @@
         </div>
         <div class="list">
           <div
-            v-for="item in careGuidance"
-            :key="item.label"
+            v-for="(item, index) in educationList"
+            :key="'edu-' + index"
             class="todo-item"
             style="padding: 12px"
           >
             <div class="todo-left">
               <div class="todo-icon" style="background: #e6f7ed; color: var(--success)">✓</div>
               <div>
-                <div class="todo-label">{{ item.label }}</div>
-                <div class="todo-sub">{{ item.sub }}</div>
+                <div class="todo-label">{{ item }}</div>
               </div>
             </div>
           </div>
@@ -33,47 +32,26 @@
       </div>
     </div>
 
-    <!-- Do's -->
-    <div class="section">
-      <div class="card">
-        <div class="title-row">
-          <div>
-            <div class="title">Do's</div>
-            <div class="muted">Helpful actions for your shoulder recovery</div>
-          </div>
-          <span class="badge success">Recommended</span>
-        </div>
-        <div class="list">
-          <div v-for="item in dos" :key="item.label" class="todo-item" style="padding: 12px">
-            <div class="todo-left">
-              <div class="todo-icon" style="background: #e6f7ed; color: var(--success)">✓</div>
-              <div>
-                <div class="todo-label">{{ item.label }}</div>
-                <div class="todo-sub">{{ item.sub }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Don'ts -->
-    <div class="section">
+    <!-- Do's & Don'ts -->
+    <div class="section" v-if="dosAndDontsList.length">
       <div class="card soft">
         <div class="title-row">
           <div>
-            <div class="title">Don'ts</div>
-            <div class="muted">Things that may delay recovery</div>
+            <div class="title">Do's & Don'ts</div>
+             <div class="muted">Important actions to follow and avoid for your recovery</div>
           </div>
-          <span class="badge danger">Avoid</span>
         </div>
         <div class="list">
-          <div v-for="item in donts" :key="item.label" class="todo-item" style="padding: 12px">
+          <div
+            v-for="(item, index) in dosAndDontsList"
+            :key="'dodont-' + index"
+            class="todo-item"
+            style="padding: 12px"
+          >
             <div class="todo-left">
-              <div class="todo-icon" style="background: #fde8ec; color: var(--danger)">!</div>
+              <div class="todo-icon" style="background: #e6f7ed; color: var(--success)">✓</div>
               <div>
-                <div class="todo-label">{{ item.label }}</div>
-                <div class="todo-sub">{{ item.sub }}</div>
+                <div class="todo-label">{{ item }}</div>
               </div>
             </div>
           </div>
@@ -115,49 +93,29 @@
 
 <script setup>
 import ScreenHeader from 'src/components/ScreenHeader.vue'
+import { useAuthStore } from 'src/stores/authStore'
+import { api } from 'src/boot/axios'
+import { ref, onMounted } from 'vue'
 
-const careGuidance = [
-  {
-    label: 'Perform home exercises with control',
-    sub: 'Slow, comfortable movement is better than rushing.',
-  },
-  {
-    label: 'Maintain good sitting posture',
-    sub: 'Keep shoulders relaxed, avoid prolonged slouching.',
-  },
-  {
-    label: 'Use ice if advised by your therapist',
-    sub: 'Especially after clinic sessions or exercise soreness.',
-  },
-]
+const authStore = useAuthStore()
 
-const dos = [
-  {
-    label: 'Perform home exercises with control',
-    sub: 'Slow, comfortable movement is better than rushing.',
-  },
-  {
-    label: 'Maintain good sitting posture',
-    sub: 'Keep shoulders relaxed, avoid prolonged slouching.',
-  },
-  {
-    label: 'Use ice if advised by your therapist',
-    sub: 'Especially after clinic sessions or exercise soreness.',
-  },
-]
+const educationList = ref([])
+const dosAndDontsList = ref([])
 
-const donts = [
-  {
-    label: 'Avoid lifting heavy weight overhead',
-    sub: 'Especially if it increases shoulder pain.',
-  },
-  {
-    label: 'Do not ignore sharp or sudden pain',
-    sub: 'Pause exercise and contact the clinic if this happens.',
-  },
-  {
-    label: 'Avoid skipping multiple home sessions',
-    sub: 'Consistency matters more than intensity.',
-  },
-]
+const getGuide = async () => {
+  try {
+    const patientId = authStore.user?.patient
+    const response = await api.post('getPatientRecoveryGuide', { patient_id: patientId })
+    if (response.data?.status === 'success') {
+      educationList.value = response.data.education || []
+      dosAndDontsList.value = response.data.dos_and_donts || []
+    }
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+onMounted(() => {
+  getGuide()
+})
 </script>
