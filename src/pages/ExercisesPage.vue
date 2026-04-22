@@ -9,8 +9,8 @@
             </button>
             <span>My Exercises</span>
           </div>
-          <h5 class="q-ma-none text-weight-bold">Day 7 of 30</h5>
-          <div class="subtle adherence-text">68% adherence • Your guided home recovery plan</div>
+          <h5 class="q-ma-none text-weight-bold">{{ currentDayLabel || `Day ${daysCompleted}` }} of {{ totalDays }}</h5>
+          <div class="subtle adherence-text">{{ adherencePercentage }}% adherence • Your guided home recovery plan</div>
         </div>
       </div>
     </div>
@@ -162,17 +162,25 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useExerciseStore } from 'src/stores/exerciseStore'
+import { useAuthStore } from 'src/stores/authStore'
 import { storeToRefs } from 'pinia'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const store = useExerciseStore()
-const { exercises, completedCount, pendingCount } = storeToRefs(store)
+const { exercises, completedCount, pendingCount, daysCompleted, totalDays, adherencePercentage, currentDayLabel } = storeToRefs(store)
 const getExStatus = store.getExStatus
 
 const exerciseFilter = ref('today')
+
+onMounted(() => {
+  const patientId = authStore.user?.patient
+  const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
+  store.fetchExercises(patientId, hospitalId)
+})
 
 const filteredExercises = computed(() => {
   if (exerciseFilter.value === 'today') return exercises.value
@@ -325,10 +333,15 @@ function stepLabel(status) {
   background: var(--brand);
 }
 
+@keyframes blinkScale {
+  0% { opacity: 1; box-shadow: 0 0 0 2px rgba(26, 168, 138, 0.4); transform: scale(1.1); }
+  50% { opacity: 0.65; box-shadow: 0 0 0 6px rgba(26, 168, 138, 0.1); transform: scale(1.1); }
+  100% { opacity: 1; box-shadow: 0 0 0 2px rgba(26, 168, 138, 0.4); transform: scale(1.1); }
+}
+
 .progress-dots-wrap .progress-dot.in-progress {
   background: #1aa88a;
-  box-shadow: 0 0 0 3px rgba(26, 168, 138, 0.25);
-  transform: scale(1.1);
+  animation: blinkScale 1.8s infinite ease-in-out;
 }
 
 .progress-dots-wrap .progress-dot.pending {
@@ -596,3 +609,5 @@ function stepLabel(status) {
   background: #f0fbfc;
 }
 </style>
+
+

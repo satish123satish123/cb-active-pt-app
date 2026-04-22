@@ -167,15 +167,16 @@
                 Track previous days, completion history, and overall adherence.
               </div>
             </div>
-            <span class="badge brand">68% Done</span>
+            <span class="badge brand">{{ exerciseStore.adherencePercentage }}% Done</span>
           </div>
           <div class="progress-wrap">
             <div class="split">
               <span class="muted">Program adherence</span>
-              <strong>14/20 days completed</strong>
+              <strong v-if="exerciseStore.totalDays > 0">{{ exerciseStore.daysCompleted }}/{{ exerciseStore.totalDays }} days completed</strong>
+              <strong v-else>No plan data</strong>
             </div>
             <div class="progress-rail" style="margin-top: 8px">
-              <div class="progress-fill" :style="`width:70%`"></div>
+              <div class="progress-fill" :style="`width:${exerciseStore.adherencePercentage || 0}%`"></div>
             </div>
           </div>
           <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
@@ -209,10 +210,12 @@
 </template>
 <script setup>
 import { useAuthStore } from 'src/stores/authStore'
+import { useExerciseStore } from 'src/stores/exerciseStore'
 import { api } from 'src/boot/axios'
 import { ref, onMounted } from 'vue'
 
 const authStore = useAuthStore()
+const exerciseStore = useExerciseStore()
 
 const exercises_data = ref([])
 const treatment_sessions_data = ref(null)
@@ -266,5 +269,8 @@ const getRecoveryProgress = async () => {
 onMounted(() => {
   getRecoveryTasks()
   getRecoveryProgress()
+  const patientId = authStore.user?.patient
+  const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
+  exerciseStore.fetchExercises(patientId, hospitalId)
 })
 </script>
