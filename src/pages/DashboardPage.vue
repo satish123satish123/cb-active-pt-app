@@ -119,8 +119,9 @@
       </div>
 
       <!-- Recovery Progress -->
-      <div v-if="recovery_progress_data?.total_sessions > 0" class="section">
-        <div class="card soft">
+      <div v-if="loadingProgress || recovery_progress_data?.total_sessions > 0" class="section">
+        <ProgressCardSkeleton v-if="loadingProgress" cardClass="soft" />
+        <div v-else class="card soft">
           <div class="title-row">
             <div>
               <div class="title">Recovery progress</div>
@@ -159,7 +160,8 @@
 
       <!-- Home Exercise Progress -->
       <div class="section">
-        <div class="card">
+        <ProgressCardSkeleton v-if="exerciseStore.loading" />
+        <div v-else class="card">
           <div class="title-row">
             <div>
               <div class="title">Home exercise progress</div>
@@ -172,11 +174,17 @@
           <div class="progress-wrap">
             <div class="split">
               <span class="muted">Program adherence</span>
-              <strong v-if="exerciseStore.totalDays > 0">{{ exerciseStore.daysCompleted }}/{{ exerciseStore.totalDays }} days completed</strong>
+              <strong v-if="exerciseStore.totalDays > 0"
+                >{{ exerciseStore.daysCompleted }}/{{ exerciseStore.totalDays }} days
+                completed</strong
+              >
               <strong v-else>No plan data</strong>
             </div>
             <div class="progress-rail" style="margin-top: 8px">
-              <div class="progress-fill" :style="`width:${exerciseStore.adherencePercentage || 0}%`"></div>
+              <div
+                class="progress-fill"
+                :style="`width:${exerciseStore.adherencePercentage || 0}%`"
+              ></div>
             </div>
           </div>
           <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
@@ -211,6 +219,7 @@
 <script setup>
 import { useAuthStore } from 'src/stores/authStore'
 import { useExerciseStore } from 'src/stores/exerciseStore'
+import ProgressCardSkeleton from 'src/components/ProgressCardSkeleton.vue'
 import { api } from 'src/boot/axios'
 import { ref, onMounted } from 'vue'
 
@@ -220,6 +229,7 @@ const exerciseStore = useExerciseStore()
 const exercises_data = ref([])
 const treatment_sessions_data = ref(null)
 const recovery_progress_data = ref(null)
+const loadingProgress = ref(true)
 
 const getRecoveryTasks = async () => {
   try {
@@ -246,6 +256,7 @@ const getRecoveryTasks = async () => {
 }
 
 const getRecoveryProgress = async () => {
+  loadingProgress.value = true
   try {
     const patientId = authStore.user?.patient
     const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
@@ -263,6 +274,8 @@ const getRecoveryProgress = async () => {
   } catch (e) {
     recovery_progress_data.value = null
     console.error(e)
+  } finally {
+    loadingProgress.value = false
   }
 }
 
