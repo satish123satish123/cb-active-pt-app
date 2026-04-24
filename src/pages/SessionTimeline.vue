@@ -96,7 +96,7 @@
                       Chief Complaint
                     </div>
                     <div class="text-body2 text-weight-medium text-grey-9">
-                      {{ s.chiefComplaint }}
+                      {{ s.chief_complaint }}
                     </div>
                   </div>
 
@@ -116,31 +116,17 @@
                     </div>
                   </div>
 
-                  <div v-if="s.smartGoals && s.smartGoals.length > 0" class="q-mt-md">
+                  <div v-if="s.smart_goals && s.smart_goals.length > 0" class="q-mt-md">
                     <div
                       class="text-caption text-weight-bold text-blue-grey-6 text-uppercase q-mb-xs"
                     >
                       SMART Goals
                     </div>
                     <div class="goal-list">
-                      <div class="goal-item">
+                      <div class="goal-item" v-for="(goal, gIdx) in s.smart_goals" :key="'goal-' + gIdx">
                         <div class="goal-mark">✓</div>
                         <div class="goal-text">
-                          Reduce pain during daily reaching and dressing activities.
-                        </div>
-                      </div>
-
-                      <div class="goal-item">
-                        <div class="goal-mark">✓</div>
-                        <div class="goal-text">
-                          Improve shoulder range of motion for overhead function.
-                        </div>
-                      </div>
-
-                      <div class="goal-item">
-                        <div class="goal-mark">✓</div>
-                        <div class="goal-text">
-                          Restore strength and control for regular work and home tasks.
+                          {{ goal.title || goal }}
                         </div>
                       </div>
                     </div>
@@ -297,8 +283,7 @@ const fetchSessionTimeline = async (patientId, assessmentId) => {
           totalSessionsAdvised = s.assessment_details.treatment_plan_and_smart_goals?.total_sessions
           chiefComplaint = s.assessment_details.chief_complaint === 'n/s' ? 'Not specified' : s.assessment_details.chief_complaint
           
-          const goals = s.assessment_details.treatment_plan_and_smart_goals?.functional_performance?.long_term_smart_goals || []
-          smartGoals = goals.map(g => g.goal_title)
+          smartGoals = s.assessment_details.smart_goals || []
         }
 
         return {
@@ -310,9 +295,9 @@ const fetchSessionTimeline = async (patientId, assessmentId) => {
           location: s.hospital_name || 'Clinic',
           modalities: s.used_modalities ? s.used_modalities.split(', ') : [],
           totalSessionsAdvised,
-          chiefComplaint,
+          chief_complaint: chiefComplaint,
           diagnoses: [],
-          smartGoals,
+          smart_goals: smartGoals,
           treatmentGiven: s.used_modalities,
           milestoneBadge: null,
           milestoneDetails: []
