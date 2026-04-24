@@ -1,1 +1,0 @@
-import{t as e}from"./authStore-mKoyp-W7.js";import{t}from"./axios-bF26An0-.js";function n(e){return e}var r=n(async({router:n,store:r})=>{let i=e(r);n.beforeEach(async e=>{let n=e.matched.some(e=>e.meta.requiresAuth),r=i.token_id;if(n&&!r)return`/login`;if(e.path===`/login`&&r)return`/`;r&&(t.defaults.headers.common.Authorization=`Bearer ${r}`)})});export{r as default};
