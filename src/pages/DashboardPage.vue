@@ -26,13 +26,13 @@
             <span class="badge brand">On Track</span>
           </div>
           <div class="today-main">
-            <div v-if="exercises_data.total_exercises > 0" class="todo-item">
+            <div v-if="exercises_data?.has_exercises" class="todo-item">
               <div class="todo-left">
                 <div class="todo-icon">💪</div>
                 <div>
-                  <div class="todo-label">{{ exercises_data.pending_count }} exercises pending</div>
+                  <div class="todo-label">{{ exercises_data.pending_count || 0 }} exercises pending</div>
                   <div class="todo-sub">
-                    Approx. {{ exercises_data.pending_exercises_time }} minutes left for today
+                    Approx. {{ exercises_data.pending_exercises_time || 0 }} minutes left for today
                   </div>
                 </div>
               </div>
@@ -49,20 +49,20 @@
               <button class="btn primary small" @click="$router.push('/support')">Connect</button>
             </div>
 
-            <div v-if="treatment_sessions_data?.total_sessions > 0" class="todo-item">
+            <div v-if="session_timeline?.total_sessions > 0" class="todo-item">
               <div class="todo-left">
                 <div class="todo-icon">📅</div>
                 <div>
                   <div class="todo-label">Session timeline</div>
                   <div class="todo-sub">
-                    {{ treatment_sessions_data?.treated_sessions }}/{{
-                      treatment_sessions_data?.total_sessions
+                    {{ session_timeline?.treated_sessions || 0 }}/{{
+                      session_timeline?.total_sessions || 0
                     }}
                     Sessions Done.
-                    <span v-if="treatment_sessions_data?.next_appointment_details">
+                    <span v-if="session_timeline?.next_appointment">
                       Next Appointment
-                      {{ treatment_sessions_data?.next_appointment_details?.date }},
-                      {{ treatment_sessions_data?.next_appointment_details?.s_time }}
+                      {{ session_timeline?.next_appointment?.date }},
+                      {{ session_timeline?.next_appointment?.s_time }}
                     </span>
                   </div>
                 </div>
@@ -86,7 +86,7 @@
       </div>
 
       <!-- Next Appointment -->
-      <div v-if="treatment_sessions_data?.next_appointment_details" class="section">
+      <div v-if="session_timeline?.next_appointment" class="section">
         <div class="card appointment">
           <div class="title-row">
             <div>
@@ -217,8 +217,8 @@ import { ref, onMounted } from 'vue'
 const authStore = useAuthStore()
 const exerciseStore = useExerciseStore()
 
-const exercises_data = ref([])
-const treatment_sessions_data = ref(null)
+const exercises_data = ref(null)
+const session_timeline = ref(null)
 const recovery_progress_data = ref(null)
 
 const getRecoveryTasks = async () => {
@@ -233,14 +233,14 @@ const getRecoveryTasks = async () => {
 
     if (response.data?.status === 'success') {
       exercises_data.value = response.data.exercises_data
-      treatment_sessions_data.value = response.data.treatment_sessions_data
+      session_timeline.value = response.data.session_timeline
     } else {
-      exercises_data.value = []
-      treatment_sessions_data.value = null
+      exercises_data.value = null
+      session_timeline.value = null
     }
   } catch (e) {
-    exercises_data.value = []
-    treatment_sessions_data.value = null
+    exercises_data.value = null
+    session_timeline.value = null
     console.error(e)
   }
 }
