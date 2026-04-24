@@ -5,6 +5,21 @@
       sub="A clear record of your assessment, treatment, and progress reviews"
     />
 
+    <!-- Summary block from API -->
+    <div class="section q-px-md q-mb-md" v-if="treatment_sessions_data">
+      <div class="card soft q-pa-md row items-center justify-between" style="border-radius: 16px;">
+        <div>
+          <div class="text-weight-bold text-subtitle1">Session Progress</div>
+          <div class="text-grey-7 text-caption">
+            {{ treatment_sessions_data.treated_sessions || 0 }} / {{ treatment_sessions_data.total_sessions || 0 }} Sessions Completed
+          </div>
+        </div>
+        <q-chip v-if="treatment_sessions_data.next_appointment" class="bg-teal-1 text-teal-9 text-weight-bold" size="sm">
+          Next: {{ treatment_sessions_data.next_appointment.date }}
+        </q-chip>
+      </div>
+    </div>
+
     <q-card class="card soft">
       <q-card-section class="q-pa-none">
         <q-timeline color="teal-8" class="q-pl-sm">
@@ -81,7 +96,7 @@
                       Chief Complaint
                     </div>
                     <div class="text-body2 text-weight-medium text-grey-9">
-                      {{ s.chiefComplaint }}
+                      {{ s.chief_complaint }}
                     </div>
                   </div>
 
@@ -101,31 +116,17 @@
                     </div>
                   </div>
 
-                  <div v-if="s.smartGoals && s.smartGoals.length > 0" class="q-mt-md">
+                  <div v-if="s.smart_goals && s.smart_goals.length > 0" class="q-mt-md">
                     <div
                       class="text-caption text-weight-bold text-blue-grey-6 text-uppercase q-mb-xs"
                     >
                       SMART Goals
                     </div>
                     <div class="goal-list">
-                      <div class="goal-item">
+                      <div class="goal-item" v-for="(goal, gIdx) in s.smart_goals" :key="'goal-' + gIdx">
                         <div class="goal-mark">✓</div>
                         <div class="goal-text">
-                          Reduce pain during daily reaching and dressing activities.
-                        </div>
-                      </div>
-
-                      <div class="goal-item">
-                        <div class="goal-mark">✓</div>
-                        <div class="goal-text">
-                          Improve shoulder range of motion for overhead function.
-                        </div>
-                      </div>
-
-                      <div class="goal-item">
-                        <div class="goal-mark">✓</div>
-                        <div class="goal-text">
-                          Restore strength and control for regular work and home tasks.
+                          {{ goal.title || goal }}
                         </div>
                       </div>
                     </div>
@@ -211,8 +212,106 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import ScreenHeader from 'src/components/ScreenHeader.vue'
+import { useAuthStore } from 'src/stores/authStore'
+import { api } from 'src/boot/axios'
+
+const authStore = useAuthStore()
+const treatment_sessions_data = ref(null)
+
+const fetchSessionTimelineData = async () => {
+  try {
+    const patientId = authStore.user?.patient
+    const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
+
+    // First fetch summary and assessment_id
+    const taskResponse = await api.post('get_recovery_tasks', {
+      patient_id: patientId,
+      hospital_id: hospitalId,
+    })
+
+    if (taskResponse.data?.status === 'success') {
+      // Map the summary details for the top card
+      treatment_sessions_data.value = taskResponse.data.session_timeline
+      
+      const assessmentId = taskResponse.data.assessment_id || taskResponse.data.session_timeline?.assessment_id
+      if (assessmentId) {
+        fetchSessionTimeline(patientId, assessmentId)
+      }
+    }
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+const sessions = ref([])
+
+const fetchSessionTimeline = async (patientId, assessmentId) => {
+  try {
+    const response = await api.post('getSessionTimeline', {
+      patient_id: patientId,
+      assessment_id: assessmentId
+    })
+
+    if (response.data?.status === 'success') {
+      const rawSessions = response.data.session_timeline || []
+      sessions.value = rawSessions.map(s => {
+        let kind = 'treatment'
+        if (s.is_consultation === '1') kind = 'assessment'
+        else if (s.is_reassessment === '1') kind = 'reassessment'
+
+        let formattedDate = ''
+        if (s.date && !isNaN(s.date)) {
+          const d = new Date(parseInt(s.date) * 1000)
+          formattedDate = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        } else {
+          formattedDate = s.created_at
+        }
+
+        let doctor = s.doctor_name || (s.visit ? s.visit.split('-')[0] : '')
+        let number = s.session_title
+        if (s.session_number) {
+          number = `Session ${s.session_number}`
+        }
+
+        let totalSessionsAdvised = null
+        let chiefComplaint = null
+        let smartGoals = []
+
+        if (kind === 'assessment' && s.assessment_details) {
+          totalSessionsAdvised = s.assessment_details.treatment_plan_and_smart_goals?.total_sessions
+          chiefComplaint = s.assessment_details.chief_complaint === 'n/s' ? 'Not specified' : s.assessment_details.chief_complaint
+          
+          smartGoals = s.assessment_details.smart_goals || []
+        }
+
+        return {
+          kind,
+          number,
+          date: formattedDate,
+          duration: s.time_slot,
+          doctor,
+          location: s.hospital_name || 'Clinic',
+          modalities: s.used_modalities ? s.used_modalities.split(', ') : [],
+          totalSessionsAdvised,
+          chief_complaint: chiefComplaint,
+          diagnoses: [],
+          smart_goals: smartGoals,
+          treatmentGiven: s.used_modalities,
+          milestoneBadge: null,
+          milestoneDetails: []
+        }
+      })
+    }
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+onMounted(() => {
+  fetchSessionTimelineData()
+})
 
 const calculateGoalProgress = (item) => {
   if (item.goalValue === item.baseValue) return 100
@@ -224,87 +323,7 @@ const formatMetric = (val, unit) => {
   return `${val} ${unit || ''}`.trim()
 }
 
-// Mock Data based on the image
-const sessions = ref([
-  {
-    kind: 'treatment',
-    number: 'Session 3',
-    date: 'April 5, 2026',
-    duration: '45 min',
-    doctor: 'Dr. Sharma',
-    location: 'CB Physiotherapy - GK II',
-    modalities: ['Manual Therapy', 'Joint Mobilisation', 'ROM Exercises', 'Soft Tissue Release'],
-  },
-  {
-    kind: 'reassessment',
-    number: 'Session 2',
-    date: 'April 2, 2026',
-    duration: '60 min',
-    doctor: 'Dr. Sharma',
-    location: 'CB Physiotherapy - GK II',
-    treatmentGiven: 'Manual Therapy, TENS, Ice Therapy',
-    milestoneBadge: '3/5 achieved',
-    milestoneDetails: [
-      {
-        title: 'Pain During Daily Reaching',
-        baseValue: 8,
-        achievedValue: 5,
-        goalValue: 2,
-        unit: '/10',
-      },
-      {
-        title: 'Shoulder Flexion',
-        baseValue: 90,
-        achievedValue: 120,
-        goalValue: 160,
-        unit: '°',
-      },
-      {
-        title: 'Sleep Interruption Per Week',
-        baseValue: 6,
-        achievedValue: 3,
-        goalValue: 0,
-        unit: ' nights',
-      },
-      {
-        title: 'Overhead Reach Comfort',
-        baseValue: 20,
-        achievedValue: 45,
-        goalValue: 90,
-        unit: '%',
-      },
-    ],
-  },
-  {
-    kind: 'assessment',
-    number: 'Session 1',
-    date: 'March 28, 2026',
-    duration: '60 min',
-    doctor: 'Dr. Sharma',
-    location: 'CB Physiotherapy - GK II',
-    totalSessionsAdvised: 8,
-    chiefComplaint: 'Pain while lifting the right arm and difficulty reaching overhead.',
-    diagnoses: [
-      {
-        label: 'PRIMARY DIAGNOSIS',
-        name: 'Right Rotator Cuff Tendinopathy',
-        inference:
-          'Findings suggest overload of the rotator cuff with pain during active elevation and resisted testing.',
-      },
-      {
-        label: 'Secondary Diagnosis',
-        name: 'Scapular Dyskinesis',
-        inference:
-          'Scapular movement pattern showed reduced control, contributing to poor shoulder mechanics during overhead activity.',
-      },
-    ],
-    smartGoals: [
-      'Reduce pain during daily reaching and dressing activities.',
-      'Improve shoulder range of motion for overhead function.',
-      'Restore strength and control for regular work and home tasks.',
-    ],
-  },
-])
+// Removed static mock data
 </script>
 
 <style scoped>

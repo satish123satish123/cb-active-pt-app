@@ -22,7 +22,7 @@
             <div style="min-width: 0; flex: 1">
               <div class="title muted uppercase-title">TODAY's EXERCISES</div>
               <div class="muted status-subtitle">
-                {{ completedCount }} completed · {{ pendingCount }} still pending
+                {{ recovery_exercises_data?.completed_count || 0 }} completed · {{ recovery_exercises_data?.pending_count || 0 }} still pending
               </div>
             </div>
           </div>
@@ -37,7 +37,7 @@
               ></span>
             </div>
             <strong class="completion-text"
-              >{{ completedCount }}/{{ exercises.length }} Completed</strong
+              >{{ recovery_exercises_data?.completed_count || 0 }}/{{ recovery_exercises_data?.total_exercises || 0 }} Completed</strong
             >
           </div>
 
@@ -167,19 +167,40 @@ import { useRouter } from 'vue-router'
 import { useExerciseStore } from 'src/stores/exerciseStore'
 import { useAuthStore } from 'src/stores/authStore'
 import { storeToRefs } from 'pinia'
+import { api } from 'src/boot/axios'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const store = useExerciseStore()
-const { exercises, completedCount, pendingCount, daysCompleted, totalDays, adherencePercentage, currentDayLabel } = storeToRefs(store)
+const { exercises, completedCount, daysCompleted, totalDays, adherencePercentage, currentDayLabel } = storeToRefs(store)
 const getExStatus = store.getExStatus
 
 const exerciseFilter = ref('today')
+const recovery_exercises_data = ref(null)
+
+const fetchRecoveryExercises = async () => {
+  try {
+    const patientId = authStore.user?.patient
+    const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
+
+    const response = await api.post('get_recovery_exercises', {
+      patient_id: patientId,
+      hospital_id: hospitalId,
+    })
+
+    if (response.data?.status === 'success') {
+      recovery_exercises_data.value = response.data.exercises_data
+    }
+  } catch (e) {
+    console.error(e)
+  }
+}
 
 onMounted(() => {
   const patientId = authStore.user?.patient
   const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
   store.fetchExercises(patientId, hospitalId)
+  fetchRecoveryExercises()
 })
 
 const filteredExercises = computed(() => {
