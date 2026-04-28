@@ -126,14 +126,19 @@
             <div>
               <div class="title">Recovery progress</div>
               <div class="muted">
-                {{ recovery_progress_data?.treated_sessions }}/{{
-                  recovery_progress_data?.total_sessions
+                {{ recovery_progress_data?.treated_sessions || 0 }}/{{
+                  recovery_progress_data?.total_sessions || 0
                 }}
                 Sessions Completed •
-                {{ recovery_progress_data?.overall_milestones_progress_percentage }}% Recovery
+                {{ recovery_progress_data?.overall_milestones_progress_percentage || 0 }}% Recovery
               </div>
             </div>
-            <span class="badge success">Doing Well</span>
+            <span
+              class="badge"
+              :class="recovery_progress_data?.milestones_status === 'Needs Attention' ? 'upcoming' : 'success'"
+            >
+              {{ recovery_progress_data?.milestones_status || 'Doing Well' }}
+            </span>
           </div>
           <div class="progress-wrap">
             <div class="split">
@@ -159,8 +164,8 @@
       </div>
 
       <!-- Home Exercise Progress -->
-      <div class="section">
-        <ProgressCardSkeleton v-if="exerciseStore.loading" />
+      <div class="section" v-if="loadingHomeExerciseCard || home_exercise_card_data">
+        <ProgressCardSkeleton v-if="loadingHomeExerciseCard" />
         <div v-else class="card">
           <div class="title-row">
             <div>
@@ -169,13 +174,13 @@
                 Track previous days, completion history, and overall adherence.
               </div>
             </div>
-            <span class="badge brand">{{ exerciseStore.adherencePercentage }}% Done</span>
+            <span class="badge brand">{{ home_exercise_card_data?.days_adherence_percentage || 0 }}% Done</span>
           </div>
           <div class="progress-wrap">
             <div class="split">
               <span class="muted">Program adherence</span>
-              <strong v-if="exerciseStore.totalDays > 0"
-                >{{ exerciseStore.daysCompleted }}/{{ exerciseStore.totalDays }} days
+              <strong v-if="home_exercise_card_data?.total_days > 0"
+                >{{ home_exercise_card_data?.days_completed || 0 }}/{{ home_exercise_card_data?.total_days }} days
                 completed</strong
               >
               <strong v-else>No plan data</strong>
@@ -183,7 +188,7 @@
             <div class="progress-rail" style="margin-top: 8px">
               <div
                 class="progress-fill"
-                :style="`width:${exerciseStore.adherencePercentage || 0}%`"
+                :style="`width:${home_exercise_card_data?.days_adherence_percentage || 0}%`"
               ></div>
             </div>
           </div>
@@ -201,7 +206,7 @@
         <div class="grid-2">
           <button class="tile" @click="$router.push('/payments-packages')">
             <div class="tile-icon">📝</div>
-            <div class="tile-title">Due || Advance ₹1,000</div>
+            <div class="tile-title">{{ financeText }}</div>
             <div class="tile-sub">Manage your Payments/packages</div>
           </button>
           <button class="tile" @click="$router.push('/education')">
@@ -221,7 +226,7 @@ import { useAuthStore } from 'src/stores/authStore'
 import { useExerciseStore } from 'src/stores/exerciseStore'
 import ProgressCardSkeleton from 'src/components/ProgressCardSkeleton.vue'
 import { api } from 'src/boot/axios'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 
 const authStore = useAuthStore()
 const exerciseStore = useExerciseStore()
@@ -230,6 +235,60 @@ const exercises_data = ref(null)
 const session_timeline = ref(null)
 const recovery_progress_data = ref(null)
 const loadingProgress = ref(true)
+
+const home_exercise_card_data = ref(null)
+const loadingHomeExerciseCard = ref(true)
+
+const fetchHomeExerciseCardData = async () => {
+  loadingHomeExerciseCard.value = true
+  try {
+    const patientId = authStore.user?.patient
+    const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
+
+    const response = await api.post('getHomeExerciseCardData', {
+      patient_id: patientId,
+      hospital_id: hospitalId,
+    })
+
+    if (response.data?.status === 'success') {
+      home_exercise_card_data.value = response.data.card_data
+    } else {
+      home_exercise_card_data.value = null
+    }
+  } catch (e) {
+    home_exercise_card_data.value = null
+    console.error(e)
+  } finally {
+    loadingHomeExerciseCard.value = false
+  }
+}
+
+const financeData = ref(null)
+
+const fetchFinanceData = async () => {
+  try {
+    const patientId = authStore.user?.patient
+
+    const response = await api.post('getPatientDueAdvance', {
+      patient_id: patientId,
+    })
+
+    if (response.data?.status === 'success') {
+      financeData.value = response.data.due_advance
+    }
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+const financeText = computed(() => {
+  if (financeData.value === null) return 'Loading...'
+  const amount = Number(financeData.value)
+  const absAmount = Math.round(Math.abs(amount)).toLocaleString('en-IN')
+  if (amount > 0) return `Due ₹${absAmount}`
+  if (amount < 0) return `Advance ₹${absAmount}`
+  return `Due ₹0`
+})
 
 const getRecoveryTasks = async () => {
   try {
@@ -261,13 +320,13 @@ const getRecoveryProgress = async () => {
     const patientId = authStore.user?.patient
     const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
 
-    const response = await api.post('getRecoveryProgress', {
+    const response = await api.post('getRecoveryProgressCardData', {
       patient_id: patientId,
       hospital_id: hospitalId,
     })
 
     if (response.data?.status === 'success') {
-      recovery_progress_data.value = response.data.data
+      recovery_progress_data.value = response.data.card_data
     } else {
       recovery_progress_data.value = null
     }
@@ -282,6 +341,8 @@ const getRecoveryProgress = async () => {
 onMounted(() => {
   getRecoveryTasks()
   getRecoveryProgress()
+  fetchHomeExerciseCardData()
+  fetchFinanceData()
   const patientId = authStore.user?.patient
   const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
   exerciseStore.fetchExercises(patientId, hospitalId)

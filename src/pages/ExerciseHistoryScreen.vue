@@ -30,7 +30,7 @@
           <div>
             <div class="eyebrow">CURRENT PROGRAM</div>
             <div class="title">{{ cp.name }}</div>
-            <div class="muted" style="margin-top: 6px">{{ cp.area }} &bull; {{ cp.dateRange }}</div>
+            <div class="muted" style="margin-top: 6px"><span v-if="cp.area">{{ cp.area }} &bull; </span>{{ cp.dateRange }}</div>
           </div>
           <span class="badge brand">{{ cp.completionPercent }}% done</span>
         </div>
@@ -220,7 +220,7 @@
                   <div>
                     <div class="title" style="font-size: 16px">{{ program.name }}</div>
                     <div class="muted" style="margin-top: 6px">
-                      {{ program.area }} &bull; {{ program.dateRange }}
+                      <span v-if="program.area">{{ program.area }} &bull; </span>{{ program.dateRange || program.durationLabel }}
                     </div>
                   </div>
                   <span class="badge brand">{{ program.sessionsLogged }} logs</span>
@@ -306,156 +306,113 @@
 <script setup>
 import ScreenHeader from 'src/components/ScreenHeader.vue'
 
-const h = {
-  overallCompletion: 68,
-  totalDaysTracked: 14,
-  completedDays: 9,
-  currentStreak: 3,
-  thisWeek: [
-    {
-      day: 'Mon',
-      status: 'done',
-      percent: 100,
-      note: 'All exercises completed',
-    },
-    {
-      day: 'Tue',
-      status: 'done',
-      percent: 75,
-      note: '3 of 4 exercises completed',
-    },
-    {
-      day: 'Wed',
-      status: 'partial',
-      percent: 50,
-      note: '2 of 4 exercises completed',
-    },
-    {
-      day: 'Thu',
-      status: 'done',
-      percent: 100,
-      note: 'All exercises completed',
-    },
-    { day: 'Fri', status: 'partial', percent: 68, note: 'Today in progress' },
-    { day: 'Sat', status: 'missed', percent: 0, note: 'No exercises logged' },
-    {
-      day: 'Sun',
-      status: 'done',
-      percent: 100,
-      note: 'All exercises completed',
-    },
-  ],
-  recentLogs: [
-    {
-      date: '05 Apr 2026',
-      title: 'Daily Home Session',
-      detail: '3 of 4 exercises completed • 24 minutes',
-    },
-    {
-      date: '04 Apr 2026',
-      title: 'Daily Home Session',
-      detail: 'All 4 exercises completed • 28 minutes',
-    },
-    {
-      date: '03 Apr 2026',
-      title: 'Daily Home Session',
-      detail: '2 of 4 exercises completed • 14 minutes',
-    },
-    {
-      date: '02 Apr 2026',
-      title: 'Daily Home Session',
-      detail: 'All 4 exercises completed • 26 minutes',
-    },
-  ],
-  pastPrograms: [
-    {
-      name: 'Early Pain Relief Program',
-      area: 'Right Shoulder',
-      dateRange: '10 Jan 2026 - 09 Mar 2026',
-      durationLabel: '2 months',
-      completionPercent: 74,
-      sessionsLogged: 45,
-      monthlyGroups: [
-        {
-          month: 'February 2026',
-          visibleCount: 3,
-          logs: [
-            {
-              title: 'Daily Home Session',
-              date: '28 Feb 2026',
-              status: 'done',
-              completion: '100%',
-              detail: 'All 4 exercises completed • 28 minutes',
-            },
-          ],
-        },
-      ],
-    },
-    {
-      name: 'Postural Control Program',
-      area: 'Neck & Upper Back',
-      dateRange: '05 Oct 2025 - 05 Jan 2026',
-      durationLabel: '3 months',
-      completionPercent: 81,
-      sessionsLogged: 70,
-      monthlyGroups: [
-        {
-          month: 'January 2026',
-          visibleCount: 3,
-          logs: [
-            {
-              title: 'Daily Home Session',
-              date: '05 Jan 2026',
-              status: 'done',
-              completion: '100%',
-              detail: 'All 4 exercises completed • 28 minutes',
-            },
-          ],
-        },
-      ],
-    },
-  ],
+import { ref, onMounted } from 'vue'
+import { api } from 'src/boot/axios'
+import { useAuthStore } from 'src/stores/authStore'
+
+const authStore = useAuthStore()
+const loading = ref(true)
+
+const h = ref({
+  overallCompletion: 0,
+  totalDaysTracked: 0,
+  completedDays: 0,
+  currentStreak: 0,
+  thisWeek: [],
+  recentLogs: [],
+  pastPrograms: []
+})
+
+const cp = ref({
+  name: '',
+  area: '',
+  dateRange: '',
+  completionPercent: 0,
+  totalDays: 0,
+  sessionsLogged: 0,
+  monthlyGroups: []
+})
+
+const fetchHistory = async () => {
+  loading.value = true
+  try {
+    const patientId = authStore.user?.patient
+    const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
+
+    const response = await api.post('getExercisesHistory', {
+      patient_id: patientId,
+      hospital_id: hospitalId,
+    })
+
+    if (response.data?.status === 'success') {
+      const data = response.data.exercises_data
+      
+      h.value = {
+        overallCompletion: Math.round(data.overall_completed_percentage || 0),
+        totalDaysTracked: data.total_days || 0,
+        completedDays: data.days_completed || 0,
+        currentStreak: data.streak || 0,
+        thisWeek: (data.this_week_adherence || []).map(d => ({
+          day: d.day_name,
+          percent: Math.round(d.completed_percentage || 0),
+          status: (d.completed_percentage || 0) >= 100 ? 'done' : (d.completed_percentage || 0) > 0 ? 'partial' : 'missed'
+        })),
+        recentLogs: (data.recent_activity || []).map(log => ({
+          date: log.date,
+          title: log.title,
+          detail: `${log.description} • ${Math.ceil((log.time_taken || 0) / 60)} minutes`
+        })),
+        pastPrograms: (data.past_programs || []).map(p => ({
+          name: p.program_name,
+          durationLabel: p.duration,
+          completionPercent: Math.round(p.adherence || 0),
+          sessionsLogged: Object.values(p.history_groups || {}).flat().length,
+          monthlyGroups: Object.keys(p.history_groups || {}).map(month => ({
+            month,
+            visibleCount: 5,
+            logs: (p.history_groups[month] || []).map(log => ({
+              title: log.title,
+              date: log.date,
+              status: log.completed_percentage >= 100 ? 'done' : log.completed_percentage > 0 ? 'partial' : 'danger',
+              completion: Math.round(log.completed_percentage || 0) + '%',
+              detail: `${log.description} • ${Math.ceil((log.time_taken || 0) / 60)} minutes`
+            }))
+          }))
+        }))
+      }
+
+      if (data.current_program) {
+        cp.value = {
+          name: data.current_program.program_name,
+          area: '', // Not provided by API
+          dateRange: `${data.current_program.start_date} - ${data.current_program.end_date}`,
+          completionPercent: Math.round(data.current_program.overall_completed_percentage || 0),
+          totalDays: data.current_program.total_days || 0,
+          sessionsLogged: data.current_program.days_completed || 0,
+          monthlyGroups: Object.keys(data.current_program_history || {}).map(month => ({
+            month,
+            visibleCount: 5,
+            logs: (data.current_program_history[month] || []).map(log => ({
+              title: log.title,
+              date: log.date,
+              status: log.completed_percentage >= 100 ? 'done' : log.completed_percentage > 0 ? 'partial' : 'danger',
+              completion: Math.round(log.completed_percentage || 0) + '%',
+              detail: `${log.description} • ${Math.ceil((log.time_taken || 0) / 60)} minutes`
+            }))
+          }))
+        }
+      }
+    }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
 }
 
-const cp = {
-  name: 'Shoulder Mobility & Strength Program',
-  area: 'Right Shoulder',
-  dateRange: '10 Mar 2026 - 08 Apr 2026',
-  completionPercent: 68,
-  totalDays: 30,
-  sessionsLogged: 21,
-  monthlyGroups: [
-    {
-      month: 'April 2026',
-      visibleCount: 5,
-      logs: Array(6)
-        .fill(null)
-        .map((_, i) => ({
-          title: 'Daily Home Session',
-          date: `0${6 - i} Apr 2026`,
-          status: i % 3 === 0 ? 'partial' : 'done',
-          completion: i % 3 === 0 ? '50%' : '100%',
-          detail:
-            i % 3 === 0
-              ? '2 of 4 exercises completed • 14 minutes'
-              : 'All 4 exercises completed • 28 minutes',
-        })),
-    },
-    {
-      month: 'March 2026',
-      visibleCount: 5,
-      logs: Array(6)
-        .fill(null)
-        .map((_, i) => ({
-          title: 'Daily Home Session',
-          date: `${28 - i} Mar 2026`,
-          status: 'done',
-          completion: '100%',
-          detail: 'All 4 exercises completed • 28 minutes',
-        })),
-    },
-  ],
-}
+onMounted(() => {
+  fetchHistory()
+})
 
 function barBg(status) {
   if (status === 'done') return 'linear-gradient(180deg,#1aa894 0%,#0a7e6e 100%)'

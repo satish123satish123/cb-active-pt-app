@@ -109,8 +109,6 @@ const saveInfo = () => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap');
-
 .premium-layout {
   font-family: 'Sora', sans-serif;
   background: linear-gradient(170deg, #eaf8f3 0%, #f4fbf8 50%, #edf9f5 100%);

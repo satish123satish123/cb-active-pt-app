@@ -6,8 +6,8 @@
     />
 
     <!-- Upcoming -->
-    <div class="section" v-if="upcoming">
-      <div class="visit-card upcoming">
+    <div class="section" v-if="upcomingAppointments.length > 0">
+      <div v-for="(upcoming, idx) in upcomingAppointments" :key="'up-'+idx" class="visit-card upcoming" :style="{ marginBottom: idx < upcomingAppointments.length - 1 ? '12px' : '0' }">
         <div class="visit-top">
           <div class="visit-title-wrap">
             <div class="visit-kicker">Upcoming Appointment</div>
@@ -17,7 +17,7 @@
         </div>
 
         <div class="visit-date-line">
-          {{ upcoming.date }} • From {{ upcoming.from }} to {{ upcoming.to }} • Physiotherapist:
+          {{ upcoming.date }} <span v-if="upcoming.timeString">• From {{ upcoming.timeString }}</span> • Physiotherapist:
           {{ upcoming.physio }}
         </div>
 
@@ -62,32 +62,32 @@
           v-for="(a, index) in pastAppointments"
           :key="index"
           class="visit-card"
-          :class="{ cancelled: a.status === 'cancelled' }"
+          :class="{ cancelled: a.mappedStatus === 'cancelled' }"
         >
           <div class="visit-top">
             <div class="visit-title-wrap">
               <div class="visit-kicker">Past Appointment</div>
               <div class="visit-title">{{ a.location }}</div>
             </div>
-            <span class="visit-status" :class="a.status">
-              {{ a.status === 'cancelled' ? 'Cancelled' : 'Completed' }}
+            <span class="visit-status" :class="a.mappedStatus">
+              {{ a.statusLabel }}
             </span>
           </div>
 
           <div class="visit-date-line">
-            {{ a.date }} • From {{ a.from }} to {{ a.to }} • Physiotherapist: {{ a.physio }}
+            {{ a.date }} <span v-if="a.timeString">• From {{ a.timeString }}</span> • Physiotherapist: {{ a.physio }}
           </div>
 
           <div class="visit-subrow">
             <div class="visit-time-range">
               <span class="status-dot"></span>
-              <template v-if="a.status === 'cancelled'">
-                Charges: {{ a.charges }} • Appointment not attended
+              <template v-if="a.mappedStatus === 'cancelled'">
+                Charges: {{ a.chargesFormatted }} • Appointment not attended
               </template>
-              <template v-else> Charges: {{ a.charges }} </template>
+              <template v-else> Charges: {{ a.chargesFormatted }} </template>
             </div>
             <div class="visit-actions">
-              <q-btn flat outline color="primary" no-caps @click="openInvoicePdf(a.id)"
+              <q-btn v-if="a.invoice_url" flat outline color="primary" no-caps @click="openInvoicePdf(a.invoice_url)"
                 >View Invoice</q-btn
               >
             </div>
@@ -99,73 +99,70 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, onMounted } from 'vue'
+import { api } from 'src/boot/axios'
+import { useAuthStore } from 'src/stores/authStore'
 import ScreenHeader from 'src/components/ScreenHeader.vue'
-import { Notify } from 'quasar'
 
-const appointments = [
-  {
-    title: 'Clinic Appointment',
-    day: 'Sunday, 13 Apr',
-    date: 'April 13, 2026',
-    time: '10:30 AM',
-    from: '10:30 AM',
-    to: '11:15 AM',
-    physio: 'Dr. Sharma',
-    location: 'CB Physiotherapy - GK II',
-    status: 'confirmed',
-    charges: null,
-  },
-  {
-    title: 'Clinic Appointment',
-    day: 'Friday, 05 Apr',
-    date: 'April 5, 2026',
-    time: '2:00 PM',
-    from: '2:00 PM',
-    to: '2:45 PM',
-    physio: 'Dr. Sharma',
-    location: 'CB Physiotherapy - GK II',
-    status: 'completed',
-    charges: '₹1,000',
-  },
-  {
-    title: 'Clinic Appointment',
-    day: 'Tuesday, 02 Apr',
-    date: 'April 2, 2026',
-    time: '10:30 AM',
-    from: '10:30 AM',
-    to: '11:30 AM',
-    physio: 'Dr. Sharma',
-    location: 'CB Physiotherapy - GK II',
-    status: 'completed',
-    charges: '₹2,000',
-  },
-  {
-    title: 'Clinic Appointment',
-    day: 'Thursday, 28 Mar',
-    date: 'March 28, 2026',
-    time: '12:00 PM',
-    from: '12:00 PM',
-    to: '1:00 PM',
-    physio: 'Dr. Sharma',
-    location: 'CB Physiotherapy - GK II',
-    status: 'cancelled',
-    charges: '₹0',
-  },
-]
+const authStore = useAuthStore()
 
-const upcoming = computed(() => appointments.find((a) => a.status === 'confirmed'))
-const pastAppointments = computed(() => appointments.filter((a) => a.status !== 'confirmed'))
+const upcomingAppointments = ref([])
+const pastAppointments = ref([])
+const loading = ref(true)
 
-function openInvoicePdf(id) {
-  console.log(id)
-  Notify.create({
-    message: 'Downloading invoice...',
-    color: 'primary',
-    position: 'top',
-    timeout: 2000,
-    spinner: true,
-  })
+const fetchVisitsData = async () => {
+  loading.value = true
+  try {
+    const patientId = authStore.user?.patient
+    const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
+
+    const response = await api.post('getVisitsData', {
+      patient_id: patientId,
+      hospital_id: hospitalId
+    })
+
+    if (response.data?.status === 'success') {
+      const data = response.data.visits_data
+      
+      upcomingAppointments.value = (data.upcoming_appointments || []).map(a => ({
+        ...a,
+        statusLabel: a.status,
+        mappedStatus: a.status.toLowerCase(),
+        location: a.clinic_name,
+        physio: a.physio_name,
+        timeString: a.time ? a.time.replace(/ - | To /ig, ' to ') : ''
+      }))
+
+      pastAppointments.value = (data.past_appointments || []).map(a => {
+        let mappedStatus = a.status.toLowerCase()
+        if (mappedStatus === 'treated') mappedStatus = 'completed'
+        
+        return {
+          ...a,
+          statusLabel: mappedStatus === 'completed' ? 'Completed' : (mappedStatus === 'cancelled' ? 'Cancelled' : a.status),
+          mappedStatus,
+          location: a.clinic_name,
+          physio: a.physio_name,
+          timeString: a.time ? a.time.replace(/ - | To /ig, ' to ') : '',
+          chargesFormatted: `₹${Math.round(Number(a.gross_total || 0)).toLocaleString('en-IN')}`
+        }
+      })
+    }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchVisitsData()
+})
+
+function openInvoicePdf(url) {
+  if (url) {
+    window.open(url, '_blank')
+  }
 }
 </script>
 
