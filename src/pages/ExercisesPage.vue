@@ -107,7 +107,7 @@
                 <q-icon v-else name="panorama_fish_eye" size="14px" />
               </span>
               <div class="exercise-info">
-                <div class="exercise-card-title">{{ ex.name }}</div>
+                <div class="exercise-card-title">{{ formatTitleCase(ex.name) }}</div>
                 <div class="exercise-card-subtitle">{{ ex.instruction }}</div>
                 <div class="exercise-card-goal">
                   Goal: {{ ex.goal || 'Build shoulder stability' }}
@@ -258,6 +258,14 @@ function stepLabel(status) {
   if (status === 'done') return 'Session completed'
   if (status === 'in-progress') return 'Continue from your current set'
   return 'Tap to start this exercise'
+}
+
+function formatTitleCase(text) {
+  if (!text) return ''
+  // Convert everything to lowercase first, then capitalize the first letter of each word
+  return text
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 </script>
 

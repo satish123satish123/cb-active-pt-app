@@ -24,7 +24,7 @@
                 <span :style="{ width:'30px', height:'30px', borderRadius:'10px', display:'inline-flex', alignItems:'center', justifyContent:'center', background: isAdvance ? 'rgba(255,255,255,.16)' : '#eef6f5', color: isAdvance ? '#fff' : 'var(--brand)', fontSize:'14px', fontWeight:'800' }">↗</span>
                 <div style="min-width:0;">
                   <div class="muted sm" :style="{ color: isAdvance ? 'rgba(255,255,255,.72)' : 'var(--text-2)' }">Invoiced</div>
-                  <div :style="{ marginTop:'2px', fontSize:'19px', fontWeight:'800', color: cardTextColor, letterSpacing:'-.02em' }">₹{{ paymentSummary.invoiced.toLocaleString('en-IN') }}</div>
+                  <div :style="{ marginTop:'2px', fontSize:'19px', fontWeight:'800', color: cardTextColor, letterSpacing:'-.02em' }">₹{{ (paymentSummary.invoiced || 0).toLocaleString('en-IN') }}</div>
                 </div>
               </div>
             </div>
@@ -34,7 +34,7 @@
                 <span :style="{ width:'30px', height:'30px', borderRadius:'10px', display:'inline-flex', alignItems:'center', justifyContent:'center', background: isAdvance ? 'rgba(255,255,255,.16)' : '#e9f7ef', color: isAdvance ? '#fff' : 'var(--success)', fontSize:'14px', fontWeight:'800' }">✓</span>
                 <div style="min-width:0;">
                   <div class="muted sm" :style="{ color: isAdvance ? 'rgba(255,255,255,.72)' : 'var(--text-2)' }">Paid</div>
-                  <div :style="{ marginTop:'2px', fontSize:'19px', fontWeight:'800', color: cardTextColor, letterSpacing:'-.02em' }">₹{{ paymentSummary.paid.toLocaleString('en-IN') }}</div>
+                  <div :style="{ marginTop:'2px', fontSize:'19px', fontWeight:'800', color: cardTextColor, letterSpacing:'-.02em' }">₹{{ (paymentSummary.paid || 0).toLocaleString('en-IN') }}</div>
                 </div>
               </div>
             </div>
@@ -44,7 +44,7 @@
                 <span :style="{ width:'30px', height:'30px', borderRadius:'10px', display:'inline-flex', alignItems:'center', justifyContent:'center', background: isAdvance ? 'rgba(255,255,255,.16)' : '#fff4e7', color: isAdvance ? '#fff' : '#c78810', fontSize:'14px', fontWeight:'800' }">↺</span>
                 <div style="min-width:0;">
                   <div class="muted sm" :style="{ color: isAdvance ? 'rgba(255,255,255,.72)' : 'var(--text-2)' }">Refunded</div>
-                  <div :style="{ marginTop:'2px', fontSize:'19px', fontWeight:'800', color: cardTextColor, letterSpacing:'-.02em' }">₹{{ paymentSummary.refunded.toLocaleString('en-IN') }}</div>
+                  <div :style="{ marginTop:'2px', fontSize:'19px', fontWeight:'800', color: cardTextColor, letterSpacing:'-.02em' }">₹{{ (paymentSummary.refunded || 0).toLocaleString('en-IN') }}</div>
                 </div>
               </div>
             </div>
@@ -53,7 +53,7 @@
           <div style="display:flex; flex-wrap:wrap; gap:8px;">
             <div :style="{ display:'inline-flex', alignItems:'center', gap:'8px', minHeight:'34px', padding:'0 12px', borderRadius:'999px', background: isAdvance ? 'rgba(255,255,255,.12)' : '#f6faf9', border: isAdvance ? '1px solid rgba(255,255,255,.14)' : '1px solid #e4ecee', color: isAdvance ? 'rgba(255,255,255,.92)' : 'var(--text)', fontSize:'12px', fontWeight:'700' }">
               <span :style="{ width:'8px', height:'8px', borderRadius:'50%', background: isAdvance ? '#bff3ea' : 'var(--brand)' }"></span>
-              Net collected ₹{{ (paymentSummary.paid - paymentSummary.refunded).toLocaleString('en-IN') }}
+              Net collected ₹{{ (paymentSummary.net_collected || 0).toLocaleString('en-IN') }}
             </div>
           </div>
         </div>
@@ -67,79 +67,44 @@
           <div class="eyebrow" style="margin:0;">Active Packages</div>
           <div class="muted sm">Currently available sessions</div>
         </div>
-        <span class="badge brand">2 Active</span>
+        <span class="badge brand">{{ activePackages.length }} Active</span>
       </div>
       
       <div style="display:grid; gap:12px;">
-        <!-- Package 1 -->
-        <div class="card soft">
+        <div v-for="(pkg, i) in activePackages" :key="'active-'+i" class="card soft">
           <div class="split" style="margin-bottom:10px;">
             <div>
-              <div style="font-size:16px; font-weight:800; letter-spacing:-.01em;">8 Sessions Basic Physiotherapy</div>
-              <div class="muted" style="margin-top:4px;">Valid until May 28, 2026</div>
+              <div style="font-size:16px; font-weight:800; letter-spacing:-.01em;">{{ pkg.package_name }}</div>
+              <div class="muted" style="margin-top:4px;">Valid until {{ pkg.validity }}</div>
             </div>
             <span class="badge brand">Active</span>
           </div>
           
-          <div class="progress-wrap" style="margin-top:12px;">
+          <div v-if="pkg.total_session" class="progress-wrap" style="margin-top:12px;">
             <div class="split">
               <span class="muted sm">Session consumption</span>
-              <strong style="color:var(--brand);">3 of 8 used</strong>
+              <strong style="color:var(--brand);">{{ pkg.total_session - pkg.sessions_left }} of {{ pkg.total_session }} used</strong>
             </div>
             <div class="progress-rail" style="margin-top:8px;">
-              <div class="progress-fill" style="width:37.5%; background:var(--grad);"></div>
+              <div class="progress-fill" :style="{ width: `${((pkg.total_session - pkg.sessions_left) / pkg.total_session) * 100}%`, background: 'var(--grad)' }"></div>
             </div>
           </div>
 
           <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--line);">
             <div class="split">
               <div>
-                <div class="muted sm">Package Value</div>
-                <div style="font-weight:800; font-size:15px; margin-top:2px;">₹7,000</div>
+                <div class="muted sm">Value Per Session</div>
+                <div style="font-weight:800; font-size:15px; margin-top:2px;">₹{{ Math.round(pkg.charges_per_session || 0).toLocaleString('en-IN') }}</div>
               </div>
               <div>
                 <div class="muted sm">Sessions Remaining</div>
-                <div style="font-weight:800; font-size:15px; margin-top:2px; color:var(--brand);">5 sessions</div>
+                <div style="font-weight:800; font-size:15px; margin-top:2px; color:var(--brand);">{{ pkg.sessions_left }} sessions</div>
               </div>
             </div>
           </div>
         </div>
-
-        <!-- Package 2 (Expiring Soon) -->
-        <div class="card soft" style="border:1.5px solid #fff4dd;">
-          <div class="split" style="margin-bottom:10px;">
-            <div>
-              <div style="font-size:16px; font-weight:800; letter-spacing:-.01em;">4 Sessions Advanced Treatment</div>
-              <div style="margin-top:4px; display:flex; align-items:center; gap:8px;">
-                <span class="muted sm">Valid until April 22, 2026</span>
-                <span class="badge warn" style="font-size:10px; min-height:22px;">⚠️ Expiring Soon</span>
-              </div>
-            </div>
-            <span class="badge brand">Active</span>
-          </div>
-          
-          <div class="progress-wrap" style="margin-top:12px;">
-            <div class="split">
-              <span class="muted sm">Session consumption</span>
-              <strong style="color:var(--warning);">2 of 4 used</strong>
-            </div>
-            <div class="progress-rail" style="margin-top:8px;">
-              <div class="progress-fill" style="width:50%; background:linear-gradient(135deg, #c78810 0%, #d69520 100%);"></div>
-            </div>
-          </div>
-
-          <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--line);">
-            <div class="split">
-              <div>
-                <div class="muted sm">Package Value</div>
-                <div style="font-weight:800; font-size:15px; margin-top:2px;">₹4,500</div>
-              </div>
-              <div>
-                <div class="muted sm">Sessions Remaining</div>
-                <div style="font-weight:800; font-size:15px; margin-top:2px; color:var(--warning);">2 sessions</div>
-              </div>
-            </div>
-          </div>
+        <div v-if="activePackages.length === 0" class="muted text-center" style="padding:20px; background:#f9fbfb; border-radius:12px;">
+          No active packages
         </div>
       </div>
     </div>
@@ -191,7 +156,7 @@
                 <div style="font-weight:800; font-size:16px;" :style="{ color: item.amountColor }">{{ item.amount }}</div>
                 <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:6px; flex-wrap:wrap;">
                   <span class="badge" :class="item.statusClass">{{ item.status }}</span>
-                  <button v-if="(transactionFilter === 'invoices' || transactionFilter === 'all') && item.title.includes('Invoice')" class="btn secondary small" style="font-size:12px;" @click="openInvoicePdf()">⤓ Invoice</button>
+                  <button v-if="(transactionFilter === 'invoices' || transactionFilter === 'all') && item.link" class="btn secondary small" style="font-size:12px;" @click="openInvoicePdf(item.link)">⤓ Invoice</button>
                 </div>
               </div>
             </div>
@@ -209,56 +174,28 @@
             <div class="muted">View completed and expired packages</div>
           </div>
           <div style="display:flex; align-items:center; gap:10px;">
-            <span class="badge" style="background:var(--bg-soft); color:var(--text-2);">3 Completed</span>
+            <span class="badge" style="background:var(--bg-soft); color:var(--text-2);">{{ historicalPackages.length }} Completed</span>
             <span class="toggle-icon" style="font-size:18px; color:var(--text-3);">{{ isHistoricalOpen ? '▼' : '▶' }}</span>
           </div>
         </div>
 
         <div class="historical-content" v-show="isHistoricalOpen" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--line);">
           <div style="display:grid; gap:10px;">
-            <!-- Historical Package 1 -->
-            <div style="padding:12px; border-radius:12px; background:#fff; border:1px solid var(--line);">
+            <div v-for="(pkg, i) in historicalPackages" :key="'hist-'+i" style="padding:12px; border-radius:12px; background:#fff; border:1px solid var(--line);">
               <div class="split">
                 <div>
-                  <div style="font-size:14px; font-weight:800;">6 Sessions Post-Surgery Rehab</div>
-                  <div class="muted sm" style="margin-top:4px;">Jan 15 - Feb 28, 2026</div>
+                  <div style="font-size:14px; font-weight:800;">{{ pkg.package_name }}</div>
+                  <div class="muted sm" style="margin-top:4px;">Valid until {{ pkg.validity }}</div>
                 </div>
                 <span class="badge success">Completed</span>
               </div>
               <div class="split" style="margin-top:10px;">
-                <span class="muted sm">6 of 6 sessions used</span>
-                <span style="font-weight:700; font-size:13px;">₹6,500</span>
+                <span class="muted sm">{{ pkg.sessions_left }} sessions left</span>
+                <span style="font-weight:700; font-size:13px;">₹{{ Math.round(pkg.charges_per_session || 0).toLocaleString('en-IN') }} per session</span>
               </div>
             </div>
-
-            <!-- Historical Package 2 -->
-            <div style="padding:12px; border-radius:12px; background:#fff; border:1px solid var(--line);">
-              <div class="split">
-                <div>
-                  <div style="font-size:14px; font-weight:800;">10 Sessions Basic Physiotherapy</div>
-                  <div class="muted sm" style="margin-top:4px;">Nov 10 - Dec 20, 2025</div>
-                </div>
-                <span class="badge success">Completed</span>
-              </div>
-              <div class="split" style="margin-top:10px;">
-                <span class="muted sm">10 of 10 sessions used</span>
-                <span style="font-weight:700; font-size:13px;">₹8,000</span>
-              </div>
-            </div>
-
-            <!-- Historical Package 3 - Expired with refund -->
-            <div style="padding:12px; border-radius:12px; background:#fff; border:1px solid var(--line);">
-              <div class="split">
-                <div>
-                  <div style="font-size:14px; font-weight:800;">4 Sessions Dry Needling</div>
-                  <div class="muted sm" style="margin-top:4px;">Sep 5 - Oct 10, 2025 • Expired</div>
-                </div>
-                <span class="badge" :style="{ background:'#f5f5f5', color:'#666' }">Expired</span>
-              </div>
-              <div class="split" style="margin-top:10px;">
-                <span class="muted sm">1 of 4 sessions used • ₹2,250 refunded</span>
-                <span style="font-weight:700; font-size:13px;">₹3,000</span>
-              </div>
+            <div v-if="historicalPackages.length === 0" class="muted text-center sm" style="padding:10px;">
+              No historical packages
             </div>
           </div>
         </div>
@@ -268,21 +205,161 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { api } from 'src/boot/axios'
+import { useAuthStore } from 'src/stores/authStore'
 import ScreenHeader from 'src/components/ScreenHeader.vue'
 
+const authStore = useAuthStore()
 const transactionFilter = ref('all')
+const loading = ref(true)
 
-const paymentSummary = {
-  invoiced: 11500,
-  paid: 10500,
-  refunded: 1000
+const paymentSummary = ref({
+  invoiced: 0,
+  paid: 0,
+  refunded: 0,
+  net_due_advance: 0,
+  net_collected: 0
+})
+
+const activePackages = ref([])
+const historicalPackages = ref([])
+const paymentEntries = ref([])
+const invoiceEntries = ref([])
+
+const fetchFinancialDetails = async () => {
+  loading.value = true
+  try {
+    const patientId = authStore.user?.patient
+    const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
+
+    const response = await api.post('getFinancialDetails', {
+      patient_id: patientId,
+      hospital_id: hospitalId
+    })
+
+    if (response.data?.status === 'success') {
+      const data = response.data.financial_transactions
+      
+      if (data['Account Summary']) {
+        paymentSummary.value = data['Account Summary']
+      }
+      
+      activePackages.value = data['Active Packages'] || []
+      historicalPackages.value = data['Historical Packages'] || []
+
+      const payments = []
+      const invoices = []
+
+      const transactions = data['Transaction History'] || []
+      transactions.forEach(group => {
+        Object.keys(group).forEach(key => {
+          const items = group[key]
+          items.forEach(item => {
+            const amount = Number(item.amount || 0)
+            const formattedAmount = `₹${Math.round(amount).toLocaleString('en-IN')}`
+            let dateStr = ''
+            if (item.date) {
+              if (item.date.includes('-')) {
+                dateStr = item.date.split(' ')[0]
+              } else {
+                const d = new Date(Number(item.date) * 1000)
+                dateStr = d.toISOString().split('T')[0]
+              }
+            }
+
+            if (key === 'advance_payment') {
+              payments.push({
+                title: 'Advance Payment',
+                subtitle: item.remarks || 'Advance kept on account',
+                meta: `${dateStr} • ${item.paid_via || 'Cash'}`,
+                amount: formattedAmount,
+                status: 'Paid',
+                icon: '₹',
+                iconBg: '#e6f7ed',
+                iconColor: 'var(--success)',
+                amountColor: 'var(--success)',
+                statusClass: 'success'
+              })
+            } else if (item.type === 'Payment') {
+              payments.push({
+                title: item.session_name ? 'Session Payment' : (item.package_details ? 'Package Payment' : 'Payment'),
+                subtitle: item.package_details || item.session_name || item.remarks || '',
+                meta: `${dateStr} • ${item.paid_via || 'Cash'}`,
+                amount: formattedAmount,
+                status: 'Paid',
+                icon: '₹',
+                iconBg: '#e6f7ed',
+                iconColor: 'var(--success)',
+                amountColor: 'var(--success)',
+                statusClass: 'success'
+              })
+            } else if (item.type === 'Invoice' || item.link) {
+              let title = item.session_name ? `Session Invoice #${item.payment_id || ''}` : (item.package_details ? `Package Invoice #${item.payment_id || ''}` : `Invoice #${item.payment_id || ''}`)
+              let status = 'Issued'
+              let icon = '🧾'
+              let iconBg = '#edf9f6'
+              let iconColor = 'var(--brand)'
+              let amountColor = 'var(--brand)'
+              let statusClass = 'brand'
+
+              if (key === 'refund_invoices') {
+                title = `Refund Invoice #${item.payment_id || ''}`
+                status = 'Refunded'
+                icon = '↩'
+                iconBg = '#fde8ec'
+                iconColor = 'var(--danger)'
+                amountColor = 'var(--danger)'
+                statusClass = 'danger'
+              } else if (key === 'package_expiry_invoice') {
+                title = `Package Expiry #${item.payment_id || ''}`
+                status = 'Expired'
+                icon = '⚠️'
+                iconBg = '#fff4dd'
+                iconColor = 'var(--warning)'
+                amountColor = 'var(--warning)'
+                statusClass = 'warn'
+              } else if (key === 'package_cancellation_charge_invoice') {
+                title = `Forfeit Invoice #${item.payment_id || ''}`
+                icon = '⚠️'
+                iconBg = '#fff4dd'
+                iconColor = 'var(--warning)'
+                amountColor = 'var(--warning)'
+                statusClass = 'warn'
+              }
+
+              invoices.push({
+                title,
+                subtitle: item.package_details || item.session_name || item.remarks || '',
+                meta: `${dateStr} • Invoice`,
+                amount: formattedAmount,
+                status,
+                icon, iconBg, iconColor, amountColor, statusClass,
+                link: item.link
+              })
+            }
+          })
+        })
+      })
+
+      paymentEntries.value = payments
+      invoiceEntries.value = invoices
+    }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
 }
 
-const netBalance = computed(() => paymentSummary.paid - paymentSummary.invoiced - paymentSummary.refunded)
-const hasRefund = computed(() => paymentSummary.refunded > 0)
-const isDue = computed(() => netBalance.value < 0)
-const isAdvance = computed(() => netBalance.value > 0)
+onMounted(() => {
+  fetchFinancialDetails()
+})
+
+const netBalance = computed(() => paymentSummary.value.net_due_advance || 0)
+const hasRefund = computed(() => (paymentSummary.value.refunded || 0) > 0)
+const isDue = computed(() => netBalance.value > 0)
+const isAdvance = computed(() => netBalance.value < 0)
 
 const balanceLabel = computed(() => isDue.value ? 'Due' : (isAdvance.value ? 'Advance' : 'Settled'))
 const statusLabel = computed(() => isDue.value ? 'Payment Pending' : (isAdvance.value ? 'Advance Available' : 'All Settled'))
@@ -305,112 +382,10 @@ const statusBadgeStyle = computed(() => isDue.value
     ? 'background:rgba(255,255,255,.16); color:#fff; border:1.5px solid rgba(255,255,255,.3);' 
     : 'background:#edf6f4; color:var(--success); border:1px solid #d7e8e2;'))
 
-const paymentEntries = [
-  {
-    title: 'Package Payment',
-    subtitle: '8 Sessions Basic Physiotherapy',
-    meta: 'March 28, 2026 • UPI',
-    amount: '₹7,000',
-    status: 'Paid',
-    icon: '₹',
-    iconBg: '#e6f7ed',
-    iconColor: 'var(--success)',
-    amountColor: 'var(--success)',
-    statusClass: 'success'
-  },
-  {
-    title: 'Session Payment',
-    subtitle: 'Session 2 - Basic Treatment',
-    meta: 'April 3, 2026 • Card',
-    amount: '₹1,500',
-    status: 'Paid',
-    icon: '₹',
-    iconBg: '#e6f7ed',
-    iconColor: 'var(--success)',
-    amountColor: 'var(--success)',
-    statusClass: 'success'
-  },
-  {
-    title: 'Advance Payment',
-    subtitle: 'Advance kept on account for future sessions',
-    meta: 'April 5, 2026 • Cash',
-    amount: '₹2,000',
-    status: 'Paid',
-    icon: '₹',
-    iconBg: '#e6f7ed',
-    iconColor: 'var(--success)',
-    amountColor: 'var(--success)',
-    statusClass: 'success'
-  }
-]
-
-const invoiceEntries = [
-  {
-    title: 'Package Invoice #2819',
-    subtitle: '8 Sessions Basic Physiotherapy',
-    meta: 'March 28, 2026 • Package Invoice',
-    amount: '₹7,000',
-    status: 'Issued',
-    icon: '🧾',
-    iconBg: '#edf9f6',
-    iconColor: 'var(--brand)',
-    amountColor: 'var(--brand)',
-    statusClass: 'brand'
-  },
-  {
-    title: 'Session Invoice #2847',
-    subtitle: 'Session 1 - Shoulder Assessment',
-    meta: 'March 30, 2026 • Session Invoice',
-    amount: '₹2,000',
-    status: 'Issued',
-    icon: '🧾',
-    iconBg: '#edf9f6',
-    iconColor: 'var(--brand)',
-    amountColor: 'var(--brand)',
-    statusClass: 'brand'
-  },
-  {
-    title: 'Session Invoice #2891',
-    subtitle: 'Session 2 - Basic Treatment',
-    meta: 'April 3, 2026 • Session Invoice',
-    amount: '₹1,500',
-    status: 'Issued',
-    icon: '🧾',
-    iconBg: '#edf9f6',
-    iconColor: 'var(--brand)',
-    amountColor: 'var(--brand)',
-    statusClass: 'brand'
-  },
-  {
-    title: 'Forfeit Invoice #2910',
-    subtitle: 'Late cancellation charge',
-    meta: 'April 6, 2026 • Forfeit Invoice',
-    amount: '₹1,000',
-    status: 'Issued',
-    icon: '⚠️',
-    iconBg: '#fff4dd',
-    iconColor: 'var(--warning)',
-    amountColor: 'var(--warning)',
-    statusClass: 'warn'
-  },
-  {
-    title: 'Refund Invoice #2917',
-    subtitle: 'Refund processed for one unused session',
-    meta: 'April 8, 2026 • Refund Invoice',
-    amount: '₹1,000',
-    status: 'Refunded',
-    icon: '↩',
-    iconBg: '#fde8ec',
-    iconColor: 'var(--danger)',
-    amountColor: 'var(--danger)',
-    statusClass: 'danger'
-  }
-]
-
 const visibleTransactions = computed(() => {
-  if (transactionFilter.value === 'payments') return paymentEntries
-  if (transactionFilter.value === 'invoices') return invoiceEntries
-  return [...paymentEntries, ...invoiceEntries]
+  if (transactionFilter.value === 'payments') return paymentEntries.value
+  if (transactionFilter.value === 'invoices') return invoiceEntries.value
+  return [...paymentEntries.value, ...invoiceEntries.value]
 })
 
 const setTransactionFilter = (filter) => {
@@ -422,8 +397,9 @@ const toggleHistorical = () => {
   isHistoricalOpen.value = !isHistoricalOpen.value
 }
 
-const openInvoicePdf = () => {
-  // Mock logic for opening PDF
-  console.log('Opening invoice PDF...')
+const openInvoicePdf = (url) => {
+  if(url) {
+    window.open(url, '_blank')
+  }
 }
 </script>
