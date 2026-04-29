@@ -98,10 +98,7 @@
                   </div>
                   <div class="modalities-container">
                     <div
-                      v-for="mod in phase.modalities.split(',').map((item) => item.trim()) || [
-                        'Manual Therapy',
-                        'TENS',
-                      ]"
+                      v-for="mod in (phase.modalities ? phase.modalities.split(',').map((item) => item.trim()) : [])"
                       :key="mod"
                       class="modality-chip"
                     >
@@ -171,7 +168,7 @@
                   <div class="text-subtitle2 text-weight-bold text-grey-10 q-mb-sm leading-tight">
                     {{ primaryDiagnosis.name }}
                   </div>
-                  <div class="text-caption text-grey-7" style="line-height: 1.4; font-size: 12px">
+                  <div v-if="primaryDiagnosis.inference" class="text-caption text-grey-7" style="line-height: 1.4; font-size: 12px">
                     {{ primaryDiagnosis.inference }}
                   </div>
                 </q-card-section>
@@ -189,7 +186,7 @@
                   <div class="text-subtitle2 text-weight-bold text-grey-10 q-mb-sm leading-tight">
                     {{ secondaryDiagnosis.name }}
                   </div>
-                  <div class="text-caption text-grey-7" style="line-height: 1.4; font-size: 12px">
+                  <div v-if="secondaryDiagnosis.inference" class="text-caption text-grey-7" style="line-height: 1.4; font-size: 12px">
                     {{ secondaryDiagnosis.inference }}
                   </div>
                 </q-card-section>
@@ -211,43 +208,82 @@ import { api } from 'src/boot/axios'
 const authStore = useAuthStore()
 
 const milestones_data = ref(null)
-
 const treatmentPhases = ref([])
 
 const assessmentSession = ref({
-  chiefComplaint: 'Pain while lifting the right arm and difficulty reaching overhead.',
+  chiefComplaint: '',
 })
 
-const primaryDiagnosis = ref({
-  name: 'Right Rotator Cuff Tendinopathy',
-  inference:
-    'Findings suggest overload of the rotator cuff with pain during active elevation and resisted testing.',
-})
+const primaryDiagnosis = ref(null)
+const secondaryDiagnosis = ref(null)
 
-const secondaryDiagnosis = ref({
-  name: 'Scapular Dyskinesis',
-  inference:
-    'Scapular movement pattern showed reduced control, contributing to poor shoulder mechanics during overhead activity.',
-})
-
-const getRecoveryProgress = async () => {
+const getClinicalTreatmentPlanData = async () => {
   try {
     const patientId = authStore.user?.patient
     const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
 
-    const response = await api.post('getRecoveryProgress', {
+    // First, fetch assessment_id from recovery progress or tasks
+    const recResponse = await api.post('getRecoveryProgressCardData', {
       patient_id: patientId,
       hospital_id: hospitalId,
     })
 
+    const assessmentId = recResponse.data?.card_data?.assessment_id
+
+    if (!assessmentId) return
+
+    const response = await api.post('getClinicalTreatmentPlanData', {
+      assessment_id: assessmentId
+    })
+
     if (response.data?.status === 'success') {
-      milestones_data.value = response.data.data
-      treatmentPhases.value = response.data.data.milestones
-    } else {
-      milestones_data.value = null
+      const data = response.data
+      const planData = data.treatment_plan_data || {}
+      const summary = data.clinical_summary || {}
+
+      milestones_data.value = { total_sessions: planData.total_sessions || 0 }
+
+      const phases = []
+      Object.keys(planData).forEach(key => {
+        if (key.startsWith('Session')) {
+          const phase = planData[key]
+          const goal_progress = []
+          
+          if (phase.milestones && Array.isArray(phase.milestones)) {
+            for (let i = 0; i < phase.milestones.length; i += 2) {
+              const title = phase.milestones[i]
+              const baseTarget = phase.milestones[i+1] || ''
+              const match = baseTarget.match(/Base:\s*(.*?)\s*·\s*Target:\s*(.*)/)
+              goal_progress.push({
+                written_goal: title,
+                base_value: match ? match[1] : 'N/A',
+                target_value: match ? match[2] : 'N/A'
+              })
+            }
+          }
+
+          const isCurrent = phase.status === 'Current Phase'
+          const isUpcoming = phase.status === 'Upcoming'
+
+          phases.push({
+            session: key.replace('Session ', ''),
+            session_frequency: phase.frequency || '',
+            status: phase.status,
+            statusClass: isCurrent ? 'bg-teal-1 text-teal-8' : (isUpcoming ? 'bg-grey-2 text-grey-7' : 'bg-green-1 text-green-8'),
+            dotColor: isCurrent ? 'teal-8' : (isUpcoming ? 'grey-4' : 'green-6'),
+            cardClass: isCurrent ? 'active-phase-border bg-teal-1' : '',
+            goal_progress,
+            modalities: phase.modalities || ''
+          })
+        }
+      })
+      treatmentPhases.value = phases
+
+      assessmentSession.value.chiefComplaint = summary.chief_complaint || 'No chief complaint recorded.'
+      primaryDiagnosis.value = summary.primary_diagnosis ? { name: summary.primary_diagnosis, inference: '' } : null
+      secondaryDiagnosis.value = summary.secondary_diagnosis ? { name: summary.secondary_diagnosis, inference: '' } : null
     }
   } catch (e) {
-    milestones_data.value = null
     console.error(e)
   }
 }
@@ -263,7 +299,7 @@ function formattedFrequency(frequency) {
 }
 
 onMounted(() => {
-  getRecoveryProgress()
+  getClinicalTreatmentPlanData()
 })
 </script>
 
