@@ -39,7 +39,7 @@
       </div>
     </div>
 
-    <div class="section">
+    <div class="section" v-if="overview.numericMetrics && overview.numericMetrics.length > 0">
       <div class="progress-section-label">Measured Progress</div>
       <div class="progress-stack">
         <div
@@ -117,7 +117,8 @@
 
               <g v-for="(value, idx) in metric.values" :key="idx">
                 <circle
-                  :cx="getXPosition(idx, metric.values.length)"
+                  v-if="value !== null"
+                  :cx="getXPosition(idx, metric.xLabels.length)"
                   :cy="getYFor(value, metric)"
                   r="5.5"
                   fill="#ffffff"
@@ -125,7 +126,7 @@
                   stroke-width="3"
                 ></circle>
                 <text
-                  :x="getXPosition(idx, metric.values.length)"
+                  :x="getXPosition(idx, metric.xLabels.length)"
                   :y="
                     CHART_CONFIG.top +
                     (CHART_CONFIG.height - CHART_CONFIG.top - CHART_CONFIG.bottom) +
@@ -139,7 +140,7 @@
                   {{ metric.xLabels[idx] }}
                 </text>
                 <text
-                  :x="getXPosition(idx, metric.values.length)"
+                  :x="getXPosition(idx, metric.xLabels.length)"
                   :y="
                     CHART_CONFIG.top +
                     (CHART_CONFIG.height - CHART_CONFIG.top - CHART_CONFIG.bottom) +
@@ -156,15 +157,14 @@
           </div>
           <div class="progress-chart-legend">
             <span class="chip">{{ getTrendText(metric) }}</span>
-            <span class="chip">{{ metric.sessionRanges[1] }} review</span>
-            <span class="chip">{{ metric.sessionRanges[2] }} review</span>
+            <span v-for="(range, rIdx) in metric.sessionRanges.slice(1)" :key="rIdx" class="chip">{{ range }}</span>
           </div>
           <div class="progress-direction-note">{{ metric.summary }}</div>
         </div>
       </div>
     </div>
 
-    <div class="section">
+    <div class="section" v-if="overview.statusMetrics && overview.statusMetrics.length > 0">
       <div class="progress-section-label">Functional Milestones</div>
       <div class="progress-stack">
         <div
@@ -181,10 +181,10 @@
           </div>
           <div class="progress-status-timeline">
             <div v-for="(status, sIdx) in metric.statuses" :key="sIdx" class="progress-status-step">
-              <span :class="['progress-status-dot', getStatusToneClass(status)]"></span>
+              <span :class="['progress-status-dot', getStatusToneClass(status, metric)]"></span>
               <div class="progress-status-step-label">{{ metric.xLabels[sIdx] }}</div>
               <div class="progress-status-step-range">{{ metric.sessionRanges[sIdx] }}</div>
-              <span :class="['progress-status-chip', getStatusToneClass(status)]">{{
+              <span :class="['progress-status-chip', getStatusToneClass(status, metric)]">{{
                 status
               }}</span>
             </div>
@@ -215,8 +215,12 @@
 </template>
 
 <script setup>
+import { ref, computed, onMounted } from 'vue'
 import ScreenHeader from 'src/components/ScreenHeader.vue'
-import { computed } from 'vue'
+import { api } from 'src/boot/axios'
+import { useAuthStore } from 'src/stores/authStore'
+
+const authStore = useAuthStore()
 
 const CHART_CONFIG = {
   width: 320,
@@ -227,100 +231,176 @@ const CHART_CONFIG = {
   bottom: 54,
 }
 
-const metrics = [
-  {
-    type: 'numeric',
-    title: 'Pain During Daily Reaching',
-    subtitle: 'Pain score recorded during reaching and overhead activity.',
-    unit: '/10',
-    betterDirection: 'down',
-    sessionRanges: ['Baseline', 'Sessions 1–5', 'Sessions 6–12', 'Now'],
-    xLabels: ['Initial', 'Reassessment 1', 'Reassessment 2', 'Now'],
-    values: [8, 5, 4, 3],
-    target: 2,
-    statusLabel: 'Pain reducing',
-    statusTone: 'success',
-    summary: 'Pain has reduced across reassessments and is moving toward the target range.',
-  },
-  {
-    type: 'numeric',
-    title: 'Shoulder Flexion',
-    subtitle: 'Range of motion recorded during reassessment reviews.',
-    unit: '°',
-    betterDirection: 'up',
-    sessionRanges: ['Baseline', 'Sessions 1–5', 'Sessions 6–12', 'Now'],
-    xLabels: ['Initial', 'Reassessment 1', 'Reassessment 2', 'Now'],
-    values: [90, 110, 125, 135],
-    target: 160,
-    statusLabel: 'Building range',
-    statusTone: 'brand',
-    summary: 'Range has improved steadily across each reassessment.',
-  },
-  {
-    type: 'numeric',
-    title: 'Overhead Reach Comfort',
-    subtitle: 'Functional comfort during reaching and lifting above shoulder height.',
-    unit: '%',
-    betterDirection: 'up',
-    sessionRanges: ['Baseline', 'Sessions 1–5', 'Sessions 6–12', 'Now'],
-    xLabels: ['Initial', 'Reassessment 1', 'Reassessment 2', 'Now'],
-    values: [20, 45, 58, 68],
-    target: 90,
-    statusLabel: 'Function improving',
-    statusTone: 'brand',
-    summary: 'Daily reaching confidence is improving with each review.',
-  },
-  {
-    type: 'status',
-    title: 'Sleep Without Disturbance',
-    subtitle: 'Night-time comfort and ability to sleep through without shoulder interruption.',
-    statusLabel: 'Functional milestone',
-    statusTone: 'warn',
-    xLabels: ['Initial', 'Reassessment 1', 'Reassessment 2', 'Now'],
-    sessionRanges: ['Baseline', 'Sessions 1–5', 'Sessions 6–12', 'Now'],
-    statuses: ['Not achieved', 'Partially achieved', 'Partially achieved', 'Achieved'],
-    summary: 'Night pain has settled enough that this milestone is now achieved.',
-  },
-  {
-    type: 'status',
-    title: 'Return to Desk Work Comfortably',
-    subtitle: 'Tolerance for regular work posture and daily sitting demands.',
-    statusLabel: 'Work function',
-    statusTone: 'brand',
-    xLabels: ['Initial', 'Reassessment 1', 'Reassessment 2', 'Now'],
-    sessionRanges: ['Baseline', 'Sessions 1–5', 'Sessions 6–12', 'Now'],
-    statuses: ['Not achieved', 'Partially achieved', 'Achieved', 'Achieved'],
-    summary: 'Work tolerance improved at Reassessment 2 and is currently maintained.',
-  },
-]
+const metricsState = ref({
+  numericMetrics: [],
+  statusMetrics: [],
+})
 
 const overview = computed(() => {
-  const numericMetrics = metrics.filter((m) => m.type === 'numeric')
-  const statusMetrics = metrics.filter((m) => m.type === 'status')
-
-  const achievedNumeric = numericMetrics.filter((m) => {
-    const now = m.values[m.values.length - 1]
-    return m.betterDirection === 'down' ? now <= m.target : now >= m.target
-  }).length
-
-  const achievedStatus = statusMetrics.filter((m) => {
-    const now = m.statuses[m.statuses.length - 1]
-    return now === 'Achieved' || now === 'Overachieved'
-  }).length
-
+  const numMetrics = metricsState.value.numericMetrics
+  const statMetrics = metricsState.value.statusMetrics
+  
+  const totalMilestones = numMetrics.length + statMetrics.length
+  
+  const achievedNumeric = numMetrics.filter(m => m.isAchieved).length
+  const achievedStatus = statMetrics.filter(m => m.isAchieved).length
+  const completedMilestones = achievedNumeric + achievedStatus
+  
+  const overallPercent = totalMilestones > 0 ? Math.round((completedMilestones / totalMilestones) * 100) : 0
+  
+  let maxReassessments = 0
+  numMetrics.forEach(m => {
+    const achievedCount = m.values.slice(1).filter(v => v !== null).length
+    if (achievedCount > maxReassessments) maxReassessments = achievedCount
+  })
+  statMetrics.forEach(m => {
+    const achievedCount = m.statuses.slice(1).filter(v => v !== 'Pending').length
+    if (achievedCount > maxReassessments) maxReassessments = achievedCount
+  })
+  
   return {
-    overallPercent: 63,
-    reassessments: 2,
-    completedMilestones: 3,
-    totalMilestones: 9,
-    numericMetrics,
-    statusMetrics,
-    achievedMilestones: achievedNumeric + achievedStatus,
+    overallPercent,
+    reassessments: maxReassessments,
+    completedMilestones,
+    totalMilestones,
+    numericMetrics: numMetrics,
+    statusMetrics: statMetrics
   }
 })
 
+const fetchProgressData = async () => {
+  try {
+    const patientId = authStore.user?.patient
+    const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
+
+    const taskResponse = await api.post('get_recovery_tasks', {
+      patient_id: patientId,
+      hospital_id: hospitalId,
+    })
+
+    if (taskResponse.data?.status === 'success') {
+      const assessmentId = taskResponse.data.assessment_id || taskResponse.data.session_timeline?.assessment_id
+      if (assessmentId) {
+        const progressResponse = await api.post('getPatientProgressTrackingData', {
+          patient_id: patientId,
+          hospital_id: hospitalId,
+          assessment_id: assessmentId
+        })
+        
+        if (progressResponse.data?.status === 'success') {
+          const data = progressResponse.data.data
+          
+          let numericMetrics = []
+          if (data.measured_progress && data.measured_progress.length > 0) {
+            numericMetrics = data.measured_progress.map((item) => {
+              const sessions = item.sessions || []
+              const baseValues = item.base_values || []
+              const targetValues = item.target_values || []
+              const achievedValues = item.achieved_values || []
+              
+              const title = item.written_goal || 'Goal'
+              let unit = ''
+              if (title.toLowerCase().includes('(degrees)')) unit = '°'
+              else if (title.toLowerCase().includes('(nprs)')) unit = '/10'
+              else if (title.toLowerCase().includes('%')) unit = '%'
+              
+              const baseNum = parseFloat(baseValues[0]) || 0
+              const targetNumStr = targetValues.slice().reverse().find(v => v !== null) || targetValues[0]
+              const targetNum = parseFloat(targetNumStr) || 0
+              
+              const betterDirection = targetNum >= baseNum ? 'up' : 'down'
+              
+              const sessionRanges = ['Baseline', ...sessions.map(s => `Sessions ${s}`)]
+              const xLabels = ['Initial', ...sessions.map((_, i) => `Review ${i + 1}`)]
+              
+              const values = [baseNum, ...achievedValues.map(v => v !== null ? parseFloat(v) : null)]
+              
+              const currentVal = values.slice().reverse().find(v => v !== null)
+              const validCurrentVal = currentVal !== undefined ? currentVal : baseNum
+              
+              let isAchieved = false
+              if (betterDirection === 'up' && validCurrentVal >= targetNum) isAchieved = true
+              else if (betterDirection === 'down' && validCurrentVal <= targetNum) isAchieved = true
+              
+              let statusTone = 'brand'
+              let statusLabel = 'In progress'
+              
+              if (isAchieved) {
+                statusTone = 'success'
+                statusLabel = 'Target reached'
+              }
+              
+              return {
+                type: 'numeric',
+                title,
+                subtitle: '',
+                unit,
+                betterDirection,
+                sessionRanges,
+                xLabels,
+                values,
+                target: targetNum,
+                isAchieved,
+                statusLabel,
+                statusTone,
+                summary: `Target is ${targetNum}${unit}. Currently at ${validCurrentVal}${unit}.`
+              }
+            })
+          }
+          
+          let statusMetrics = []
+          if (data.functional_milestones && data.functional_milestones.length > 0) {
+            statusMetrics = data.functional_milestones.map((item) => {
+              const sessions = item.sessions || []
+              const baseValues = item.base_values || []
+              const targetValues = item.target_values || []
+              const achievedValues = item.achieved_values || []
+              
+              const sessionRanges = ['Baseline', ...sessions.map(s => `Sessions ${s}`)]
+              const xLabels = ['Initial', ...sessions.map((_, i) => `Review ${i + 1}`)]
+              
+              const statuses = [baseValues[0] || 'Initial', ...achievedValues.map(v => v !== null ? v : 'Pending')]
+              
+              const currentStatus = statuses.slice().reverse().find(v => v !== 'Pending') || statuses[0]
+              const targetStatus = targetValues.slice().reverse().find(v => v !== null) || targetValues[0]
+              
+              const isAchieved = currentStatus === targetStatus
+              
+              return {
+                type: 'status',
+                title: item.written_goal || 'Functional Goal',
+                subtitle: `Target: ${targetStatus}`,
+                statusLabel: isAchieved ? 'Achieved' : 'In progress',
+                statusTone: isAchieved ? 'success' : 'brand',
+                xLabels,
+                sessionRanges,
+                statuses,
+                targetStatus,
+                isAchieved,
+                summary: isAchieved ? `Target '${targetStatus}' achieved.` : `Working towards '${targetStatus}'.`
+              }
+            })
+          }
+          
+          metricsState.value = {
+            numericMetrics,
+            statusMetrics
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error fetching progress data:', e)
+  }
+}
+
+onMounted(() => {
+  fetchProgressData()
+})
+
 function getGridValues(metric) {
-  const allValues = metric.values.concat([metric.target])
+  const validValues = metric.values.filter(v => v !== null)
+  const allValues = validValues.concat([metric.target])
   const minValue = Math.min(...allValues)
   const maxValue = Math.max(...allValues)
   const padding = Math.max(
@@ -338,8 +418,10 @@ function getGridValues(metric) {
 }
 
 function getYFor(value, metric) {
+  if (value === null) return 0
   const chartHeight = CHART_CONFIG.height - CHART_CONFIG.top - CHART_CONFIG.bottom
-  const allValues = metric.values.concat([metric.target])
+  const validValues = metric.values.filter(v => v !== null)
+  const allValues = validValues.concat([metric.target])
   const minValue = Math.min(...allValues)
   const maxValue = Math.max(...allValues)
   const padding = Math.max(
@@ -358,28 +440,44 @@ function getXPosition(idx, total) {
 }
 
 function getLinePoints(metric) {
-  return metric.values
-    .map((value, idx) => `${getXPosition(idx, metric.values.length)},${getYFor(value, metric)}`)
-    .join(' ')
+  const validPoints = []
+  metric.values.forEach((value, idx) => {
+    if (value !== null) {
+      validPoints.push(`${getXPosition(idx, metric.xLabels.length)},${getYFor(value, metric)}`)
+    }
+  })
+  return validPoints.join(' ')
 }
 
 function getAreaPoints(metric) {
   const chartHeight = CHART_CONFIG.height - CHART_CONFIG.top - CHART_CONFIG.bottom
-  const chartWidth = CHART_CONFIG.width - CHART_CONFIG.left - CHART_CONFIG.right
   const points = getLinePoints(metric)
-  return `${CHART_CONFIG.left},${CHART_CONFIG.top + chartHeight} ${points} ${CHART_CONFIG.left + chartWidth},${CHART_CONFIG.top + chartHeight}`
+  if (!points) return ''
+  
+  const validIndices = metric.values.map((v, i) => v !== null ? i : -1).filter(i => i !== -1)
+  if (validIndices.length === 0) return ''
+  
+  const firstIdx = validIndices[0]
+  const lastIdx = validIndices[validIndices.length - 1]
+  const startX = getXPosition(firstIdx, metric.xLabels.length)
+  const endX = getXPosition(lastIdx, metric.xLabels.length)
+  
+  return `${startX},${CHART_CONFIG.top + chartHeight} ${points} ${endX},${CHART_CONFIG.top + chartHeight}`
 }
 
 function getTrendText(metric) {
-  const nowValue = metric.values[metric.values.length - 1]
+  const validValues = metric.values.filter(v => v !== null)
+  if (validValues.length === 0) return ''
+  const nowValue = validValues[validValues.length - 1]
   return metric.betterDirection === 'down'
-    ? `${metric.values[0]}${metric.unit} to ${nowValue}${metric.unit}`
+    ? `${validValues[0]}${metric.unit} to ${nowValue}${metric.unit}`
     : `${nowValue}${metric.unit} current`
 }
 
-function getStatusToneClass(status) {
-  if (status === 'Achieved' || status === 'Overachieved') return 'done'
-  if (status === 'Partially achieved' || status === 'Nearly achieved') return 'active'
+function getStatusToneClass(status, metric) {
+  if (!status || status === 'Pending') return ''
+  if (status === metric.targetStatus) return 'done'
+  if (status !== metric.statuses[0]) return 'active'
   return ''
 }
 </script>
