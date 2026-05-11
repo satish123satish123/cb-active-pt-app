@@ -1,5 +1,15 @@
 const routes = [
   {
+    path: '/pre-assessment',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      {
+        path: '',
+        component: () => import('pages/PreAssessmentForm.vue'),
+      },
+    ],
+  },
+  {
     path: '/login',
     component: () => import('layouts/MainLayout.vue'),
     meta: { requiresAuth: false },

@@ -2,7 +2,6 @@
   <q-layout 
     view="lHh lpr lFf" 
     class="desktop-constrained"
-    container 
   >
     <q-page-container>
       <router-view />
