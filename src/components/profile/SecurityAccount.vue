@@ -32,7 +32,7 @@
             <div class="row-icon" style="background: #edf5f3; color: #2a7da8">📱</div>
             <div>
               <div class="row-label">Linked Phone</div>
-              <div class="muted">+91 98100 86624</div>
+              <div class="muted">{{ phone }}</div>
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 10px">
@@ -61,9 +61,16 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, inject, computed } from 'vue'
 
+const profileData = inject('profileData')
 const biometric = ref(true)
+
+const phone = computed(() => {
+  const p = profileData?.value?.phone || 'Not provided'
+  const c = profileData?.value?.country_code || '91'
+  return `+${c} ${p}`
+})
 </script>
 
 <style scoped>

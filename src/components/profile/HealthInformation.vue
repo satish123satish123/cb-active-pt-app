@@ -16,19 +16,19 @@
       <div class="vitals-grid">
         <div class="vital-cell" style="border-right:1px solid var(--line);border-bottom:1px solid var(--line);">
           <div class="eyebrow" style="margin-bottom:6px;">Age</div>
-          <div class="vital-val">34 years</div>
+          <div class="vital-val">{{ age }}</div>
         </div>
         <div class="vital-cell" style="border-bottom:1px solid var(--line);">
           <div class="eyebrow" style="margin-bottom:6px;">Blood Group</div>
-          <div class="vital-val" style="color:var(--brand);">B+</div>
+          <div class="vital-val" style="color:var(--brand);">{{ bloodGroup }}</div>
         </div>
         <div class="vital-cell" style="border-right:1px solid var(--line);">
-          <div class="eyebrow" style="margin-bottom:6px;">Height</div>
-          <div class="vital-val">5'10" (178 cm)</div>
+          <div class="eyebrow" style="margin-bottom:6px;">Sex</div>
+          <div class="vital-val">{{ sex }}</div>
         </div>
         <div class="vital-cell">
-          <div class="eyebrow" style="margin-bottom:6px;">Weight</div>
-          <div class="vital-val">74 kg</div>
+          <div class="eyebrow" style="margin-bottom:6px;">Condition</div>
+          <div class="vital-val">{{ condition }}</div>
         </div>
       </div>
 
@@ -36,7 +36,7 @@
       <div class="allergy-box">
         <div class="eyebrow" style="margin-bottom:8px;">Allergies / Medications</div>
         <div style="font-size:15px;line-height:1.55;color:var(--text);">
-          No known allergies · Ibuprofen (NSAIDs) – avoid
+          {{ medications }}
         </div>
       </div>
     </div>
@@ -44,7 +44,25 @@
 </template>
 
 <script setup>
-// static data
+import { inject, computed } from 'vue'
+
+const profileData = inject('profileData')
+
+const age = computed(() => profileData.value?.age ? `${profileData.value.age} years` : 'Not recorded')
+const bloodGroup = computed(() => {
+  const bg = profileData.value?.bloodgroup
+  return (bg && bg !== '0') ? bg : 'Unknown'
+})
+const sex = computed(() => profileData.value?.sex || 'Not recorded')
+const condition = computed(() => profileData.value?.current_condition || 'Not recorded')
+
+const medications = computed(() => {
+  const meds = profileData.value?.medications
+  if (meds && meds.length > 0) {
+    return meds.join(' · ')
+  }
+  return 'No recorded medications'
+})
 </script>
 
 <style scoped>

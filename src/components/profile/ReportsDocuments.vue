@@ -29,44 +29,58 @@
               <div class="muted">{{ doc.meta }}</div>
             </div>
           </div>
-          <q-btn color="secondary" outline dense icon="download" />
+          <q-btn color="secondary" outline dense icon="download" @click="downloadFile(doc.url)" />
         </div>
+      </div>
+      
+      <div v-if="documents.length === 0" class="q-py-md text-center text-grey-6">
+        No documents available.
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-const documents = [
-  {
-    emoji: '📋',
-    title: 'Assessment Report – Mar 2026',
-    meta: '1.2 MB · 28 Mar 2026',
-    bg: '#f8ebea',
-    color: '#e4563f',
-  },
-  {
-    emoji: '📘',
-    title: 'Treatment Plan – Shoulder Rehab',
-    meta: '890 KB · 01 Apr 2026',
-    bg: '#eaf2f7',
-    color: '#2a7da8',
-  },
-  {
-    emoji: '🩻',
-    title: 'X-Ray Reference – Right Shoulder',
-    meta: '3.4 MB · 15 Mar 2026',
-    bg: '#f0eef9',
-    color: '#7a43d1',
-  },
-  {
-    emoji: '🧾',
-    title: 'Progress Report – Week 4',
-    meta: '640 KB · 05 Apr 2026',
-    bg: '#f8ebea',
-    color: '#e4563f',
-  },
-]
+import { inject, computed } from 'vue'
+
+const profileData = inject('profileData')
+
+const documents = computed(() => {
+  const docs = []
+  
+  if (profileData.value?.reports_and_documents) {
+    profileData.value.reports_and_documents.forEach(doc => {
+      docs.push({
+        title: doc.name,
+        meta: `${doc.size || 'Unknown size'} · ${doc.date || ''}`,
+        url: doc.url,
+        emoji: '📋',
+        bg: '#eaf2f7',
+        color: '#2a7da8'
+      })
+    })
+  }
+
+  if (profileData.value?.investigation_data?.investigation_files) {
+    profileData.value.investigation_data.investigation_files.forEach(file => {
+      const isImg = ['jpg', 'png', 'jpeg'].includes(file.type?.toLowerCase())
+      docs.push({
+        title: file.name.split('/').pop() || file.name,
+        meta: `${file.type ? file.type.toUpperCase() : 'File'} · ${file.uploaded_at ? file.uploaded_at.split(' ')[0] : ''}`,
+        url: file.url,
+        emoji: isImg ? '🩻' : '📄',
+        bg: isImg ? '#f0eef9' : '#f8ebea',
+        color: isImg ? '#7a43d1' : '#e4563f'
+      })
+    })
+  }
+  
+  return docs
+})
+
+const downloadFile = (url) => {
+  if (url) window.open(url, '_blank')
+}
 </script>
 
 <style scoped>
