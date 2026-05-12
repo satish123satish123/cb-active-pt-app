@@ -7,7 +7,7 @@ import axios from 'axios'
 // good idea to move this instance creation inside of the
 // "export default () => {}" function below (which runs individually
 // for each client)
-let CRM_API_URL = `${process.env.CRM_API_PROTOCOL}://${process.env.CRM_API_URL}/api/`
+let CRM_API_URL = `${process.env.API_PROTOCOL}://${process.env.API_URL}/api/`
 const api = axios.create({ baseURL: CRM_API_URL })
 
 let ASSESSMENT_API_URL = `${process.env.ASSESSMENT_API_PROTOCOL}://${process.env.ASSESSMENT_API_URL}/api/`
