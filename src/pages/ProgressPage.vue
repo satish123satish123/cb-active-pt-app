@@ -234,37 +234,59 @@ const CHART_CONFIG = {
 const metricsState = ref({
   numericMetrics: [],
   statusMetrics: [],
+  apiOverallPercent: null,
+  apiReassessmentsDone: null,
+  apiMilestonesCompleted: null,
 })
 
 const overview = computed(() => {
   const numMetrics = metricsState.value.numericMetrics
   const statMetrics = metricsState.value.statusMetrics
-  
+
   const totalMilestones = numMetrics.length + statMetrics.length
-  
-  const achievedNumeric = numMetrics.filter(m => m.isAchieved).length
-  const achievedStatus = statMetrics.filter(m => m.isAchieved).length
-  const completedMilestones = achievedNumeric + achievedStatus
-  
-  const overallPercent = totalMilestones > 0 ? Math.round((completedMilestones / totalMilestones) * 100) : 0
-  
-  let maxReassessments = 0
-  numMetrics.forEach(m => {
-    const achievedCount = m.values.slice(1).filter(v => v !== null).length
-    if (achievedCount > maxReassessments) maxReassessments = achievedCount
-  })
-  statMetrics.forEach(m => {
-    const achievedCount = m.statuses.slice(1).filter(v => v !== 'Pending').length
-    if (achievedCount > maxReassessments) maxReassessments = achievedCount
-  })
-  
+
+  // Use API direct values if available, otherwise fallback to local calculation
+  const overallPercent =
+    metricsState.value.apiOverallPercent !== null
+      ? metricsState.value.apiOverallPercent
+      : totalMilestones > 0
+        ? Math.round(
+            ((numMetrics.filter(m => m.isAchieved).length +
+              statMetrics.filter(m => m.isAchieved).length) /
+              totalMilestones) *
+              100,
+          )
+        : 0
+
+  const completedMilestones =
+    metricsState.value.apiMilestonesCompleted !== null
+      ? metricsState.value.apiMilestonesCompleted
+      : numMetrics.filter(m => m.isAchieved).length +
+        statMetrics.filter(m => m.isAchieved).length
+
+  const reassessments =
+    metricsState.value.apiReassessmentsDone !== null
+      ? metricsState.value.apiReassessmentsDone
+      : (() => {
+          let max = 0
+          numMetrics.forEach(m => {
+            const c = m.values.slice(1).filter(v => v !== null).length
+            if (c > max) max = c
+          })
+          statMetrics.forEach(m => {
+            const c = m.statuses.slice(1).filter(v => v !== 'Pending').length
+            if (c > max) max = c
+          })
+          return max
+        })()
+
   return {
     overallPercent,
-    reassessments: maxReassessments,
+    reassessments,
     completedMilestones,
     totalMilestones,
     numericMetrics: numMetrics,
-    statusMetrics: statMetrics
+    statusMetrics: statMetrics,
   }
 })
 
@@ -384,7 +406,11 @@ const fetchProgressData = async () => {
           
           metricsState.value = {
             numericMetrics,
-            statusMetrics
+            statusMetrics,
+            // Store API's direct values so overview uses them
+            apiOverallPercent: data.overall_progress_percentage ?? null,
+            apiReassessmentsDone: data.reassessments_done ?? null,
+            apiMilestonesCompleted: data.milestones_completed ?? null,
           }
         }
       }
