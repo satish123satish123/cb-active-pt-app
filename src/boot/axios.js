@@ -7,8 +7,11 @@ import axios from 'axios'
 // good idea to move this instance creation inside of the
 // "export default () => {}" function below (which runs individually
 // for each client)
-let API_URL = `${process.env.API_PROTOCOL}://${process.env.API_URL}/api/`
-const api = axios.create({ baseURL: API_URL })
+let CRM_API_URL = `${process.env.CRM_API_PROTOCOL}://${process.env.CRM_API_URL}/api/`
+const api = axios.create({ baseURL: CRM_API_URL })
+
+let ASSESSMENT_API_URL = `${process.env.ASSESSMENT_API_PROTOCOL}://${process.env.ASSESSMENT_API_URL}/api/`
+const assessment_api = axios.create({ baseURL: ASSESSMENT_API_URL })
 
 export default defineBoot(({ app }) => {
   // for use inside Vue files (Options API) through this.$axios and this.$api
@@ -18,8 +21,9 @@ export default defineBoot(({ app }) => {
   //       so you won't necessarily have to import axios in each vue file
 
   app.config.globalProperties.$api = api
+  app.config.globalProperties.$assessment_api = assessment_api
   // ^ ^ ^ this will allow you to use this.$api (for Vue Options API form)
   //       so you can easily perform requests against your app's API
 })
 
-export { api }
+export { api, assessment_api }

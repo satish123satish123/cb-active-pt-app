@@ -1,6 +1,6 @@
 const routes = [
   {
-    path: '/pre-assessment',
+    path: '/corporate-assessment',
     component: () => import('layouts/MainLayout.vue'),
     children: [
       {
