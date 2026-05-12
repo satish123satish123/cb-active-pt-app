@@ -363,7 +363,7 @@ const validateLink = async (companyId, hospitalId, providedKey) => {
   if (!companyId || !hospitalId || !providedKey) return false
 
   try {
-    const secretKey = 'CB_CORPORATE_ASSESSMENT_SECRET_2026'
+    const secretKey = process.env.SECRET_KEY
     const encoder = new TextEncoder()
     const keyData = encoder.encode(secretKey)
     const messageData = encoder.encode(`${companyId}|${hospitalId}`)
