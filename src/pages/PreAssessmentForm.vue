@@ -203,11 +203,18 @@
               </div>
 
               <div class="field" :class="{ 'has-error': v$.previous_assessment.$error }">
-                <label class="required">Were you part of the previous Cars24 x CB Physiotherapy assessment?</label>
-                <select v-model="form.previous_assessment" @change="v$.previous_assessment.$touch()">
+                <label class="required"
+                  >Were you part of the previous Cars24 x CB Physiotherapy assessment?</label
+                >
+                <select
+                  v-model="form.previous_assessment"
+                  @change="v$.previous_assessment.$touch()"
+                >
                   <option value="">Select an option</option>
                   <option value="completed">Yes, I completed the assessment</option>
-                  <option value="registered_incomplete">I registered but could not complete the assessment</option>
+                  <option value="registered_incomplete">
+                    I registered but could not complete the assessment
+                  </option>
                   <option value="first_time">No, this is my first time</option>
                   <option value="not_sure">Not sure</option>
                 </select>
@@ -266,8 +273,7 @@
               </div>
               <h5>Review your responses</h5>
               <p>
-                Please review your assessment details below. Once everything looks good, hit
-                submit.
+                Please review your assessment details below. Once everything looks good, hit submit.
               </p>
             </div>
 
@@ -310,21 +316,13 @@
             </div>
 
             <!-- Assessment Responses by Section -->
-            <div
-              class="card summary-card"
-              v-for="(group, index) in summaryGroups"
-              :key="index"
-            >
+            <div class="card summary-card" v-for="(group, index) in summaryGroups" :key="index">
               <div class="summary-section-title">
                 <q-icon :name="sectionIcon(group.section)" size="20px" color="teal-8" />
                 <span>{{ group.section }}</span>
               </div>
               <div class="summary-qa-list">
-                <div
-                  class="summary-qa"
-                  v-for="(item, qIdx) in group.items"
-                  :key="qIdx"
-                >
+                <div class="summary-qa" v-for="(item, qIdx) in group.items" :key="qIdx">
                   <div class="qa-question">{{ item.question }}</div>
                   <div class="qa-answer">{{ item.answer }}</div>
                 </div>
@@ -369,6 +367,7 @@ import { useQuasar } from 'quasar'
 import { api, assessment_api } from 'src/boot/axios'
 import { useVuelidate } from '@vuelidate/core'
 import AssessmentQuestions from 'src/components/AssessmentQuestions.vue'
+import { mapAssessmentPayload } from 'src/utils/assessmentMapper'
 import {
   required,
   email,
@@ -388,6 +387,7 @@ const isSubmitting = ref(false)
 const isValidLink = ref(true)
 const invalidMessage = ref('')
 const assessmentResponses = ref([])
+const patientId = ref(null)
 
 const previousAssessmentLabel = computed(() => {
   const map = {
@@ -416,8 +416,7 @@ const sectionIcon = (section) => {
   const icons = {
     'Working Conditions': 'computer',
     'Pain & Discomfort': 'healing',
-    'Women-Specific Health': 'favorite',
-    'Functional Self-Check': 'fitness_center',
+    'Lifestyle & Women-Specific Factors': 'self_improvement',
     'Health & Safety Information': 'health_and_safety',
     'Goals & Additional Information': 'flag',
   }
@@ -534,6 +533,7 @@ async function createPatient() {
     const res = await api.post('/assessmentSignUp', payload)
 
     if (res.data.status === 'success') {
+      patientId.value = res.data.user.id
       return await createPatientInAssessmentDB(res.data.user)
     } else {
       $q.notify({
@@ -578,11 +578,7 @@ async function createPatientInAssessmentDB(user) {
       hospital_id: form.value.hospital_id,
     }
 
-    const res = await assessment_api.post('/patients', payload, {
-      headers: {
-        Authorization: `Bearer ${process.env.ASSESSMENT_API_TOKEN}`,
-      },
-    })
+    const res = await assessment_api.post('/patients', payload)
 
     if (!res.data.error) {
       $q.notify({
@@ -658,8 +654,51 @@ const handleSubmit = async () => {
 const handleFinalSubmit = async () => {
   isSubmitting.value = true
   try {
-    // TODO: Send assessment data to API here if needed
-    console.log('Final Submission:', form.value)
+    // Build structured payload from form data + assessment responses
+    const payload = mapAssessmentPayload(form.value, assessmentResponses.value)
+    console.log('Mapped Assessment Payload:', JSON.stringify(payload, null, 2))
+
+    // Send payload to assessment API with patient_id and hospital_id
+    await assessment_api
+      .post('/assessments', { patient_id: patientId.value, hospital_id: form.value.hospital_id, ...payload })
+      .then((res) => {
+        console.log('Assessment API Response:', res.data)
+        if (res.data.error) {
+          $q.notify({
+            type: 'negative',
+            message: res.data.message || 'Failed to sync with assessment database',
+            position: 'top',
+            html: true,
+          })
+          return false
+        }
+        $q.notify({
+          type: 'positive',
+          message: res.data.message || 'Assessment sync successful',
+          position: 'top',
+        })
+        return true
+      })
+      .catch((err) => {
+        console.error('Assessment API Error:', err)
+        const data = err.response?.data
+        if (data?.results && typeof data.results === 'object') {
+          Object.values(data.results)
+            .flat()
+            .forEach((msg) => {
+              $q.notify({ type: 'negative', message: msg, position: 'top', html: true })
+            })
+        } else {
+          $q.notify({
+            type: 'negative',
+            message: data?.message || 'Failed to sync with assessment database',
+            position: 'top',
+            html: true,
+          })
+        }
+        return false
+      })
+
     submitted.value = true
     showSummary.value = false
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1633,4 +1672,3 @@ select:focus {
   }
 }
 </style>
-

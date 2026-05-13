@@ -11,7 +11,12 @@ let CRM_API_URL = `${process.env.API_PROTOCOL}://${process.env.API_URL}/api/`
 const api = axios.create({ baseURL: CRM_API_URL })
 
 let ASSESSMENT_API_URL = `${process.env.ASSESSMENT_API_PROTOCOL}://${process.env.ASSESSMENT_API_URL}/api/`
-const assessment_api = axios.create({ baseURL: ASSESSMENT_API_URL })
+const assessment_api = axios.create({
+  baseURL: ASSESSMENT_API_URL,
+  headers: {
+    Authorization: `Bearer ${process.env.ASSESSMENT_API_TOKEN}`,
+  },
+})
 
 export default defineBoot(({ app }) => {
   // for use inside Vue files (Options API) through this.$axios and this.$api
