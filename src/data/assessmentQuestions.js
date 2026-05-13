@@ -65,6 +65,8 @@ export const workingConditions = [
 ]
 
 // ─── SECTION 3: Pain & Discomfort ───
+// pd_3 should be SKIPPED if pd_1 answer includes "No discomfort"
+// Pain scale (pd_2) is generated dynamically per area in AssessmentQuestions.vue
 export const painDiscomfort = [
   {
     id: 'pd_1',
@@ -87,158 +89,66 @@ export const painDiscomfort = [
     ],
   },
   {
-    id: 'pd_2',
-    text: 'On a scale of 0–10, how would you rate your main area of pain or discomfort?',
-    type: 'slider',
-  },
-  {
     id: 'pd_3',
-    text: 'How did this issue start?',
-    type: 'choice',
-    options: [
-      'Gradually over time',
-      'Suddenly one day',
-      'After a specific incident or injury',
-      'I am not sure',
-      'Not applicable',
-    ],
-  },
-  {
-    id: 'pd_4',
-    text: 'When does your discomfort usually increase the most?',
-    type: 'choice',
-    options: [
-      'During prolonged sitting',
-      'After a full workday',
-      'During workouts',
-      'After waking up',
-      'Random / no clear trigger',
-      'Not applicable',
-      'Other',
-    ],
-  },
-  {
-    id: 'pd_5',
     text: 'How long have you been experiencing this discomfort?',
     type: 'choice',
     options: [
-      'Less than a month',
-      '1–6 months',
-      'More than 6 months',
+      'Less than 6 weeks (Acute)',
+      '6 weeks to 3 months (Subacute)',
+      'More than 3 months (Chronic)',
       'Not applicable',
     ],
-  },
-  {
-    id: 'pd_6',
-    text: 'How often do you feel this discomfort?',
-    type: 'choice',
-    options: [
-      'Comes and goes',
-      'Present most of the time',
-      'Only after a specific activity',
-      'Not applicable',
-    ],
-  },
-  {
-    id: 'pd_7',
-    text: 'Does your discomfort stay in one place or travel elsewhere?',
-    type: 'choice',
-    options: [
-      'Stays in one place',
-      'Spreads to a nearby area',
-      'Shoots/goes down the arm or leg',
-      'Not applicable',
-    ],
-  },
-  {
-    id: 'pd_8',
-    text: 'Do you experience any of the following along with your discomfort?',
-    type: 'choice',
-    options: [
-      'No',
-      'Numbness or tingling',
-      'Weakness',
-      'Dizziness or blackout',
-      'Pain shooting down the arm or leg',
-    ],
+    skipIfNoDiscomfort: true,
   },
 ]
 
-// ─── SECTION 4: Women-Specific Health ───
-export const womenHealth = [
+// ─── SECTION 4: Lifestyle & Women-Specific Factors ───
+// Shown to ALL genders (heels question is women-specific by context)
+export const lifestyleFactors = [
   {
-    id: 'wh_1',
-    section: 'Women-Specific Health',
+    id: 'lf_1',
+    section: 'Lifestyle & Women-Specific Factors',
     text: 'Do you feel physical fatigue by the end of your workday?',
     type: 'choice',
     options: ['Rarely', 'Sometimes', 'Often', 'Almost every day'],
   },
   {
-    id: 'wh_2',
+    id: 'lf_2',
     text: 'Do you feel stiffness after sitting for long hours?',
     type: 'radio',
     options: ['Yes', 'No'],
   },
   {
-    id: 'wh_3',
-    text: 'Does your discomfort increase around your menstrual cycle?',
-    type: 'radio',
-    options: ['Yes', 'No', 'Not sure'],
-  },
-  {
-    id: 'wh_4',
-    text: 'Have you given birth?',
-    type: 'radio',
-    options: ['Yes', 'No'],
-  },
-  {
-    id: 'wh_5',
+    id: 'lf_3',
     text: 'Do you frequently wear heels? (More than 2–3 times per week)',
     type: 'radio',
     options: ['Yes', 'No'],
+    femaleOnly: true,
   },
   {
-    id: 'wh_6',
+    id: 'lf_4',
     text: 'Do you carry a bag on one shoulder?',
     type: 'radio',
     options: ['Yes', 'No'],
   },
   {
-    id: 'wh_7',
+    id: 'lf_5',
     text: 'What is your water intake throughout the day?',
     type: 'choice',
     options: [
       'Less than 1 litre',
-      '1–1.5 litres',
-      '1.5–2 litres',
+      '1-2 litres',
       'More than 2 litres',
     ],
   },
   {
-    id: 'wh_8',
+    id: 'lf_6',
     text: 'How would you rate your stress levels at work?',
     type: 'choice',
     options: ['Low', 'Moderate', 'High'],
   },
-]
-
-// ─── SECTION 5: Functional Self-Check ───
-export const functionalSelfCheck = [
   {
-    id: 'fc_1',
-    section: 'Functional Self-Check',
-    text: 'Can you raise both arms overhead without discomfort?',
-    type: 'choice',
-    options: ['Easily', 'With slight stiffness', 'With pain'],
-  },
-  {
-    id: 'fc_2',
-    text: 'Can you stand up from a chair without using hands?',
-    type: 'choice',
-    options: ['Easily', 'With some effort', 'Difficult'],
-  },
-  {
-    id: 'fc_3',
+    id: 'lf_7',
     text: 'How often do you exercise?',
     type: 'choice',
     options: [
@@ -249,26 +159,26 @@ export const functionalSelfCheck = [
     ],
   },
   {
-    id: 'fc_4',
+    id: 'lf_8',
     text: 'Do you find yourself slouching during work?',
     type: 'choice',
     options: ['Often', 'Sometimes', 'Rarely', 'Not aware', 'Never'],
   },
   {
-    id: 'fc_5',
+    id: 'lf_9',
     text: 'Do you use your phone by bending your neck forward for long periods?',
     type: 'choice',
     options: ['Frequently', 'Sometimes', 'Rarely', 'Not aware'],
   },
 ]
 
-// ─── SECTION 6: Health & Safety Information ───
+// ─── SECTION 5: Health & Safety Information ───
 export const healthSafety = [
   {
     id: 'hs_1',
     section: 'Health & Safety Information',
     text: 'Do you have any health condition that your physiotherapist should know about before suggesting exercises?',
-    type: 'multi',
+    type: 'multi_with_other',
     options: [
       'None',
       'Diabetes',
@@ -279,17 +189,18 @@ export const healthSafety = [
       'Cardiac condition',
       'Neurological condition',
       'Recent surgery / injury',
-      'Other — will mention to therapist',
+      'Other',
     ],
+    otherOption: 'Other',
   },
 ]
 
-// ─── SECTION 7: Goals & Additional Information ───
+// ─── SECTION 6: Goals & Additional Information ───
 export const goalsInfo = [
   {
     id: 'gi_1',
     section: 'Goals & Additional Information',
-    text: 'What do you most want to get out of this assessment? Select all that apply.',
+    text: 'What would you like help with through this assessment? Select all that apply.',
     type: 'multi',
     options: [
       'Understand and reduce my pain',

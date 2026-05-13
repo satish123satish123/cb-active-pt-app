@@ -48,7 +48,7 @@
       <!-- Current Question -->
       <div v-if="!isThinking && currentQuestion && !isComplete" class="chat-row assistant">
         <div class="bubble animate-in">
-          {{ currentQuestion.text }}
+          {{ displayText }}
         </div>
       </div>
     </div>
@@ -89,6 +89,39 @@
           class="option-btn submit-multi"
           :disabled="multiSelected.length === 0"
           @click="handleMultiSubmit"
+        >
+          Confirm Selection
+        </button>
+      </div>
+
+      <!-- Multi-select with Other text box -->
+      <div v-else-if="currentQuestion.type === 'multi_with_other'" class="options-grid">
+        <button
+          type="button"
+          v-for="option in currentQuestion.options"
+          :key="option"
+          class="option-btn"
+          :class="{ selected: multiSelected.includes(option) }"
+          @click="toggleMulti(option)"
+        >
+          <span class="check-indicator">{{ multiSelected.includes(option) ? '✓' : '' }}</span>
+          {{ option }}
+        </button>
+        <div
+          v-if="multiSelected.includes(currentQuestion.otherOption)"
+          class="other-text-wrap"
+        >
+          <input
+            v-model="otherText"
+            placeholder="Please specify..."
+            class="other-text-input"
+          />
+        </div>
+        <button
+          type="button"
+          class="option-btn submit-multi"
+          :disabled="multiSelected.length === 0 || (multiSelected.includes(currentQuestion.otherOption) && !otherText.trim())"
+          @click="handleMultiWithOtherSubmit"
         >
           Confirm Selection
         </button>
@@ -152,28 +185,27 @@ const emit = defineEmits(['complete'])
 import {
   workingConditions,
   painDiscomfort,
-  womenHealth,
-  functionalSelfCheck,
+  lifestyleFactors,
   healthSafety,
   goalsInfo,
 } from 'src/data/assessmentQuestions'
 
-// ─── Build question list (conditionally include women-specific) ───
+// ─── Build question list (filter femaleOnly questions for non-female) ───
 const allQuestions = computed(() => {
-  const base = [
-    ...workingConditions,
-    ...painDiscomfort,
-  ]
-
-  if (props.gender === 'female') {
-    base.push(...womenHealth)
+  const filterByGender = (questions) => {
+    return questions.filter(q => {
+      if (q.femaleOnly && props.gender !== 'female') return false
+      return true
+    })
   }
 
-  base.push(...functionalSelfCheck)
-  base.push(...healthSafety)
-  base.push(...goalsInfo)
-
-  return base
+  return [
+    ...workingConditions,
+    ...painDiscomfort,
+    ...filterByGender(lifestyleFactors),
+    ...healthSafety,
+    ...goalsInfo,
+  ]
 })
 
 const totalQuestions = computed(() => allQuestions.value.length)
@@ -186,10 +218,39 @@ const isComplete = ref(false)
 const textAnswer = ref('')
 const sliderValue = ref(5)
 const multiSelected = ref([])
+const otherText = ref('')
 const chatScroll = ref(null)
 const lastSection = ref('')
+const hasNoDiscomfort = ref(false)
 
-const currentQuestion = computed(() => allQuestions.value[currentIdx.value])
+// ─── Per-area pain slider state ───
+const painAreasQueue = ref([])     // areas still to rate
+const activePainArea = ref(null)   // area currently being rated
+const painRatings = ref({})        // { 'Neck': 7, 'Upper back': 5 }
+
+// Is the component currently showing a dynamic pain slider?
+const isInPainSliderMode = computed(() => activePainArea.value !== null)
+
+// The current question — either from static list or a dynamic pain slider
+const currentQuestion = computed(() => {
+  if (isInPainSliderMode.value) {
+    return {
+      id: `pd_2_${activePainArea.value.toLowerCase().replace(/[\s/]+/g, '_')}`,
+      section: 'Pain & Discomfort',
+      text: `On a scale of 0–10, how would you rate your ${activePainArea.value} pain or discomfort?`,
+      type: 'slider',
+      _dynamic: true,
+    }
+  }
+  return allQuestions.value[currentIdx.value]
+})
+
+// Display text (used in template)
+const displayText = computed(() => {
+  const q = currentQuestion.value
+  if (!q) return ''
+  return q.text
+})
 
 const sectionHeader = computed(() => {
   const q = currentQuestion.value
@@ -206,8 +267,66 @@ const scrollToBottom = async () => {
   }
 }
 
+// ─── Advance: check pain slider queue first, then static list ───
+const advanceToNext = () => {
+  // If there are more pain areas to rate, show next slider
+  if (painAreasQueue.value.length > 0) {
+    activePainArea.value = painAreasQueue.value.shift()
+    sliderValue.value = 5
+    return
+  }
+
+  // Clear pain slider mode if queue is empty
+  if (activePainArea.value !== null) {
+    activePainArea.value = null
+  }
+
+  // Advance static question index
+  let nextIdx = currentIdx.value + 1
+
+  // Skip questions flagged with skipIfNoDiscomfort when user selected "No discomfort"
+  while (nextIdx < allQuestions.value.length) {
+    const nextQ = allQuestions.value[nextIdx]
+    if (nextQ.skipIfNoDiscomfort && hasNoDiscomfort.value) {
+      nextIdx++
+    } else {
+      break
+    }
+  }
+
+  if (nextIdx < allQuestions.value.length) {
+    currentIdx.value = nextIdx
+  } else {
+    isComplete.value = true
+    emit('complete', responses.value)
+  }
+}
+
 const handleAnswer = async (answer) => {
   const q = currentQuestion.value
+
+  // After pd_1: populate pain areas queue for per-area sliders
+  if (q.id === 'pd_1') {
+    if (answer.includes('No discomfort')) {
+      hasNoDiscomfort.value = true
+    } else {
+      hasNoDiscomfort.value = false
+      // Split areas and filter out "Other" / "Eye Strain / Dry Eyes" from slider
+      const areas = answer.split(', ').map(a => a.trim()).filter(a =>
+        a !== 'No discomfort' && !a.startsWith('Other')
+      )
+      if (areas.length > 0) {
+        // First area goes to active, rest go to queue
+        painAreasQueue.value = areas.slice(1)
+        activePainArea.value = areas[0]
+      }
+    }
+  }
+
+  // If this is a dynamic pain slider answer, store the rating
+  if (q._dynamic && q.id.startsWith('pd_2_')) {
+    painRatings.value[activePainArea.value] = parseInt(answer, 10)
+  }
 
   // Track section header in history if new section
   if (q.section && q.section !== lastSection.value) {
@@ -234,18 +353,22 @@ const handleAnswer = async (answer) => {
   // 4. Transition to thinking
   isThinking.value = true
   multiSelected.value = []
+  otherText.value = ''
   sliderValue.value = 5
   await scrollToBottom()
 
-  // 5. Simulated delay
+  // 5. Simulated delay then advance
   setTimeout(async () => {
     isThinking.value = false
-    if (currentIdx.value < allQuestions.value.length - 1) {
-      currentIdx.value++
-    } else {
-      isComplete.value = true
-      emit('complete', responses.value)
+
+    // After pd_1 with discomfort: don't advance index yet — pain sliders take over
+    if (q.id === 'pd_1' && !hasNoDiscomfort.value && activePainArea.value) {
+      // activePainArea is already set, just scroll
+      await scrollToBottom()
+      return
     }
+
+    advanceToNext()
     await scrollToBottom()
   }, 800)
 }
@@ -269,6 +392,21 @@ const toggleMulti = (option) => {
 const handleMultiSubmit = () => {
   if (multiSelected.value.length > 0) {
     handleAnswer(multiSelected.value.join(', '))
+  }
+}
+
+const handleMultiWithOtherSubmit = () => {
+  if (multiSelected.value.length > 0) {
+    const q = currentQuestion.value
+    const selected = [...multiSelected.value]
+
+    // Replace "Other" with "Other: <text>" if text provided
+    if (q.otherOption && selected.includes(q.otherOption) && otherText.value.trim()) {
+      const otherIdx = selected.indexOf(q.otherOption)
+      selected[otherIdx] = `Other: ${otherText.value.trim()}`
+    }
+
+    handleAnswer(selected.join(', '))
   }
 }
 
@@ -559,6 +697,29 @@ onMounted(() => {
   background: #cbd5cb;
   border-color: #cbd5cb;
   cursor: not-allowed;
+}
+
+/* Other text box in multi_with_other */
+.other-text-wrap {
+  grid-column: 1 / -1;
+  animation: slideUp 0.3s ease both;
+}
+
+.other-text-input {
+  width: 100%;
+  padding: 14px 16px;
+  background: #f6f8f6;
+  border: 1.5px solid #107e6e;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1c1a;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.other-text-input:focus {
+  box-shadow: 0 0 0 3px rgba(16, 126, 110, 0.12);
 }
 
 /* Slider */
