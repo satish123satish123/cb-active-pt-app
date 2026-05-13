@@ -9,6 +9,7 @@ export const useExerciseStore = defineStore('exercise', () => {
   const adherencePercentage = ref(0)
   const currentDayLabel = ref('')
   const loading = ref(false)
+  const exerciseDetails = ref(null)
 
   async function fetchExercises(patientId, hospitalId) {
     loading.value = true
@@ -80,6 +81,20 @@ export const useExerciseStore = defineStore('exercise', () => {
     }
   }
 
+  async function fetchExerciseDetails(id) {
+    loading.value = true
+    try {
+      const response = await api.post('getExerciseDetailsData', { id })
+      if (response.data?.status === 'success') {
+        exerciseDetails.value = response.data.data
+      }
+    } catch (err) {
+      console.error('Failed to fetch exercise details:', err)
+    } finally {
+      loading.value = false
+    }
+  }
+
   function getExStatus(ex) {
     if (ex.progress.totalSets > 0 && ex.progress.set === ex.progress.totalSets) return 'done'
     if (ex.progress.set > 0) return 'in-progress'
@@ -116,6 +131,8 @@ export const useExerciseStore = defineStore('exercise', () => {
     pendingCount,
     updateProgress,
     fetchExercises,
+    fetchExerciseDetails,
     loading,
+    exerciseDetails,
   }
 })

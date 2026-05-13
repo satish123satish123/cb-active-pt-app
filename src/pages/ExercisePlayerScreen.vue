@@ -12,7 +12,7 @@
     </header>
 
     <!-- Unified Exercise Card -->
-    <div class="section">
+    <div class="section" v-if="ex">
       <div class="exercise-player-card">
         <!-- Top Half: Info & Focus -->
         <div class="player-card-top">
@@ -20,13 +20,13 @@
             <div class="eyebrow-text">EXERCISE {{ currentNumber }} OF {{ total }}</div>
             <span class="badge" :class="statusBadge(ex.status)">{{ statusLabel(ex.status) }}</span>
           </div>
-          <h5 class="ex-player-name">{{ ex.name }}</h5>
+          <h5 class="ex-player-name">{{ formatTitleCase(ex.name) }}</h5>
           <p class="ex-player-subtitle">{{ ex.subtitle || ex.instruction }}</p>
 
           <div class="exercise-player-focus-grid">
             <div class="focus-box">
               <div class="focus-label">GOAL</div>
-              <div class="focus-value">{{ ex.goal || 'Build shoulder stability' }}</div>
+              <div class="focus-value">{{ ex.goal || 'Follow your recovery plan' }}</div>
             </div>
             <div class="focus-box">
               <div class="focus-label">PRESCRIPTION</div>
@@ -41,16 +41,34 @@
 
         <div class="player-divider"></div>
 
-        <!-- Bottom Half: Visual Content -->
+        <!-- Bottom Half: Visual Content (Video or GIF) -->
         <div class="player-card-bottom">
-          <div class="visual-card">
-            <div class="visual-thumb">{{ ex.icon }}</div>
-            <div class="visual-name">{{ ex.name }}</div>
-            <div class="visual-instruction">{{ ex.instruction }}</div>
-            <div class="visual-chips">
-              <span class="v-chip">{{ ex.frequency }}</span>
-              <span class="v-chip">{{ ex.duration }}</span>
-              <span class="v-chip">{{ ex.focus || 'Upper Body Activation' }}</span>
+          <div class="visual-card-new">
+             <template v-if="exerciseDetails?.exercise_media?.image">
+                <img :src="`https://app.activpt.in/${exerciseDetails.exercise_media.image}`" class="main-exercise-image" />
+             </template>
+             <div v-else class="visual-thumb">{{ ex.icon || '💪' }}</div>
+             <div class="visual-name">{{ formatTitleCase(ex.name) }}</div>
+             <div class="visual-instruction">{{ ex.instruction }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instructions / Steps Section -->
+    <div class="section" v-if="exerciseDetails?.exercise_step_images_with_instructions?.length">
+      <div class="progress-section-label">Step-by-step Guide</div>
+      <div class="steps-stack">
+        <div v-for="(step, idx) in exerciseDetails.exercise_step_images_with_instructions" :key="idx" class="step-card">
+          <div class="step-image-wrapper">
+             <img :src="`https://app.activpt.in/${step.image}`" class="step-img" />
+             <div class="step-number">{{ idx + 1 }}</div>
+          </div>
+          <div class="step-content">
+            <div class="step-primary">{{ step.primary_instructions }}</div>
+            <div class="step-post">{{ step.post_instruction }}</div>
+            <div class="step-cue" v-if="step.post_cue">
+              <span class="cue-label">Cue:</span> {{ step.post_cue }}
             </div>
           </div>
         </div>
@@ -110,7 +128,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useExerciseStore } from 'src/stores/exerciseStore'
 import { storeToRefs } from 'pinia'
@@ -118,7 +136,7 @@ import { storeToRefs } from 'pinia'
 const route = useRoute()
 const router = useRouter()
 const store = useExerciseStore()
-const { exercises } = storeToRefs(store)
+const { exercises, exerciseDetails } = storeToRefs(store)
 
 const ex = computed(() => getSelectedExercise())
 const currentNumber = computed(() => exercises.value.findIndex((x) => x.id === ex.value.id) + 1)
@@ -127,6 +145,20 @@ const total = computed(() => exercises.value.length)
 function getSelectedExercise() {
   const id = Number(route.params.exercise_id)
   return exercises.value.find((x) => x.id === id) || exercises.value[0]
+}
+
+onMounted(() => {
+  const id = Number(route.params.exercise_id)
+  if (id) store.fetchExerciseDetails(id)
+})
+
+watch(() => route.params.exercise_id, (newId) => {
+  if (newId) store.fetchExerciseDetails(Number(newId))
+})
+
+function formatTitleCase(text) {
+  if (!text) return ''
+  return text.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
 const progressPercent = computed(() => {
@@ -320,6 +352,109 @@ function statusLabel(status) {
   font-size: 12px;
   font-weight: 700;
   color: #557070;
+}
+
+.visual-card-new {
+  background: #f8fbfb;
+  border: 1px solid #e1eded;
+  border-radius: 24px;
+  text-align: center;
+  padding: 12px;
+}
+
+.main-exercise-image {
+  width: 100%;
+  border-radius: 18px;
+  height: 240px;
+  object-fit: cover;
+  margin-bottom: 16px;
+}
+
+.steps-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.step-card {
+  display: flex;
+  gap: 16px;
+  background: white;
+  padding: 12px;
+  border-radius: 20px;
+  border: 1px solid #f0f4f4;
+}
+
+.step-image-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.step-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 14px;
+  object-fit: cover;
+}
+
+.step-number {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  background: var(--brand);
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  border: 2px solid white;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-primary {
+  font-size: 15px;
+  font-weight: 800;
+  color: #1a3333;
+  margin-bottom: 4px;
+}
+
+.step-post {
+  font-size: 13px;
+  color: #557070;
+  line-height: 1.4;
+}
+
+.step-cue {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #0d8a7a;
+  font-weight: 700;
+  background: #e6f7f4;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.cue-label {
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.progress-section-label {
+  margin-bottom: 12px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding-left: 4px;
 }
 
 .progress-card-player {
