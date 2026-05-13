@@ -1,335 +1,260 @@
 <template>
   <div class="pre-assessment-container">
-    <div class="pre-assessment-container">
-      <div v-if="!isValidLink" class="invalid-link-wrapper">
-        <div class="card error-state-card text-center">
-          <div class="error-badge-ring">
-            <q-icon name="lock" size="44px" color="negative" />
-          </div>
-          <h2>Access Denied</h2>
-          <p class="error-text">{{ invalidMessage }}</p>
-          <p class="error-subtext">
-            For security reasons, assessment links must be valid and unmodified. Please use the link
-            sent to your official email or contact your coordinator.
-          </p>
-          <div class="q-mt-xl">
-            <q-btn
-              label="Try Again"
-              color="primary"
-              unelevated
-              rounded
-              padding="12px 32px"
-              @click="window.location.reload()"
-            />
-          </div>
+    <div v-if="!isValidLink" class="invalid-link-wrapper">
+      <div class="card error-state-card text-center">
+        <div class="error-badge-ring">
+          <q-icon name="lock" size="44px" color="negative" />
+        </div>
+        <h2>Access Denied</h2>
+        <p class="error-text">{{ invalidMessage }}</p>
+        <p class="error-subtext">
+          For security reasons, assessment links must be valid and unmodified. Please use the link
+          sent to your official email or contact your coordinator.
+        </p>
+        <div class="q-mt-xl">
+          <q-btn
+            label="Try Again"
+            color="primary"
+            unelevated
+            rounded
+            padding="12px 32px"
+            @click="window.location.reload()"
+          />
         </div>
       </div>
+    </div>
 
-      <div v-else class="app-shell">
-        <div class="layout-container">
-          <!-- SIDEBAR: HERO & PROGRESS -->
-          <aside class="sidebar">
-            <header class="hero">
-              <div class="hero-row">
-                <div class="brand-lockup">
-                  <div class="brand-logo">CB</div>
-                  <div class="brand-text">
-                    CB Physiotherapy
-                    <small>Move Activ · Live Activ</small>
-                  </div>
-                </div>
-                <div class="secure-chip">Secure</div>
-              </div>
-              <span class="kicker">Corporate wellness</span>
-              <h1>Pre-Assessment</h1>
-              <p>
-                A short self-check before your on-site physiotherapy assessment. Takes about 2
-                minutes.
-              </p>
-            </header>
-
-            <!-- STEP RAIL -->
-            <div class="step-rail" v-if="!submitted">
-              <div class="step-dots">
-                <div
-                  class="step-dot"
-                  :class="{ active: currentStep === 1, complete: currentStep > 1 }"
-                >
-                  <div class="dot-icon">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                      <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
-                  </div>
-                  <div class="dot-label">Profile</div>
-                </div>
-                <div
-                  class="step-dot"
-                  :class="{ active: currentStep === 2, complete: currentStep > 2 }"
-                >
-                  <div class="dot-icon">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path
-                        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
-                      ></path>
-                      <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                      <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                    </svg>
-                  </div>
-                  <div class="dot-label">AI Check</div>
+    <div v-else class="app-shell">
+      <div class="layout-container">
+        <!-- SIDEBAR: HERO & PROGRESS -->
+        <aside class="sidebar">
+          <header class="hero">
+            <div class="hero-row">
+              <div class="brand-lockup">
+                <div class="brand-logo">CB</div>
+                <div class="brand-text">
+                  CB Physiotherapy
+                  <small>Move Activ · Live Activ</small>
                 </div>
               </div>
-              <div class="progress-wrap">
-                <div class="progress-rail">
-                  <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
-                </div>
-                <div class="progress-meta">
-                  <span class="step-counter">Step {{ currentStep }} of 2</span>
-                  <span class="percent">{{ progressPercent }}% complete</span>
-                </div>
-              </div>
+              <div class="secure-chip">Secure</div>
             </div>
-          </aside>
+            <span class="kicker">Corporate wellness</span>
+            <h1>Pre-Assessment</h1>
+            <p>
+              A short self-check before your on-site physiotherapy assessment. Takes about 2
+              minutes.
+            </p>
+          </header>
 
-          <main class="content">
-            <form v-if="!submitted" class="card" @submit.prevent="handleSubmit">
-              <!-- STEP 1: PROFILE -->
-              <section v-if="currentStep === 1" class="step active">
-                <div class="step-header">
-                  <div class="eyebrow">Step 1 · Profile</div>
-                  <h2>Let's start with the basics</h2>
-                  <p class="step-intro">
-                    We use these details to register you before your assessment.
-                  </p>
-                </div>
-
-                <div class="field" :class="{ 'has-error': v$.name.$error }">
-                  <label class="required">Full name</label>
-                  <input
-                    type="text"
-                    v-model="form.name"
-                    @blur="v$.name.$touch()"
-                    placeholder="e.g. Aarav Sharma"
-                    required
-                  />
-                  <div v-if="v$.name.$error" class="error-msg">
-                    {{ v$.name.$errors[0].$message }}
-                  </div>
-                </div>
-
-                <div class="grid-2">
-                  <div class="field" :class="{ 'has-error': v$.phone.$error }">
-                    <label class="required">Phone number</label>
-                    <input
-                      type="tel"
-                      v-model="form.phone"
-                      @blur="v$.phone.$touch()"
-                      placeholder="10-digit mobile"
-                      required
-                    />
-                    <div v-if="v$.phone.$error" class="error-msg">
-                      {{ v$.phone.$errors[0].$message }}
-                    </div>
-                  </div>
-
-                  <div class="field" :class="{ 'has-error': v$.email.$error }">
-                    <label class="required">Email address</label>
-                    <input
-                      type="email"
-                      v-model="form.email"
-                      @blur="v$.email.$touch()"
-                      placeholder="you@company.com"
-                      required
-                    />
-                    <div v-if="v$.email.$error" class="error-msg">
-                      {{ v$.email.$errors[0].$message }}
-                    </div>
-                  </div>
-                </div>
-
-                <div class="grid-2">
-                  <div class="field" :class="{ 'has-error': v$.age.$error }">
-                    <label class="required">Age</label>
-                    <input
-                      type="number"
-                      v-model="form.age"
-                      @blur="v$.age.$touch()"
-                      min="18"
-                      max="80"
-                      placeholder="18 – 80"
-                      required
-                    />
-                    <div v-if="v$.age.$error" class="error-msg">
-                      {{ v$.age.$errors[0].$message }}
-                    </div>
-                  </div>
-
-                  <div class="field">
-                    <label>Gender</label>
-                    <select v-model="form.sex">
-                      <option value="">Select</option>
-                      <option value="female">Female</option>
-                      <option value="male">Male</option>
-                      <option value="other">Other</option>
-                      <option value="prefer_not_to_say">Prefer not to say</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="field" :class="{ 'has-error': v$.preferred_slot.$error }">
-                  <label class="required">Preferred assessment slot</label>
-                  <select v-model="form.preferred_slot" @change="v$.preferred_slot.$touch()">
-                    <option value="">Select a slot</option>
-                    <option>Morning (09:00 - 12:00)</option>
-                    <option>Afternoon (12:00 - 15:00)</option>
-                    <option>Evening (15:00 - 18:00)</option>
-                  </select>
-                  <div v-if="v$.preferred_slot.$error" class="error-msg">
-                    {{ v$.preferred_slot.$errors[0].$message }}
-                  </div>
-                </div>
-              </section>
-
-              <!-- STEP 2: AI GENERATED QUESTIONS -->
-              <section v-if="currentStep === 2" class="step active">
-                <div class="step-header">
-                  <div class="eyebrow">
-                    Step 2 · AI Assessment ({{ currentAiIdx + 1 }}/{{ aiQuestions.length }})
-                  </div>
-                  <h2>{{ aiQuestions[currentAiIdx].title }}</h2>
-                  <p class="step-intro">{{ aiQuestions[currentAiIdx].description }}</p>
-                </div>
-
-                <div class="field">
-                  <div class="question-title required">
-                    {{ aiQuestions[currentAiIdx].question }}
-                  </div>
-                  <div class="options">
-                    <q-radio
-                      v-for="(choice, index) in aiQuestions[currentAiIdx].choices"
-                      :key="index"
-                      v-model="form.ai_responses[currentAiIdx]"
-                      :val="choice"
-                      :label="choice"
-                      class="choice-card full-width"
-                      :class="{ 'active-card': form.ai_responses[currentAiIdx] === choice }"
-                    />
-                  </div>
-                </div>
-              </section>
-
-              <div class="nav">
-                <button type="button" class="btn ghost" v-if="currentStep > 1" @click="handleBack">
+          <!-- STEP RAIL -->
+          <div class="step-rail" v-if="!submitted">
+            <div class="step-dots">
+              <div
+                class="step-dot"
+                :class="{ active: currentStep === 1, complete: currentStep > 1 }"
+              >
+                <div class="dot-icon">
                   <svg
-                    width="16"
-                    height="16"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    stroke-width="2.5"
+                    stroke-width="2"
                     stroke-linecap="round"
                     stroke-linejoin="round"
                   >
-                    <line x1="19" y1="12" x2="5" y2="12"></line>
-                    <polyline points="12 19 5 12 12 5"></polyline>
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
                   </svg>
-                  Back
-                </button>
-                <button type="button" class="btn primary" @click="handleNext">
-                  <template v-if="currentStep === 1">
-                    <span>Continue</span>
-                    <svg
-                      class="arrow"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                      <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
-                  </template>
-                  <template v-else-if="currentAiIdx < aiQuestions.length - 1">
-                    <span>Continue</span>
-                    <svg
-                      class="arrow"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                      <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
-                  </template>
-                  <template v-else>
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                    <span>Submit assessment</span>
-                  </template>
-                </button>
+                </div>
+                <div class="dot-label">Profile</div>
+              </div>
+              <div
+                class="step-dot"
+                :class="{ active: currentStep === 2, complete: currentStep > 2 }"
+              >
+                <div class="dot-icon">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                    ></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                  </svg>
+                </div>
+                <div class="dot-label">AI Check</div>
+              </div>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-rail">
+                <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+              </div>
+              <div class="progress-meta">
+                <span class="step-counter">Step {{ currentStep }} of 2</span>
+                <span class="percent">{{ progressPercent }}% complete</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <main class="content">
+          <form v-if="!submitted" class="card" @submit.prevent="handleSubmit">
+            <!-- STEP 1: PROFILE -->
+            <section v-if="currentStep === 1" class="step active">
+              <div class="step-header">
+                <div class="eyebrow">Step 1 · Profile</div>
+                <h2>Let's start with the basics</h2>
+                <p class="step-intro">
+                  We use these details to register you before your assessment.
+                </p>
               </div>
 
-              <p class="footer-note">
+              <div class="field" :class="{ 'has-error': v$.name.$error }">
+                <label class="required">Full name</label>
+                <input
+                  type="text"
+                  v-model="form.name"
+                  @blur="v$.name.$touch()"
+                  placeholder="e.g. Aarav Sharma"
+                  required
+                />
+                <div v-if="v$.name.$error" class="error-msg">
+                  {{ v$.name.$errors[0].$message }}
+                </div>
+              </div>
+
+              <div class="grid-2">
+                <div class="field" :class="{ 'has-error': v$.phone.$error }">
+                  <label class="required">Phone number</label>
+                  <input
+                    type="tel"
+                    v-model="form.phone"
+                    @blur="v$.phone.$touch()"
+                    placeholder="10-digit mobile"
+                    required
+                  />
+                  <div v-if="v$.phone.$error" class="error-msg">
+                    {{ v$.phone.$errors[0].$message }}
+                  </div>
+                </div>
+
+                <div class="field" :class="{ 'has-error': v$.email.$error }">
+                  <label class="required">Email address</label>
+                  <input
+                    type="email"
+                    v-model="form.email"
+                    @blur="v$.email.$touch()"
+                    placeholder="you@company.com"
+                    required
+                  />
+                  <div v-if="v$.email.$error" class="error-msg">
+                    {{ v$.email.$errors[0].$message }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid-2">
+                <div class="field" :class="{ 'has-error': v$.age.$error }">
+                  <label class="required">Age</label>
+                  <input
+                    type="number"
+                    v-model="form.age"
+                    @blur="v$.age.$touch()"
+                    min="18"
+                    max="80"
+                    placeholder="18 – 80"
+                    required
+                  />
+                  <div v-if="v$.age.$error" class="error-msg">
+                    {{ v$.age.$errors[0].$message }}
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label>Gender</label>
+                  <select v-model="form.sex">
+                    <option value="">Select</option>
+                    <option value="female">Female</option>
+                    <option value="male">Male</option>
+                    <option value="other">Other</option>
+                    <option value="prefer_not_to_say">Prefer not to say</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field" :class="{ 'has-error': v$.preferred_slot.$error }">
+                <label class="required">Preferred assessment slot</label>
+                <select v-model="form.preferred_slot" @change="v$.preferred_slot.$touch()">
+                  <option value="">Select a slot</option>
+                  <option>Morning (09:00 - 12:00)</option>
+                  <option>Afternoon (12:00 - 15:00)</option>
+                  <option>Evening (15:00 - 18:00)</option>
+                </select>
+                <div v-if="v$.preferred_slot.$error" class="error-msg">
+                  {{ v$.preferred_slot.$errors[0].$message }}
+                </div>
+              </div>
+            </section>
+
+            <!-- STEP 2: SEQUENTIAL QUESTIONS -->
+            <section v-if="currentStep === 2" class="step active">
+              <AssessmentQuestions @complete="handleAssessmentComplete" />
+            </section>
+
+            <div class="nav" v-if="currentStep === 1">
+              <button type="button" class="btn primary" @click="handleNext">
+                <span>Continue</span>
                 <svg
+                  class="arrow"
+                  width="16"
+                  height="16"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="2"
+                  stroke-width="2.5"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 >
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
                 </svg>
-                Encrypted · For clinical pre-assessment only
-              </p>
-            </form>
-
-            <div class="card success" v-if="submitted">
-              <div class="success-badge">
-                <q-icon name="check" size="42px" color="white" />
-              </div>
-              <h5>Submitted successfully</h5>
-              <p>
-                Your pre-assessment is saved and ready for your physio. We'll see you at your
-                scheduled session.
-              </p>
+              </button>
             </div>
-          </main>
-        </div>
+
+            <p class="footer-note">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              Encrypted · For clinical pre-assessment only
+            </p>
+          </form>
+
+          <div class="card success" v-if="submitted">
+            <div class="success-badge">
+              <q-icon name="check" size="42px" color="white" />
+            </div>
+            <h5>Submitted successfully</h5>
+            <p>
+              Your pre-assessment is saved and ready for your physio. We'll see you at your
+              scheduled session.
+            </p>
+          </div>
+        </main>
       </div>
     </div>
   </div>
@@ -341,6 +266,7 @@ import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { api, assessment_api } from 'src/boot/axios'
 import { useVuelidate } from '@vuelidate/core'
+import AssessmentQuestions from 'src/components/AssessmentQuestions.vue'
 import {
   required,
   email,
@@ -355,7 +281,6 @@ const $q = useQuasar()
 const route = useRoute()
 const currentStep = ref(1)
 const submitted = ref(false)
-const loading = ref(false)
 const isValidLink = ref(true)
 const invalidMessage = ref('')
 
@@ -415,26 +340,9 @@ onMounted(async () => {
   }
 })
 
-const aiQuestions = ref([
-  {
-    title: 'Daily Activity',
-    description: 'Understanding your base activity levels.',
-    question: 'In a typical workday, which of these best describes your physical activity levels?',
-    choices: [
-      'Mostly sedentary (sitting for > 6 hours)',
-      'Moderately active (mixture of sitting and standing)',
-      'Highly active (frequent movement/lifting)',
-      'Varied (no fixed pattern)',
-    ],
-  },
-])
-
-const currentAiIdx = ref(0)
-
 const progressPercent = computed(() => {
-  if (currentStep.value === 1) return (currentStep.value / 2) * 50 // 25% for profile
-  const aiProgress = ((currentAiIdx.value + 1) / aiQuestions.value.length) * 50
-  return 50 + aiProgress
+  if (currentStep.value === 1) return 50
+  return 100
 })
 
 const rules = {
@@ -460,106 +368,9 @@ const rules = {
 
 const v$ = useVuelidate(rules, form)
 
-const generateAIQuestion = async () => {
-  loading.value = true
-  $q.loading.show({
-    message: 'AI is personalizing your assessment...',
-    backgroundColor: 'teal-10',
-  })
-
-  try {
-    const systemPrompt = `You are a clinical physiotherapy assistant. Generate 4 to 5 highly relevant follow-up questions for a patient based on their profile.
-    The questions should help understand their musculoskeletal health, lifestyle risk factors, or daily physical strain.
-    Return ONLY a JSON object with this structure:
-    {
-      "questions": [
-        {
-          "title": "A short, catchy title (e.g., 'Daily Dynamics')",
-          "description": "A brief explanation of why this question is being asked.",
-          "question": "The actual question text.",
-          "choices": ["Choice 1", "Choice 2", "Choice 3", "Choice 4"]
-        }
-      ]
-    }`
-
-    const userPrompt = `Patient Profile: Age ${form.value.age}, Gender ${form.value.sex}.
-    Preferred Slot: ${form.value.preferred_slot}.`
-
-    const input = [
-      {
-        role: 'system',
-        content: systemPrompt,
-      },
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'input_text',
-            text: userPrompt,
-          },
-        ],
-      },
-    ]
-
-    const body = {
-      model: 'gpt-5.2',
-      input,
-      prompt_cache_retention: '24h',
-      prompt_cache_key: 'cb-admin-assessment-key-v1-ai',
-    }
-
-    const res = await assessment_api.post('ai/responses', body, {
-      headers: {
-        Authorization: `Bearer ${process.env.ASSESSMENT_API_TOKEN}`,
-      },
-    })
-    const data = res.data
-
-    if (data) {
-      let extractedText = data.output?.at(-1)?.content?.[0]?.text ?? ''
-
-      // Clean markdown code blocks if present
-      const markdownMatch =
-        extractedText.match(/```json\s*([\s\S]*?)\s*```/) ||
-        extractedText.match(/```\s*([\s\S]*?)\s*```/)
-      if (markdownMatch) {
-        extractedText = markdownMatch[1].trim()
-      }
-
-      try {
-        const parsed = JSON.parse(extractedText)
-        if (parsed.questions && Array.isArray(parsed.questions)) {
-          aiQuestions.value = parsed.questions
-          currentAiIdx.value = 0
-          form.value.ai_responses = new Array(parsed.questions.length).fill('')
-        }
-      } catch (e) {
-        console.error('Failed to parse AI response:', e, extractedText)
-      }
-    }
-  } catch (err) {
-    console.error('AI Generation Error:', err)
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to generate personalized question. Using default.',
-    })
-  } finally {
-    loading.value = false
-    $q.loading.hide()
-  }
-}
-
-const handleBack = () => {
-  if (currentStep.value === 2) {
-    if (currentAiIdx.value > 0) {
-      currentAiIdx.value--
-    } else {
-      currentStep.value = 1
-    }
-  } else {
-    currentStep.value--
-  }
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+const handleAssessmentComplete = (responses) => {
+  form.value.assessment_data = responses
+  handleSubmit()
 }
 
 async function createPatient() {
@@ -682,28 +493,10 @@ const handleNext = async () => {
       })
       const isCreated = await createPatient()
       if (isCreated) {
-        await generateAIQuestion()
         currentStep.value++
         window.scrollTo({ top: 0, behavior: 'smooth' })
       }
       $q.loading.hide()
-    }
-  } else {
-    // Navigate through AI questions
-    if (!form.value.ai_responses[currentAiIdx.value]) {
-      $q.notify({
-        type: 'warning',
-        message: 'Please select an option to continue.',
-        position: 'top',
-      })
-      return
-    }
-
-    if (currentAiIdx.value < aiQuestions.value.length - 1) {
-      currentAiIdx.value++
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    } else {
-      handleSubmit()
     }
   }
 }
