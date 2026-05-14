@@ -65,9 +65,29 @@
           v-for="option in currentQuestion.options"
           :key="option"
           class="option-btn"
-          @click="handleAnswer(option)"
+          :class="{ selected: selectedRadio === option }"
+          @click="handleRadioClick(option)"
         >
           {{ option }}
+        </button>
+
+        <div v-if="selectedRadio" class="other-text-wrap">
+          <input
+            v-model="otherText"
+            placeholder="Please specify..."
+            class="other-text-input"
+            @keyup.enter="handleRadioOtherSubmit"
+          />
+        </div>
+
+        <button
+          v-if="selectedRadio"
+          type="button"
+          class="option-btn submit-multi"
+          :disabled="!otherText.trim()"
+          @click="handleRadioOtherSubmit"
+        >
+          Confirm Selection
         </button>
       </div>
 
@@ -217,6 +237,7 @@ const isComplete = ref(false)
 const textAnswer = ref('')
 const sliderValue = ref(5)
 const multiSelected = ref([])
+const selectedRadio = ref(null)
 const otherText = ref('')
 const chatScroll = ref(null)
 const lastSection = ref('')
@@ -233,10 +254,14 @@ const isInPainSliderMode = computed(() => activePainArea.value !== null)
 // The current question — either from static list or a dynamic pain slider
 const currentQuestion = computed(() => {
   if (isInPainSliderMode.value) {
+    const displayArea = activePainArea.value.startsWith('Other:')
+      ? activePainArea.value.replace('Other:', '').trim()
+      : activePainArea.value
+
     return {
       id: `pd_2_${activePainArea.value.toLowerCase().replace(/[\s/]+/g, '_')}`,
       section: 'Pain & Discomfort',
-      text: `On a scale of 0–10, how would you rate your ${activePainArea.value} pain or discomfort?`,
+      text: `On a scale of 0–10, how would you rate your ${displayArea} pain or discomfort?`,
       type: 'slider',
       _dynamic: true,
     }
@@ -314,7 +339,7 @@ const handleAnswer = async (answer) => {
       const areas = answer
         .split(', ')
         .map((a) => a.trim())
-        .filter((a) => a !== 'No discomfort' && !a.startsWith('Other'))
+        .filter((a) => a !== 'No discomfort' && a !== 'Other')
       if (areas.length > 0) {
         // First area goes to active, rest go to queue
         painAreasQueue.value = areas.slice(1)
@@ -353,6 +378,7 @@ const handleAnswer = async (answer) => {
   // 4. Transition to thinking
   isThinking.value = true
   multiSelected.value = []
+  selectedRadio.value = null
   otherText.value = ''
   sliderValue.value = 5
   await scrollToBottom()
@@ -377,6 +403,25 @@ const handleTextSubmit = () => {
   if (textAnswer.value.trim()) {
     handleAnswer(textAnswer.value.trim())
     textAnswer.value = ''
+  }
+}
+
+const handleRadioClick = (option) => {
+  const q = currentQuestion.value
+  const isOther = option === 'Other' || (q.otherOption && option === q.otherOption)
+
+  if (isOther) {
+    selectedRadio.value = option
+  } else {
+    selectedRadio.value = null
+    handleAnswer(option)
+  }
+}
+
+const handleRadioOtherSubmit = () => {
+  if (otherText.value.trim()) {
+    handleAnswer(`Other: ${otherText.value.trim()}`)
+    selectedRadio.value = null
   }
 }
 

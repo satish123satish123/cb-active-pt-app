@@ -121,15 +121,20 @@ function buildPainAssessment(responses) {
   const duration = DURATION_MAP[durationRaw] || durationRaw
 
   return areas
-    .filter((area) => area !== 'Other' && !area.startsWith('Other:'))
+    .filter((area) => area !== 'No discomfort' && area !== 'Other')
     .map((area) => {
+      let cleanArea = area
+      if (area.startsWith('Other:')) {
+        cleanArea = area.replace('Other:', '').trim()
+      }
+
       // Find per-area severity from dynamic pd_2_<key> responses
       const areaKey = area.toLowerCase().replace(/[\s/]+/g, '_')
       const pd2 = responses.find((r) => r.id === `pd_2_${areaKey}`)
       const severity = pd2 ? parseInt(pd2.answer, 10) : 0
 
       return {
-        pain_site_side: PAIN_SITE_MAP[area] || area.toLowerCase().replace(/\s+/g, '_'),
+        pain_site_side: PAIN_SITE_MAP[cleanArea] || cleanArea.toLowerCase().replace(/\s+/g, '_'),
         pain_severity: severity,
         pain_onset: 'Gradual',
         pain_duration: duration,
@@ -157,8 +162,13 @@ function buildChiefComplaint(responses) {
   const areas = pd1.answer
     .split(', ')
     .map((a) => a.trim())
-    .filter((a) => a !== 'Other')
-  return areas.map((a) => `${a} pain`).join(', ')
+    .filter((a) => a !== 'Other' && a !== 'No discomfort')
+  return areas
+    .map((a) => {
+      const clean = a.startsWith('Other:') ? a.replace('Other:', '').trim() : a
+      return `${clean} pain`
+    })
+    .join(', ')
 }
 
 /**
@@ -219,6 +229,19 @@ function buildPresentPastIllness(responses) {
 export function mapAssessmentPayload(formData, assessmentResponses) {
   const gender = formData.sex ? formData.sex.charAt(0).toUpperCase() + formData.sex.slice(1) : ''
 
+  // Extract "Other" medical history text if present
+  const hs1 = assessmentResponses.find((r) => r.id === 'hs_1')
+  let medicalHistoryOther = ''
+  if (hs1) {
+    const otherItem = hs1.answer
+      .split(', ')
+      .map((a) => a.trim())
+      .find((a) => a.startsWith('Other:'))
+    if (otherItem) {
+      medicalHistoryOther = otherItem.replace('Other:', '').trim()
+    }
+  }
+
   return {
     age: parseInt(formData.age, 10) || 0,
     gender,
@@ -229,6 +252,7 @@ export function mapAssessmentPayload(formData, assessmentResponses) {
     questions: buildQuestionsArray(assessmentResponses, formData.sex, formData),
     patient_expectations: buildExpectations(assessmentResponses),
     medical_history: buildMedicalHistory(assessmentResponses),
+    medical_history_other: medicalHistoryOther,
     present_past_illness: buildPresentPastIllness(assessmentResponses),
     surgical_history: 'NA',
     personal_family_history: 'NA',

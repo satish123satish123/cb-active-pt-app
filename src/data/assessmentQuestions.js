@@ -72,7 +72,8 @@ export const painDiscomfort = [
     id: 'pd_1',
     section: 'Pain & Discomfort',
     text: 'Do you currently experience pain or discomfort in any of the following areas?',
-    type: 'multi',
+    type: 'multi_with_other',
+    otherOption: 'Other',
     options: [
       'Neck',
       'Upper back',
