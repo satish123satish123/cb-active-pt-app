@@ -28,7 +28,7 @@
       <div class="layout-container">
         <!-- SIDEBAR: HERO & PROGRESS -->
         <aside class="sidebar">
-          <header class="hero">
+          <header class="hero" :class="{ minimized: isMinimized }">
             <div class="hero-row">
               <div class="brand-lockup">
                 <div class="brand-logo">
@@ -65,7 +65,10 @@
                     <circle cx="12" cy="7" r="4"></circle>
                   </svg>
                 </div>
-                <div class="dot-label">Profile</div>
+                <div class="dot-label">
+                  Section 1
+                  <small>(Profile)</small>
+                </div>
               </div>
               <div
                 class="step-dot"
@@ -87,7 +90,16 @@
                     <line x1="12" y1="22.08" x2="12" y2="12"></line>
                   </svg>
                 </div>
-                <div class="dot-label">AI Check</div>
+                <div class="dot-label">
+                  <span
+                    v-if="currentStep === 2 && assessmentProgress.section"
+                    class="active-section"
+                  >
+                    Section {{ sectionNumber(assessmentProgress.section) }}
+                    <small>({{ assessmentProgress.section }})</small>
+                  </span>
+                  <span v-else>AI Check</span>
+                </div>
               </div>
             </div>
             <div class="progress-wrap">
@@ -95,7 +107,7 @@
                 <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
               </div>
               <div class="progress-meta">
-                <span class="step-counter">Step {{ currentStep }} of 2</span>
+                <span class="step-counter">Section {{ currentDisplayStep }} of 7</span>
                 <span class="percent">{{ progressPercent }}% complete</span>
               </div>
             </div>
@@ -187,7 +199,7 @@
                 </div>
               </div>
 
-              <div class="field" :class="{ 'has-error': v$.preferred_slot.$error }">
+              <!-- <div class="field" :class="{ 'has-error': v$.preferred_slot.$error }">
                 <label class="required">Preferred assessment slot</label>
                 <select v-model="form.preferred_slot" @change="v$.preferred_slot.$touch()">
                   <option value="">Select a slot</option>
@@ -198,7 +210,7 @@
                 <div v-if="v$.preferred_slot.$error" class="error-msg">
                   {{ v$.preferred_slot.$errors[0].$message }}
                 </div>
-              </div>
+              </div> -->
 
               <div class="field" :class="{ 'has-error': v$.previous_assessment.$error }">
                 <label class="required"
@@ -224,7 +236,11 @@
 
             <!-- STEP 2: SEQUENTIAL QUESTIONS -->
             <section v-if="currentStep === 2" class="step active">
-              <AssessmentQuestions :gender="form.sex" @complete="handleAssessmentComplete" />
+              <AssessmentQuestions
+                :gender="form.sex"
+                @complete="handleAssessmentComplete"
+                @progress="handleAssessmentProgress"
+              />
             </section>
 
             <div class="nav" v-if="currentStep === 1">
@@ -302,10 +318,10 @@
                   <span class="summary-label">Gender</span>
                   <span class="summary-value capitalize">{{ form.sex }}</span>
                 </div>
-                <div class="summary-item">
+                <!-- <div class="summary-item">
                   <span class="summary-label">Preferred Slot</span>
                   <span class="summary-value">{{ form.preferred_slot }}</span>
-                </div>
+                </div> -->
                 <div class="summary-item">
                   <span class="summary-label">Previous Assessment</span>
                   <span class="summary-value">{{ previousAssessmentLabel }}</span>
@@ -321,7 +337,7 @@
               </div>
               <div class="summary-qa-list">
                 <div class="summary-qa" v-for="(item, qIdx) in group.items" :key="qIdx">
-                  <div class="qa-question">{{ item.question }}</div>
+                  <div class="qa-question" v-html="item.question"></div>
                   <div class="qa-answer">{{ item.answer }}</div>
                 </div>
               </div>
@@ -378,6 +394,30 @@ const isValidLink = ref(true)
 const invalidMessage = ref('')
 const assessmentResponses = ref([])
 const patientId = ref(null)
+const assessmentProgress = ref({
+  section: '',
+  percent: 0,
+})
+
+const SECTION_MAP = {
+  'Working Conditions': 2,
+  'Pain & Discomfort': 3,
+  'Lifestyle & Women-Specific Factors': 4,
+  'Health & Safety Information': 5,
+  'Goals & Additional Information': 6,
+}
+
+const sectionNumber = (section) => SECTION_MAP[section] || 2
+
+const currentDisplayStep = computed(() => {
+  if (submitted.value || showSummary.value) return 7
+  if (currentStep.value === 1) return 1
+  return sectionNumber(assessmentProgress.value.section)
+})
+
+const isMinimized = computed(() => {
+  return currentStep.value === 2 && !showSummary.value && !submitted.value
+})
 
 const previousAssessmentLabel = computed(() => {
   const map = {
@@ -450,8 +490,8 @@ const form = ref({
   phone: '',
   email: '',
   age: '',
-  sex: '',
-  preferred_slot: '',
+  sex: 'female',
+  // preferred_slot: '',
   previous_assessment: '',
 })
 
@@ -470,10 +510,30 @@ onMounted(async () => {
   }
 })
 
-const progressPercent = computed(() => {
-  if (currentStep.value === 1) return 50
-  return 100
+const profilePercent = computed(() => {
+  const fields = ['name', 'phone', 'email', 'age', 'sex', 'previous_assessment']
+  const filled = fields.filter((f) => !!form.value[f]).length
+  return Math.round((filled / fields.length) * 100)
 })
+
+const progressPercent = computed(() => {
+  if (submitted.value) return 100
+  if (showSummary.value) return 100
+
+  if (currentStep.value === 1) {
+    // Step 1: 0% to 50%
+    return Math.round(profilePercent.value * 0.5)
+  }
+  if (currentStep.value === 2) {
+    // Step 2: 50% to 100%
+    return 50 + Math.round(assessmentProgress.value.percent * 0.5)
+  }
+  return 0
+})
+
+const handleAssessmentProgress = (data) => {
+  assessmentProgress.value = data
+}
 
 const rules = {
   name: { required: helpers.withMessage('Full name is required', required) },
@@ -490,9 +550,9 @@ const rules = {
   age: {
     required: helpers.withMessage('Age is required', required),
   },
-  preferred_slot: {
-    required: helpers.withMessage('Please select a preferred slot', required),
-  },
+  // preferred_slot: {
+  //   required: helpers.withMessage('Please select a preferred slot', required),
+  // },
   previous_assessment: {
     required: helpers.withMessage('Please select an option', required),
   },
@@ -648,49 +708,49 @@ const handleFinalSubmit = async () => {
     console.log('Mapped Assessment Payload:', JSON.stringify(payload, null, 2))
 
     // Send payload to assessment API with patient_id and hospital_id
-    await assessment_api
-      .post('/assessments', {
-        patient_id: patientId.value,
-        hospital_id: form.value.hospital_id,
-        ...payload,
-      })
-      .then((res) => {
-        console.log('Assessment API Response:', res.data)
-        if (res.data.error) {
-          $q.notify({
-            type: 'negative',
-            message: res.data.message || 'Failed to sync with assessment database',
-            position: 'top',
-            html: true,
-          })
-          return false
-        }
-        $q.notify({
-          type: 'positive',
-          message: res.data.message || 'Assessment sync successful',
-          position: 'top',
-        })
-        return true
-      })
-      .catch((err) => {
-        console.error('Assessment API Error:', err)
-        const data = err.response?.data
-        if (data?.results && typeof data.results === 'object') {
-          Object.values(data.results)
-            .flat()
-            .forEach((msg) => {
-              $q.notify({ type: 'negative', message: msg, position: 'top', html: true })
-            })
-        } else {
-          $q.notify({
-            type: 'negative',
-            message: data?.message || 'Failed to sync with assessment database',
-            position: 'top',
-            html: true,
-          })
-        }
-        return false
-      })
+    // await assessment_api
+    //   .post('/assessments', {
+    //     patient_id: patientId.value,
+    //     hospital_id: form.value.hospital_id,
+    //     ...payload,
+    //   })
+    //   .then((res) => {
+    //     console.log('Assessment API Response:', res.data)
+    //     if (res.data.error) {
+    //       $q.notify({
+    //         type: 'negative',
+    //         message: res.data.message || 'Failed to sync with assessment database',
+    //         position: 'top',
+    //         html: true,
+    //       })
+    //       return false
+    //     }
+    //     $q.notify({
+    //       type: 'positive',
+    //       message: res.data.message || 'Assessment sync successful',
+    //       position: 'top',
+    //     })
+    //     return true
+    //   })
+    //   .catch((err) => {
+    //     console.error('Assessment API Error:', err)
+    //     const data = err.response?.data
+    //     if (data?.results && typeof data.results === 'object') {
+    //       Object.values(data.results)
+    //         .flat()
+    //         .forEach((msg) => {
+    //           $q.notify({ type: 'negative', message: msg, position: 'top', html: true })
+    //         })
+    //     } else {
+    //       $q.notify({
+    //         type: 'negative',
+    //         message: data?.message || 'Failed to sync with assessment database',
+    //         position: 'top',
+    //         html: true,
+    //       })
+    //     }
+    //     return false
+    //   })
 
     submitted.value = true
     showSummary.value = false
@@ -775,6 +835,14 @@ const handleFinalSubmit = async () => {
   overflow: hidden;
   background: var(--grad);
   color: white;
+  transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (max-width: 1023px) {
+  .hero.minimized {
+    padding-top: 16px;
+    padding-bottom: 40px;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -827,8 +895,9 @@ const handleFinalSubmit = async () => {
 }
 
 .kicker {
-  display: inline-block;
-  padding: 5px 12px;
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 6px 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.18);
   font-size: 11px;
@@ -838,6 +907,19 @@ const handleFinalSubmit = async () => {
   margin-bottom: 12px;
   position: relative;
   z-index: 1;
+  transition: all 0.4s ease;
+}
+
+@media (max-width: 1023px) {
+  .hero.minimized .kicker,
+  .hero.minimized h1,
+  .hero.minimized p {
+    opacity: 0;
+    max-height: 0;
+    margin: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
 }
 
 .hero h1 {
@@ -847,6 +929,7 @@ const handleFinalSubmit = async () => {
   line-height: 1.1;
   position: relative;
   z-index: 1;
+  transition: all 0.4s ease;
 }
 
 @media (min-width: 1024px) {
@@ -863,12 +946,13 @@ const handleFinalSubmit = async () => {
   max-width: 42ch;
   position: relative;
   z-index: 1;
+  transition: all 0.4s ease;
 }
 
 /* CONTENT */
 .content {
   padding: 0 16px;
-  margin-top: 16px;
+  margin-top: 5px;
   position: relative;
   z-index: 2;
   flex: 1;
@@ -954,13 +1038,28 @@ const handleFinalSubmit = async () => {
   font-size: 11px;
   font-weight: 800;
   color: var(--text-3);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  text-align: center;
+  align-items: center;
+}
+
+.step-dot .dot-label small {
+  font-size: 10px;
+  font-weight: 500;
+  color: #6a716a;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 @media (min-width: 1024px) {
   .step-dot .dot-label {
     font-size: 13px;
+    text-align: left;
+    align-items: flex-start;
   }
 }
 
@@ -976,6 +1075,19 @@ const handleFinalSubmit = async () => {
 
 .step-dot.active .dot-label {
   color: var(--brand);
+}
+
+.active-section {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.active-section small {
+  font-size: 10px;
+  font-weight: 500;
+  color: #6a716a;
+  text-transform: none;
 }
 
 .step-dot.complete .dot-icon {

@@ -1,7 +1,7 @@
 <template>
   <div class="assessment-flow">
     <!-- Header -->
-    <div class="flow-header">
+    <!-- <div class="flow-header">
       <div class="brand-info">
         <div class="physio-icon">
           <q-icon name="medical_services" color="white" size="20px" />
@@ -19,14 +19,21 @@
           :class="{ active: n <= currentIdx + 1, completed: n < currentIdx + 1 }"
         ></div>
       </div>
-    </div>
+    </div> -->
 
     <!-- Chat Area -->
     <div class="chat-container" ref="chatScroll">
-      <div v-for="(item, idx) in history" :key="idx" class="chat-row" :class="item.type">
-        <div class="bubble" :class="{ 'section-divider': item.isSection }">
-          {{ item.text }}
-        </div>
+      <div
+        v-for="(item, idx) in history"
+        :key="idx"
+        class="chat-row"
+        :class="[item.type, { 'section-header': item.isSection }]"
+      >
+        <div
+          class="bubble"
+          :class="{ 'section-divider': item.isSection }"
+          v-html="item.text"
+        ></div>
       </div>
 
       <!-- Current Question Thinking -->
@@ -39,7 +46,10 @@
       </div>
 
       <!-- Section Header -->
-      <div v-if="!isThinking && sectionHeader && !isComplete" class="chat-row assistant">
+      <div
+        v-if="!isThinking && sectionHeader && !isComplete"
+        class="chat-row assistant section-header"
+      >
         <div class="bubble section-divider animate-in">
           {{ sectionHeader }}
         </div>
@@ -47,9 +57,7 @@
 
       <!-- Current Question -->
       <div v-if="!isThinking && currentQuestion && !isComplete" class="chat-row assistant">
-        <div class="bubble animate-in">
-          {{ displayText }}
-        </div>
+        <div class="bubble animate-in" v-html="displayText"></div>
       </div>
     </div>
 
@@ -59,6 +67,7 @@
       <div
         v-if="currentQuestion.type === 'radio' || currentQuestion.type === 'choice'"
         class="options-grid"
+        :class="{ 'vertical-grid': isVertical }"
       >
         <button
           type="button"
@@ -92,7 +101,11 @@
       </div>
 
       <!-- Multi-select (checkboxes) -->
-      <div v-else-if="currentQuestion.type === 'multi'" class="options-grid">
+      <div
+        v-else-if="currentQuestion.type === 'multi'"
+        class="options-grid"
+        :class="{ 'vertical-grid': isVertical }"
+      >
         <button
           type="button"
           v-for="option in currentQuestion.options"
@@ -115,7 +128,11 @@
       </div>
 
       <!-- Multi-select with Other text box -->
-      <div v-else-if="currentQuestion.type === 'multi_with_other'" class="options-grid">
+      <div
+        v-else-if="currentQuestion.type === 'multi_with_other'"
+        class="options-grid"
+        :class="{ 'vertical-grid': isVertical }"
+      >
         <button
           type="button"
           v-for="option in currentQuestion.options"
@@ -199,7 +216,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['complete'])
+const emit = defineEmits(['complete', 'progress'])
 
 import {
   workingConditions,
@@ -243,9 +260,19 @@ const chatScroll = ref(null)
 const lastSection = ref('')
 const hasNoDiscomfort = ref(false)
 
+const isVertical = computed(() => {
+  const q = currentQuestion.value
+  if (!q || !q.options) return false
+  // Exception for pd_1 (Pain area selection)
+  if (q.id === 'pd_1') return false
+  // More than 2 options -> vertical
+  return q.options.length > 2
+})
+
 // ─── Per-area pain slider state ───
 const painAreasQueue = ref([]) // areas still to rate
 const activePainArea = ref(null) // area currently being rated
+const activePainStep = ref(0) // 0: severity slider, 1: duration choice
 const painRatings = ref({}) // { 'Neck': 7, 'Upper back': 5 }
 
 // Is the component currently showing a dynamic pain slider?
@@ -258,12 +285,28 @@ const currentQuestion = computed(() => {
       ? activePainArea.value.replace('Other:', '').trim()
       : activePainArea.value
 
-    return {
-      id: `pd_2_${activePainArea.value.toLowerCase().replace(/[\s/]+/g, '_')}`,
-      section: 'Pain & Discomfort',
-      text: `On a scale of 0–10, how would you rate your ${displayArea} pain or discomfort?`,
-      type: 'slider',
-      _dynamic: true,
+    if (activePainStep.value === 0) {
+      return {
+        id: `pd_2_${activePainArea.value.toLowerCase().replace(/[\s/]+/g, '_')}`,
+        section: 'Pain & Discomfort',
+        text: `On a scale of 0–10, how would you rate your <strong>${displayArea}</strong> pain or discomfort?`,
+        type: 'slider',
+        _dynamic: true,
+      }
+    } else {
+      return {
+        id: `pd_3_${activePainArea.value.toLowerCase().replace(/[\s/]+/g, '_')}`,
+        section: 'Pain & Discomfort',
+        text: `How long have you been experiencing <strong>${displayArea}</strong> discomfort?`,
+        type: 'choice',
+        options: [
+          'Less than 6 weeks',
+          '6 weeks to 3 months',
+          'More than 3 months',
+          'Not applicable',
+        ],
+        _dynamic: true,
+      }
     }
   }
   return allQuestions.value[currentIdx.value]
@@ -284,6 +327,18 @@ const sectionHeader = computed(() => {
   return null
 })
 
+const currentSectionName = computed(() => {
+  if (isInPainSliderMode.value) return 'Pain & Discomfort'
+  const q = allQuestions.value[currentIdx.value]
+  if (!q) return ''
+
+  // Search backwards for the section label
+  for (let i = currentIdx.value; i >= 0; i--) {
+    if (allQuestions.value[i].section) return allQuestions.value[i].section
+  }
+  return ''
+})
+
 const scrollToBottom = async () => {
   await nextTick()
   if (chatScroll.value) {
@@ -291,11 +346,38 @@ const scrollToBottom = async () => {
   }
 }
 
+// ─── Emit progress when question changes ───
+import { watch } from 'vue'
+watch(
+  [currentIdx, activePainArea, activePainStep],
+  () => {
+    if (isComplete.value) return
+    const q = currentQuestion.value
+    if (!q) return
+
+    // Calculate progress based on static index
+    const progress = Math.min(Math.round((currentIdx.value / totalQuestions.value) * 100), 99)
+
+    emit('progress', {
+      section: currentSectionName.value,
+      percent: progress,
+    })
+  },
+  { immediate: true },
+)
+
 // ─── Advance: check pain slider queue first, then static list ───
 const advanceToNext = () => {
+  // If we just finished the slider, move to duration for the same area
+  if (isInPainSliderMode.value && activePainStep.value === 0) {
+    activePainStep.value = 1
+    return
+  }
+
   // If there are more pain areas to rate, show next slider
   if (painAreasQueue.value.length > 0) {
     activePainArea.value = painAreasQueue.value.shift()
+    activePainStep.value = 0
     sliderValue.value = 5
     return
   }
@@ -303,6 +385,7 @@ const advanceToNext = () => {
   // Clear pain slider mode if queue is empty
   if (activePainArea.value !== null) {
     activePainArea.value = null
+    activePainStep.value = 0
   }
 
   // Advance static question index
@@ -344,6 +427,7 @@ const handleAnswer = async (answer) => {
         // First area goes to active, rest go to queue
         painAreasQueue.value = areas.slice(1)
         activePainArea.value = areas[0]
+        activePainStep.value = 0
       }
     }
   }
@@ -562,6 +646,11 @@ onMounted(() => {
   justify-content: flex-end;
 }
 
+.chat-row.section-header {
+  justify-content: center;
+  margin: 12px 0 4px;
+}
+
 .bubble {
   max-width: 80%;
   padding: 14px 18px;
@@ -593,12 +682,15 @@ onMounted(() => {
   color: white !important;
   font-weight: 700 !important;
   font-size: 13px !important;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.05em;
   border: none !important;
   border-radius: 12px !important;
-  padding: 10px 18px !important;
+  padding: 12px 18px !important;
   text-transform: uppercase;
-  box-shadow: 0 4px 16px rgba(16, 126, 110, 0.2) !important;
+  box-shadow: 0 4px 16px rgba(16, 126, 110, 0.15) !important;
+  width: 100%;
+  max-width: 100% !important;
+  text-align: center;
 }
 
 /* THINKING ANIMATION */
@@ -666,7 +758,7 @@ onMounted(() => {
 }
 
 @media (min-width: 480px) {
-  .options-grid {
+  .options-grid:not(.vertical-grid) {
     grid-template-columns: repeat(2, 1fr);
   }
 }
