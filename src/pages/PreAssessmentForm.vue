@@ -31,11 +31,15 @@
           <header class="hero" :class="{ minimized: isMinimized }">
             <div class="hero-row">
               <div class="brand-lockup">
-                <div class="brand-logo">
+                <div class="brand-logo cb-logo">
                   <q-img src="cb_white.webp" />
                 </div>
+                <div class="brand-divider"></div>
+                <div class="brand-logo partner-logo">
+                  <q-img src="cars24.webp" />
+                </div>
               </div>
-              <div class="secure-chip">Secure</div>
+              <!-- <div class="secure-chip">Secure</div> -->
             </div>
             <span class="kicker">Corporate wellness</span>
             <h1>Pre-Assessment</h1>
@@ -862,13 +866,31 @@ const handleFinalSubmit = async () => {
   margin-bottom: 10px;
 }
 
-.brand-logo {
-  width: 150px;
-  height: 50px;
+.brand-lockup {
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin: 0;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.brand-logo {
+  height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+.cb-logo {
+  width: 140px;
+}
+
+.partner-logo {
+  width: 100px;
+}
+
+.brand-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .secure-chip {
