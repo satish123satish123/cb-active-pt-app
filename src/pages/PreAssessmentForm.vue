@@ -167,7 +167,7 @@
                     @blur="v$.age.$touch()"
                     min="18"
                     max="80"
-                    placeholder="18 – 80"
+                    placeholder="e.g. 32"
                     required
                   />
                   <div v-if="v$.age.$error" class="error-msg">
@@ -366,15 +366,7 @@ import { api, assessment_api } from 'src/boot/axios'
 import { useVuelidate } from '@vuelidate/core'
 import AssessmentQuestions from 'src/components/AssessmentQuestions.vue'
 import { mapAssessmentPayload } from 'src/utils/assessmentMapper'
-import {
-  required,
-  email,
-  numeric,
-  minLength,
-  maxLength,
-  between,
-  helpers,
-} from '@vuelidate/validators'
+import { required, email, numeric, minLength, maxLength, helpers } from '@vuelidate/validators'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -497,7 +489,6 @@ const rules = {
   },
   age: {
     required: helpers.withMessage('Age is required', required),
-    between: helpers.withMessage('Enter an age between 18 and 80', between(18, 80)),
   },
   preferred_slot: {
     required: helpers.withMessage('Please select a preferred slot', required),
