@@ -26,9 +26,9 @@ const EXPECTATION_MAP = {
 
 // ─── Pain duration mapping ───
 const DURATION_MAP = {
-  'Less than 6 weeks (Acute)': 'Acute',
-  '6 weeks to 3 months (Subacute)': 'Sub-acute',
-  'More than 3 months (Chronic)': 'Chronic',
+  'Less than 6 weeks': 'Acute',
+  '6 weeks to 3 months': 'Sub-acute',
+  'More than 3 months': 'Chronic',
   'Not applicable': '',
 }
 
@@ -185,8 +185,8 @@ function buildExpectations(responses) {
 
 // ─── Medical history option mapping ───
 const MEDICAL_HISTORY_MAP = {
-  'None': 'none',
-  'Diabetes': 'diabetes',
+  None: 'none',
+  Diabetes: 'diabetes',
   'High blood pressure': 'htn',
   'Thyroid condition': 'thyroid',
   'Osteoporosis / osteopenia': 'osteoporosis/osteopenia',
@@ -215,7 +215,8 @@ function buildMedicalHistory(responses) {
 function buildPresentPastIllness(responses) {
   const gi2 = responses.find((r) => r.id === 'gi_2')
   if (!gi2 || !gi2.answer.trim()) return 'NA'
-  return gi2.answer.trim()
+  // Remove "Other:" prefix if it exists
+  return gi2.answer.replace(/^Other:\s*/i, '').trim()
 }
 
 /**

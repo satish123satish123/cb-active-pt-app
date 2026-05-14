@@ -21,19 +21,13 @@ export const workingConditions = [
       'Laptop + external keyboard',
       'Laptop + external monitor',
       'Desktop with monitor',
-      'Flexible seating (couch/bed/varied)',
     ],
   },
   {
     id: 'wc_3',
     text: 'Where is your screen positioned while working?',
     type: 'choice',
-    options: [
-      'At eye level',
-      'Slightly below eye level',
-      'Much lower (looking down)',
-      'Not sure',
-    ],
+    options: ['At eye level', 'Slightly below eye level', 'Much lower (looking down)', 'Not sure'],
   },
   {
     id: 'wc_4',
@@ -45,22 +39,13 @@ export const workingConditions = [
     id: 'wc_5',
     text: 'What is your average daily screen time during work hours?',
     type: 'choice',
-    options: [
-      'Less than 4 hours',
-      '4–6 hours',
-      '6–8 hours',
-      'More than 8 hours',
-    ],
+    options: ['Less than 4 hours', '4–6 hours', '6–8 hours', 'More than 8 hours'],
   },
   {
     id: 'wc_6',
     text: 'How often do you take breaks during work?',
     type: 'choice',
-    options: [
-      'Every 30–45 minutes',
-      'Every 1–2 hours',
-      'Rarely',
-    ],
+    options: ['Every 30–45 minutes', 'Every 1–2 hours', 'Rarely'],
   },
 ]
 
@@ -81,25 +66,13 @@ export const painDiscomfort = [
       'Shoulder',
       'Forearm / Elbow',
       'Wrist / Hand',
-      'Headaches',
+      'Headache',
       'Hip',
       'Knee',
       'Eye Strain / Dry Eyes',
       'No discomfort',
       'Other',
     ],
-  },
-  {
-    id: 'pd_3',
-    text: 'How long have you been experiencing this discomfort?',
-    type: 'choice',
-    options: [
-      'Less than 6 weeks (Acute)',
-      '6 weeks to 3 months (Subacute)',
-      'More than 3 months (Chronic)',
-      'Not applicable',
-    ],
-    skipIfNoDiscomfort: true,
   },
 ]
 
@@ -136,11 +109,7 @@ export const lifestyleFactors = [
     id: 'lf_5',
     text: 'What is your water intake throughout the day?',
     type: 'choice',
-    options: [
-      'Less than 1 litre',
-      '1-2 litres',
-      'More than 2 litres',
-    ],
+    options: ['Less than 1 litre', '1-2 litres', 'More than 2 litres'],
   },
   {
     id: 'lf_6',
@@ -152,12 +121,7 @@ export const lifestyleFactors = [
     id: 'lf_7',
     text: 'How often do you exercise?',
     type: 'choice',
-    options: [
-      '3+ times per week',
-      '1–2 times per week',
-      'Rarely',
-      'Not at all',
-    ],
+    options: ['3+ times per week', '1–2 times per week', 'Rarely', 'Not at all'],
   },
   {
     id: 'lf_8',
@@ -215,6 +179,8 @@ export const goalsInfo = [
   {
     id: 'gi_2',
     text: 'Is there anything else you would like us to know about your physical comfort, posture, or work habits?',
-    type: 'text',
+    type: 'choice',
+    options: ['Yes', 'No'],
+    otherOption: 'Yes',
   },
 ]
