@@ -31,10 +31,8 @@
           <header class="hero">
             <div class="hero-row">
               <div class="brand-lockup">
-                <div class="brand-logo">CB</div>
-                <div class="brand-text">
-                  CB Physiotherapy
-                  <small>Move Activ · Live Activ</small>
+                <div class="brand-logo">
+                  <q-img src="cb_white.webp" />
                 </div>
               </div>
               <div class="secure-chip">Secure</div>
@@ -660,7 +658,11 @@ const handleFinalSubmit = async () => {
 
     // Send payload to assessment API with patient_id and hospital_id
     await assessment_api
-      .post('/assessments', { patient_id: patientId.value, hospital_id: form.value.hospital_id, ...payload })
+      .post('/assessments', {
+        patient_id: patientId.value,
+        hospital_id: form.value.hospital_id,
+        ...payload,
+      })
       .then((res) => {
         console.log('Assessment API Response:', res.data)
         if (res.data.error) {
@@ -798,44 +800,16 @@ const handleFinalSubmit = async () => {
 .brand-lockup {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-@media (min-width: 1024px) {
-  .brand-lockup {
-    margin-bottom: 24px;
-  }
+  margin-bottom: 10px;
 }
 
 .brand-logo {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.22);
-  backdrop-filter: blur(12px);
+  width: 150px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  font-weight: 900;
   margin: 0;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-}
-
-.brand-text {
-  text-align: left;
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1.1;
-}
-
-.brand-text small {
-  display: block;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
-  margin-top: 2px;
 }
 
 .secure-chip {

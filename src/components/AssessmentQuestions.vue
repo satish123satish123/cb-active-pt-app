@@ -107,20 +107,16 @@
           <span class="check-indicator">{{ multiSelected.includes(option) ? '✓' : '' }}</span>
           {{ option }}
         </button>
-        <div
-          v-if="multiSelected.includes(currentQuestion.otherOption)"
-          class="other-text-wrap"
-        >
-          <input
-            v-model="otherText"
-            placeholder="Please specify..."
-            class="other-text-input"
-          />
+        <div v-if="multiSelected.includes(currentQuestion.otherOption)" class="other-text-wrap">
+          <input v-model="otherText" placeholder="Please specify..." class="other-text-input" />
         </div>
         <button
           type="button"
           class="option-btn submit-multi"
-          :disabled="multiSelected.length === 0 || (multiSelected.includes(currentQuestion.otherOption) && !otherText.trim())"
+          :disabled="
+            multiSelected.length === 0 ||
+            (multiSelected.includes(currentQuestion.otherOption) && !otherText.trim())
+          "
           @click="handleMultiWithOtherSubmit"
         >
           Confirm Selection
@@ -133,15 +129,13 @@
           <span>0 — No pain</span>
           <span>10 — Severe pain</span>
         </div>
-        <input
-          type="range"
-          min="0"
-          max="10"
-          v-model.number="sliderValue"
-          class="pain-slider"
-        />
+        <input type="range" min="0" max="10" v-model.number="sliderValue" class="pain-slider" />
         <div class="slider-value">{{ sliderValue }}</div>
-        <button type="button" class="option-btn submit-slider" @click="handleAnswer(String(sliderValue))">
+        <button
+          type="button"
+          class="option-btn submit-slider"
+          @click="handleAnswer(String(sliderValue))"
+        >
           Confirm
         </button>
       </div>
@@ -153,7 +147,12 @@
           placeholder="Type your answer here..."
           @keyup.enter="handleTextSubmit"
         />
-        <button type="button" class="send-btn" @click="handleTextSubmit" :disabled="!textAnswer.trim()">
+        <button
+          type="button"
+          class="send-btn"
+          @click="handleTextSubmit"
+          :disabled="!textAnswer.trim()"
+        >
           <q-icon name="send" />
         </button>
       </div>
@@ -193,7 +192,7 @@ import {
 // ─── Build question list (filter femaleOnly questions for non-female) ───
 const allQuestions = computed(() => {
   const filterByGender = (questions) => {
-    return questions.filter(q => {
+    return questions.filter((q) => {
       if (q.femaleOnly && props.gender !== 'female') return false
       return true
     })
@@ -224,9 +223,9 @@ const lastSection = ref('')
 const hasNoDiscomfort = ref(false)
 
 // ─── Per-area pain slider state ───
-const painAreasQueue = ref([])     // areas still to rate
-const activePainArea = ref(null)   // area currently being rated
-const painRatings = ref({})        // { 'Neck': 7, 'Upper back': 5 }
+const painAreasQueue = ref([]) // areas still to rate
+const activePainArea = ref(null) // area currently being rated
+const painRatings = ref({}) // { 'Neck': 7, 'Upper back': 5 }
 
 // Is the component currently showing a dynamic pain slider?
 const isInPainSliderMode = computed(() => activePainArea.value !== null)
@@ -312,9 +311,10 @@ const handleAnswer = async (answer) => {
     } else {
       hasNoDiscomfort.value = false
       // Split areas and filter out "Other" / "Eye Strain / Dry Eyes" from slider
-      const areas = answer.split(', ').map(a => a.trim()).filter(a =>
-        a !== 'No discomfort' && !a.startsWith('Other')
-      )
+      const areas = answer
+        .split(', ')
+        .map((a) => a.trim())
+        .filter((a) => a !== 'No discomfort' && !a.startsWith('Other'))
       if (areas.length > 0) {
         // First area goes to active, rest go to queue
         painAreasQueue.value = areas.slice(1)
@@ -520,7 +520,7 @@ onMounted(() => {
 .bubble {
   max-width: 80%;
   padding: 14px 18px;
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1.5;
   border-radius: 18px;
   position: relative;
@@ -632,7 +632,7 @@ onMounted(() => {
   border: 1.5px solid #e0e7e1;
   border-radius: 14px;
   color: #1a1c1a;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
