@@ -5,124 +5,146 @@
       <button class="back-btn-white" @click="$router.push('/exercises')">
         <q-icon name="arrow_back" size="18px" color="black" />
       </button>
-      <div class="header-content">
+      <div class="header-content" v-if="ex">
         <div class="header-title">{{ ex.name }}</div>
         <div class="header-sub">Guided exercise mode</div>
       </div>
+      <div class="header-content" v-else>
+        <div class="header-title">Loading...</div>
+      </div>
     </header>
 
-    <!-- Unified Exercise Card -->
-    <div class="section" v-if="ex">
-      <div class="exercise-player-card">
-        <!-- Top Half: Info & Focus -->
-        <div class="player-card-top">
-          <div class="info-topline">
-            <div class="eyebrow-text">EXERCISE {{ currentNumber }} OF {{ total }}</div>
-            <span class="badge" :class="statusBadge(ex.status)">{{ statusLabel(ex.status) }}</span>
-          </div>
-          <h5 class="ex-player-name">{{ formatTitleCase(ex.name) }}</h5>
-          <p class="ex-player-subtitle">{{ ex.subtitle || ex.instruction }}</p>
-
-          <div class="exercise-player-focus-grid">
-            <div class="focus-box">
-              <div class="focus-label">GOAL</div>
-              <div class="focus-value">{{ ex.goal || 'Follow your recovery plan' }}</div>
+    <!-- Main Content (Protected by ex check) -->
+    <template v-if="ex">
+      <!-- Unified Exercise Card -->
+      <div class="section">
+        <div class="exercise-player-card">
+          <!-- Top Half: Info & Focus -->
+          <div class="player-card-top">
+            <div class="info-topline">
+              <div class="eyebrow-text">EXERCISE {{ currentNumber }} OF {{ total }}</div>
+              <span class="badge" :class="statusBadge(ex.status)">{{ statusLabel(ex.status) }}</span>
             </div>
-            <div class="focus-box">
-              <div class="focus-label">PRESCRIPTION</div>
-              <div class="focus-value">{{ ex.reps }} reps • {{ ex.sets }} sets</div>
+            <h5 class="ex-player-name">{{ formatTitleCase(ex.name) }}</h5>
+            <p class="ex-player-subtitle">{{ ex.subtitle || ex.instruction }}</p>
+
+            <div class="exercise-player-focus-grid">
+              <div class="focus-box">
+                <div class="focus-label">GOAL</div>
+                <div class="focus-value">{{ ex.goal || 'Follow your recovery plan' }}</div>
+              </div>
+              <div class="focus-box">
+                <div class="focus-label">PRESCRIPTION</div>
+                <div class="focus-value">{{ ex.reps }} reps • {{ ex.sets }} sets</div>
+              </div>
+              <div class="focus-box">
+                <div class="focus-label">EQUIPMENT</div>
+                <div class="focus-value">{{ ex.equipment || 'No Equipment' }}</div>
+              </div>
             </div>
-            <div class="focus-box">
-              <div class="focus-label">EQUIPMENT</div>
-              <div class="focus-value">{{ ex.equipment || 'No Equipment' }}</div>
-            </div>
           </div>
-        </div>
 
-        <div class="player-divider"></div>
+          <div class="player-divider"></div>
 
-        <!-- Bottom Half: Visual Content (Video or GIF) -->
-        <div class="player-card-bottom">
-          <div class="visual-card-new">
-             <template v-if="exerciseDetails?.exercise_media?.image">
-                <img :src="`https://app.activpt.in/${exerciseDetails.exercise_media.image}`" class="main-exercise-image" />
-             </template>
-             <div v-else class="visual-thumb">{{ ex.icon || '💪' }}</div>
-             <div class="visual-name">{{ formatTitleCase(ex.name) }}</div>
-             <div class="visual-instruction">{{ ex.instruction }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Instructions / Steps Section -->
-    <div class="section" v-if="exerciseDetails?.exercise_step_images_with_instructions?.length">
-      <div class="progress-section-label">Step-by-step Guide</div>
-      <div class="steps-stack">
-        <div v-for="(step, idx) in exerciseDetails.exercise_step_images_with_instructions" :key="idx" class="step-card">
-          <div class="step-image-wrapper">
-             <img :src="`https://app.activpt.in/${step.image}`" class="step-img" />
-             <div class="step-number">{{ idx + 1 }}</div>
-          </div>
-          <div class="step-content">
-            <div class="step-primary">{{ step.primary_instructions }}</div>
-            <div class="step-post">{{ step.post_instruction }}</div>
-            <div class="step-cue" v-if="step.post_cue">
-              <span class="cue-label">Cue:</span> {{ step.post_cue }}
+          <!-- Bottom Half: Visual Content (Video or GIF) -->
+          <div class="player-card-bottom">
+            <div class="visual-card-new">
+              <template v-if="exerciseDetails?.exercise_media?.image">
+                <img
+                  :src="`https://app.activpt.in/${exerciseDetails.exercise_media.image}`"
+                  class="main-exercise-image"
+                />
+              </template>
+              <div v-else class="visual-thumb">{{ ex.icon || '💪' }}</div>
+              <div class="visual-name">{{ formatTitleCase(ex.name) }}</div>
+              <div class="visual-instruction">{{ ex.instruction }}</div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Progress Card -->
-    <div class="section">
-      <div class="card progress-card-player">
-        <div class="split">
-          <div>
-            <div class="title">Current progress</div>
-            <div class="muted">Continue from where you left off.</div>
+      <!-- Instructions / Steps Section -->
+      <div class="section" v-if="exerciseDetails?.exercise_step_images_with_instructions?.length">
+        <div class="progress-section-label">Step-by-step Guide</div>
+        <div class="steps-stack">
+          <div
+            v-for="(step, idx) in exerciseDetails.exercise_step_images_with_instructions"
+            :key="idx"
+            class="step-card"
+          >
+            <div class="step-image-wrapper">
+              <img :src="`https://app.activpt.in/${step.image}`" class="step-img" />
+              <div class="step-number">{{ idx + 1 }}</div>
+            </div>
+            <div class="step-content">
+              <div class="step-primary">{{ step.primary_instructions }}</div>
+              <div class="step-post">{{ step.post_instruction }}</div>
+              <div class="step-cue" v-if="step.post_cue">
+                <span class="cue-label">Cue:</span> {{ step.post_cue }}
+              </div>
+            </div>
           </div>
-          <span class="badge brand">{{ progressPercent }}%</span>
-        </div>
-        <div class="progress-wrap">
-          <div class="progress-rail">
-            <div class="progress-fill" :style="`width:${progressPercent}%`"></div>
-          </div>
-        </div>
-        <div class="split progress-labels">
-          <div class="muted">
-            Set {{ ex.progress.set }} of {{ ex.progress.totalSets }} completed
-          </div>
-          <strong class="sets-left-text">{{ ex.progress.totalSets - ex.progress.set }} left</strong>
-        </div>
-        <div class="progress-actions">
-          <button class="btn primary full-btn" @click="cycleExerciseProgress()">
-            {{ ex.progress.set === ex.progress.totalSets ? 'Reset Progress' : 'Complete Next Set' }}
-          </button>
-          <button class="btn ghost full-btn" @click="$router.push('/support')">Need Help?</button>
         </div>
       </div>
-    </div>
 
-    <!-- Tip Card -->
-    <div class="section">
-      <div class="card tip-card">
-        <div class="title q-mb-xs">Technique tip</div>
-        <div class="muted tip-text">{{ ex.tips }}</div>
+      <!-- Progress Card -->
+      <div class="section">
+        <div class="card progress-card-player">
+          <div class="split">
+            <div>
+              <div class="title">Current progress</div>
+              <div class="muted">Continue from where you left off.</div>
+            </div>
+            <span class="badge brand">{{ progressPercent }}%</span>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-rail">
+              <div class="progress-fill" :style="`width:${progressPercent}%`"></div>
+            </div>
+          </div>
+          <div class="split progress-labels" v-if="ex.progress">
+            <div class="muted">
+              Set {{ ex.progress.set }} of {{ ex.progress.totalSets }} completed
+            </div>
+            <strong class="sets-left-text"
+              >{{ ex.progress.totalSets - ex.progress.set }} left</strong
+            >
+          </div>
+          <div class="progress-actions" v-if="ex.progress">
+            <button class="btn primary full-btn" @click="cycleExerciseProgress()">
+              {{ ex.progress.set === ex.progress.totalSets ? 'Reset Progress' : 'Complete Next Set' }}
+            </button>
+            <button class="btn ghost full-btn" @click="$router.push('/support')">Need Help?</button>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <!-- Sticky Footer Nav -->
-    <div class="player-footer-spacer"></div>
-    <div class="exercise-sticky-nav">
-      <button class="nav-btn-grey" :disabled="currentNumber === 1" @click="goToPrevExercise">
-        Previous
-      </button>
-      <div class="nav-center-text">Exercise {{ currentNumber }} of {{ total }}</div>
-      <button class="nav-btn-primary" @click="goToNextExercise">
-        {{ currentNumber === total ? 'Finish' : 'Next' }}
-      </button>
+      <!-- Tip Card -->
+      <div class="section">
+        <div class="card tip-card">
+          <div class="title q-mb-xs">Technique tip</div>
+          <div class="muted tip-text">{{ ex.tips }}</div>
+        </div>
+      </div>
+
+      <!-- Sticky Footer Nav -->
+      <div class="player-footer-spacer"></div>
+      <div class="exercise-sticky-nav">
+        <button class="nav-btn-grey" :disabled="currentNumber === 1" @click="goToPrevExercise">
+          Previous
+        </button>
+        <div class="nav-center-text">Exercise {{ currentNumber }} of {{ total }}</div>
+        <button class="nav-btn-primary" @click="goToNextExercise">
+          {{ currentNumber === total ? 'Finish' : 'Next' }}
+        </button>
+      </div>
+    </template>
+
+    <!-- Global Loading State -->
+    <div v-else class="q-pa-xl text-center">
+      <q-inner-loading :showing="true">
+        <q-spinner-dots size="50px" color="primary" />
+      </q-inner-loading>
     </div>
   </section>
 </template>
@@ -131,6 +153,7 @@
 import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useExerciseStore } from 'src/stores/exerciseStore'
+import { useAuthStore } from 'src/stores/authStore'
 import { storeToRefs } from 'pinia'
 
 const route = useRoute()
@@ -139,7 +162,10 @@ const store = useExerciseStore()
 const { exercises, exerciseDetails } = storeToRefs(store)
 
 const ex = computed(() => getSelectedExercise())
-const currentNumber = computed(() => exercises.value.findIndex((x) => x.id === ex.value.id) + 1)
+const currentNumber = computed(() => {
+  if (!ex.value || !exercises.value.length) return 0
+  return exercises.value.findIndex((x) => x.id === ex.value.id) + 1
+})
 const total = computed(() => exercises.value.length)
 
 function getSelectedExercise() {
@@ -150,6 +176,14 @@ function getSelectedExercise() {
 onMounted(() => {
   const id = Number(route.params.exercise_id)
   if (id) store.fetchExerciseDetails(id)
+
+  // If exercises list is empty (e.g. on refresh), fetch it
+  if (exercises.value.length === 0) {
+    const authStore = useAuthStore()
+    const patientId = authStore.user?.patient
+    const hospitalId = authStore.user?.hospital_id || authStore.user?.network_id || ''
+    store.fetchExercises(patientId, hospitalId)
+  }
 })
 
 watch(() => route.params.exercise_id, (newId) => {
@@ -163,14 +197,16 @@ function formatTitleCase(text) {
 
 const progressPercent = computed(() => {
   const e = ex.value
+  if (!e || !e.progress) return 0
   return Math.round((e.progress.set / e.progress.totalSets) * 100)
 })
 
 function cycleExerciseProgress() {
-  store.updateProgress(ex.value.id)
+  if (ex.value) store.updateProgress(ex.value.id)
 }
 
 function goToPrevExercise() {
+  if (!ex.value) return
   const idx = exercises.value.findIndex((x) => x.id === ex.value.id)
   if (idx > 0) {
     router.push(`/exercise-player/${exercises.value[idx - 1].id}`)
@@ -178,6 +214,7 @@ function goToPrevExercise() {
 }
 
 function goToNextExercise() {
+  if (!ex.value) return
   const idx = exercises.value.findIndex((x) => x.id === ex.value.id)
   if (idx < exercises.value.length - 1) {
     router.push(`/exercise-player/${exercises.value[idx + 1].id}`)
