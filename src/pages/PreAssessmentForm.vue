@@ -712,49 +712,50 @@ const handleFinalSubmit = async () => {
     console.log('Mapped Assessment Payload:', JSON.stringify(payload, null, 2))
 
     // Send payload to assessment API with patient_id and hospital_id
-    // await assessment_api
-    //   .post('/assessments', {
-    //     patient_id: patientId.value,
-    //     hospital_id: form.value.hospital_id,
-    //     ...payload,
-    //   })
-    //   .then((res) => {
-    //     console.log('Assessment API Response:', res.data)
-    //     if (res.data.error) {
-    //       $q.notify({
-    //         type: 'negative',
-    //         message: res.data.message || 'Failed to sync with assessment database',
-    //         position: 'top',
-    //         html: true,
-    //       })
-    //       return false
-    //     }
-    //     $q.notify({
-    //       type: 'positive',
-    //       message: res.data.message || 'Assessment sync successful',
-    //       position: 'top',
-    //     })
-    //     return true
-    //   })
-    //   .catch((err) => {
-    //     console.error('Assessment API Error:', err)
-    //     const data = err.response?.data
-    //     if (data?.results && typeof data.results === 'object') {
-    //       Object.values(data.results)
-    //         .flat()
-    //         .forEach((msg) => {
-    //           $q.notify({ type: 'negative', message: msg, position: 'top', html: true })
-    //         })
-    //     } else {
-    //       $q.notify({
-    //         type: 'negative',
-    //         message: data?.message || 'Failed to sync with assessment database',
-    //         position: 'top',
-    //         html: true,
-    //       })
-    //     }
-    //     return false
-    //   })
+    await assessment_api
+      .post('/assessments', {
+        patient_id: patientId.value,
+        hospital_id: form.value.hospital_id,
+        assessment_context: 'ergonomic',
+        ...payload,
+      })
+      .then((res) => {
+        console.log('Assessment API Response:', res.data)
+        if (res.data.error) {
+          $q.notify({
+            type: 'negative',
+            message: res.data.message || 'Failed to sync with assessment database',
+            position: 'top',
+            html: true,
+          })
+          return false
+        }
+        $q.notify({
+          type: 'positive',
+          message: res.data.message || 'Assessment sync successful',
+          position: 'top',
+        })
+        return true
+      })
+      .catch((err) => {
+        console.error('Assessment API Error:', err)
+        const data = err.response?.data
+        if (data?.results && typeof data.results === 'object') {
+          Object.values(data.results)
+            .flat()
+            .forEach((msg) => {
+              $q.notify({ type: 'negative', message: msg, position: 'top', html: true })
+            })
+        } else {
+          $q.notify({
+            type: 'negative',
+            message: data?.message || 'Failed to sync with assessment database',
+            position: 'top',
+            html: true,
+          })
+        }
+        return false
+      })
 
     submitted.value = true
     showSummary.value = false
