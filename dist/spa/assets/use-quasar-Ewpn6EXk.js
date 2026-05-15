@@ -1,1 +1,0 @@
-import{S as e,T as t,j as n,k as r}from"./vue.runtime.esm-bundler-CBby-L45.js";import{g as i}from"./index-wnksUNzc.js";function a(){let t=null,a=e();function o(){t!==null&&(clearTimeout(t),t=null)}return n(o),r(o),{removeTimeout:o,registerTimeout(e,n){o(),i(a)===!1&&(t=setTimeout(()=>{t=null,e()},n))}}}function o(){return t(`_q_`)}export{a as n,o as t};
