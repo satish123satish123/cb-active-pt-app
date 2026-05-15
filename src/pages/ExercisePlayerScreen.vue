@@ -164,13 +164,14 @@ const { exercises, exerciseDetails } = storeToRefs(store)
 const ex = computed(() => getSelectedExercise())
 const currentNumber = computed(() => {
   if (!ex.value || !exercises.value.length) return 0
-  return exercises.value.findIndex((x) => x.id === ex.value.id) + 1
+  return exercises.value.findIndex((x) => String(x.id) === String(ex.value.id)) + 1
 })
 const total = computed(() => exercises.value.length)
 
 function getSelectedExercise() {
-  const id = Number(route.params.exercise_id)
-  return exercises.value.find((x) => x.id === id) || exercises.value[0]
+  const id = route.params.exercise_id
+  if (!id) return exercises.value[0]
+  return exercises.value.find((x) => String(x.id) === String(id))
 }
 
 onMounted(() => {
@@ -207,7 +208,7 @@ function cycleExerciseProgress() {
 
 function goToPrevExercise() {
   if (!ex.value) return
-  const idx = exercises.value.findIndex((x) => x.id === ex.value.id)
+  const idx = exercises.value.findIndex((x) => String(x.id) === String(ex.value.id))
   if (idx > 0) {
     router.push(`/exercise-player/${exercises.value[idx - 1].id}`)
   }
@@ -215,7 +216,7 @@ function goToPrevExercise() {
 
 function goToNextExercise() {
   if (!ex.value) return
-  const idx = exercises.value.findIndex((x) => x.id === ex.value.id)
+  const idx = exercises.value.findIndex((x) => String(x.id) === String(ex.value.id))
   if (idx < exercises.value.length - 1) {
     router.push(`/exercise-player/${exercises.value[idx + 1].id}`)
   } else {

@@ -83,6 +83,7 @@ export const useExerciseStore = defineStore('exercise', () => {
 
   async function fetchExerciseDetails(id) {
     loading.value = true
+    exerciseDetails.value = null
     try {
       const response = await api.post('getExerciseDetailsData', { id })
       if (response.data?.status === 'success') {
