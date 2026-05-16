@@ -653,6 +653,7 @@ async function createPatientInAssessmentDB(user) {
     const res = await assessment_api.post('/patients', payload)
 
     if (!res.data.error) {
+      patientId.value = res.data.results.id
       console.log(res.data.message || 'Registration successful')
       return true
     } else {
@@ -693,6 +694,48 @@ async function createPatientInAssessmentDB(user) {
   }
 }
 
+async function getMcqSummary(questions) {
+  const prompt = `Based on the following physiotherapy assessment questions and answers, provide a concise clinical summary of the patient's condition, focusing on their primary complaints, lifestyle factors, and working conditions. Return only the summary text.
+
+Questions:
+${questions.map((q) => `Q: ${q.question}\nA: ${q.patient_answer || 'Not answered'}`).join('\n\n')}`
+
+  const aiPayload = {
+    model: 'gpt-4o-mini',
+    input: [
+      {
+        role: 'system',
+        content: [
+          {
+            type: 'input_text',
+            text: 'You are a helpful assistant that provides concise clinical summaries of physiotherapy assessments.',
+          },
+        ],
+      },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'input_text',
+            text: prompt,
+          },
+        ],
+      },
+    ],
+  }
+
+  try {
+    const res = await assessment_api.post('ai/responses', aiPayload)
+    if (res.data && res.data.output) {
+      return res.data.output[0]?.content[0]?.text || ''
+    }
+    return ''
+  } catch (error) {
+    console.error('Error getting MCQ summary:', error)
+    return ''
+  }
+}
+
 const handleNext = async () => {
   if (currentStep.value === 1) {
     const isValid = await v$.value.$validate()
@@ -724,6 +767,17 @@ const handleFinalSubmit = async () => {
   try {
     // Build structured payload from form data + assessment responses
     const payload = mapAssessmentPayload(form.value, assessmentResponses.value)
+
+    // Get MCQ Summary from AI
+    $q.loading.show({
+      message: 'Generating clinical summary...',
+      backgroundColor: 'teal-10',
+    })
+    const mcqSummary = await getMcqSummary(payload.questions)
+    $q.loading.hide()
+
+    payload.mcq_summary = mcqSummary
+
     console.log('Mapped Assessment Payload:', JSON.stringify(payload, null, 2))
 
     // Send payload to assessment API with patient_id and hospital_id
