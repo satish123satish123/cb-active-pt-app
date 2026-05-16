@@ -101,7 +101,7 @@ export const lifestyleFactors = [
   },
   {
     id: 'lf_4',
-    text: 'Do you carry a bag on one shoulder?',
+    text: 'Do you often carry a bag on one shoulder?',
     type: 'radio',
     options: ['Yes', 'No'],
   },
