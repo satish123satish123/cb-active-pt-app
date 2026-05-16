@@ -33,34 +33,34 @@ const DURATION_MAP = {
 }
 
 // ─── Previous assessment option label mapping ───
-const PREVIOUS_ASSESSMENT_OPTIONS = [
-  { key: 'completed', label: 'Yes, I completed the assessment' },
-  { key: 'registered_incomplete', label: 'I registered but could not complete the assessment' },
-  { key: 'first_time', label: 'No, this is my first time' },
-  { key: 'not_sure', label: 'Not sure' },
-]
+// const PREVIOUS_ASSESSMENT_OPTIONS = [
+//   { key: 'completed', label: 'Yes, I completed the assessment' },
+//   { key: 'registered_incomplete', label: 'I registered but could not complete the assessment' },
+//   { key: 'first_time', label: 'No, this is my first time' },
+//   { key: 'not_sure', label: 'Not sure' },
+// ]
 
 /**
  * Build the MCQ-formatted questions array from Working Conditions
  * and Lifestyle sections with patient answers.
  * Also prepends previous_assessment from step 1 as a MCQ question.
  */
-function buildQuestionsArray(responses, gender, formData) {
+function buildQuestionsArray(responses, gender /* , formData */) {
   const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
   const questions = []
 
   // 1. Prepend previous_assessment from form as MCQ
-  if (formData.previous_assessment) {
-    const prevMatch = PREVIOUS_ASSESSMENT_OPTIONS.find(
-      (o) => o.key === formData.previous_assessment,
-    )
-    questions.push({
-      id: 1,
-      question: 'Were you part of the previous Cars24 x CB Physiotherapy assessment?',
-      options: PREVIOUS_ASSESSMENT_OPTIONS.map((o, i) => ({ key: ALPHABET[i], label: o.label })),
-      patient_answer: prevMatch ? prevMatch.label : formData.previous_assessment,
-    })
-  }
+  // if (formData.previous_assessment) {
+  //   const prevMatch = PREVIOUS_ASSESSMENT_OPTIONS.find(
+  //     (o) => o.key === formData.previous_assessment,
+  //   )
+  //   questions.push({
+  //     id: 1,
+  //     question: 'Were you part of the previous Cars24 x CB Physiotherapy assessment?',
+  //     options: PREVIOUS_ASSESSMENT_OPTIONS.map((o, i) => ({ key: ALPHABET[i], label: o.label })),
+  //     patient_answer: prevMatch ? prevMatch.label : formData.previous_assessment,
+  //   })
+  // }
 
   // Collect all questions that should appear in the MCQ questions array
   const mcqSources = [
@@ -250,7 +250,7 @@ export function mapAssessmentPayload(formData, assessmentResponses) {
     activities: [],
     prescription: {},
     chief_complaint: buildChiefComplaint(assessmentResponses),
-    questions: buildQuestionsArray(assessmentResponses, formData.sex, formData),
+    questions: buildQuestionsArray(assessmentResponses, formData.sex),
     patient_expectations: buildExpectations(assessmentResponses),
     medical_history: buildMedicalHistory(assessmentResponses),
     medical_history_other: medicalHistoryOther,

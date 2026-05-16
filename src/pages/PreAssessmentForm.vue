@@ -102,7 +102,7 @@
                     Section {{ sectionNumber(assessmentProgress.section) }}
                     <small>({{ assessmentProgress.section }})</small>
                   </span>
-                  <span v-else>AI Check</span>
+                  <span v-else>Section 2</span>
                 </div>
               </div>
             </div>
@@ -141,6 +141,20 @@
                 />
                 <div v-if="v$.name.$error" class="error-msg">
                   {{ v$.name.$errors[0].$message }}
+                </div>
+              </div>
+
+              <div class="field" :class="{ 'has-error': v$.employee_id.$error }">
+                <label class="required">Employee ID</label>
+                <input
+                  type="text"
+                  v-model="form.employee_id"
+                  @blur="v$.employee_id.$touch()"
+                  placeholder="Enter Employee ID"
+                  required
+                />
+                <div v-if="v$.employee_id.$error" class="error-msg">
+                  {{ v$.employee_id.$errors[0].$message }}
                 </div>
               </div>
 
@@ -216,7 +230,7 @@
                 </div>
               </div> -->
 
-              <div class="field" :class="{ 'has-error': v$.previous_assessment.$error }">
+              <!-- <div class="field" :class="{ 'has-error': v$.previous_assessment.$error }">
                 <label class="required"
                   >Were you part of the previous Cars24 x CB Physiotherapy assessment?</label
                 >
@@ -235,7 +249,7 @@
                 <div v-if="v$.previous_assessment.$error" class="error-msg">
                   {{ v$.previous_assessment.$errors[0].$message }}
                 </div>
-              </div>
+              </div> -->
             </section>
 
             <!-- STEP 2: SEQUENTIAL QUESTIONS -->
@@ -326,10 +340,10 @@
                   <span class="summary-label">Preferred Slot</span>
                   <span class="summary-value">{{ form.preferred_slot }}</span>
                 </div> -->
-                <div class="summary-item">
+                <!-- <div class="summary-item">
                   <span class="summary-label">Previous Assessment</span>
                   <span class="summary-value">{{ previousAssessmentLabel }}</span>
-                </div>
+                </div> -->
               </div>
             </div>
 
@@ -423,15 +437,15 @@ const isMinimized = computed(() => {
   return currentStep.value === 2 && !showSummary.value && !submitted.value
 })
 
-const previousAssessmentLabel = computed(() => {
-  const map = {
-    completed: 'Yes, I completed the assessment',
-    registered_incomplete: 'I registered but could not complete the assessment',
-    first_time: 'No, this is my first time',
-    not_sure: 'Not sure',
-  }
-  return map[form.value.previous_assessment] || form.value.previous_assessment
-})
+// const previousAssessmentLabel = computed(() => {
+//   const map = {
+//     completed: 'Yes, I completed the assessment',
+//     registered_incomplete: 'I registered but could not complete the assessment',
+//     first_time: 'No, this is my first time',
+//     not_sure: 'Not sure',
+//   }
+//   return map[form.value.previous_assessment] || form.value.previous_assessment
+// })
 
 const summaryGroups = computed(() => {
   const groups = []
@@ -490,22 +504,25 @@ const validateLink = async (companyId, hospitalId, providedKey) => {
 const form = ref({
   company_id: '',
   hospital_id: '',
+  employee_id: '',
   name: '',
   phone: '',
   email: '',
   age: '',
   sex: 'female',
   // preferred_slot: '',
-  previous_assessment: '',
+  // previous_assessment: '',
 })
 
 onMounted(async () => {
   const company_id = route.query.company_id || ''
   const hospital_id = route.query.hospital_id || ''
   const key = route.query.key || ''
+  const employee_id = route.query.employee_id || ''
 
   form.value.company_id = company_id
   form.value.hospital_id = hospital_id
+  form.value.employee_id = employee_id
 
   const valid = await validateLink(company_id, hospital_id, key)
   if (!valid) {
@@ -515,7 +532,7 @@ onMounted(async () => {
 })
 
 const profilePercent = computed(() => {
-  const fields = ['name', 'phone', 'email', 'age', 'sex', 'previous_assessment']
+  const fields = ['name', 'phone', 'email', 'age', 'sex']
   const filled = fields.filter((f) => !!form.value[f]).length
   return Math.round((filled / fields.length) * 100)
 })
@@ -525,12 +542,12 @@ const progressPercent = computed(() => {
   if (showSummary.value) return 100
 
   if (currentStep.value === 1) {
-    // Step 1: 0% to 50%
-    return Math.round(profilePercent.value * 0.5)
+    // Step 1: 0% to 10%
+    return Math.round(profilePercent.value * 0.1)
   }
   if (currentStep.value === 2) {
-    // Step 2: 50% to 100%
-    return 50 + Math.round(assessmentProgress.value.percent * 0.5)
+    // Step 2: 10% to 100%
+    return 10 + Math.round(assessmentProgress.value.percent * 0.9)
   }
   return 0
 })
@@ -540,6 +557,7 @@ const handleAssessmentProgress = (data) => {
 }
 
 const rules = {
+  employee_id: { required: helpers.withMessage('Employee ID is required', required) },
   name: { required: helpers.withMessage('Full name is required', required) },
   phone: {
     required: helpers.withMessage('Phone number is required', required),
@@ -557,9 +575,9 @@ const rules = {
   // preferred_slot: {
   //   required: helpers.withMessage('Please select a preferred slot', required),
   // },
-  previous_assessment: {
-    required: helpers.withMessage('Please select an option', required),
-  },
+  // previous_assessment: {
+  //   required: helpers.withMessage('Please select an option', required),
+  // },
 }
 
 const v$ = useVuelidate(rules, form)
@@ -629,16 +647,13 @@ async function createPatientInAssessmentDB(user) {
       sex: user.sex,
       // company_id: form.value.company_id,
       hospital_id: form.value.hospital_id,
+      employee_id: form.value.employee_id,
     }
 
     const res = await assessment_api.post('/patients', payload)
 
     if (!res.data.error) {
-      $q.notify({
-        type: 'positive',
-        message: res.data.message || 'Registration successful',
-        position: 'top',
-      })
+      console.log(res.data.message || 'Registration successful')
       return true
     } else {
       if (res.data.results && typeof res.data.results === 'object') {
@@ -715,6 +730,7 @@ const handleFinalSubmit = async () => {
     await assessment_api
       .post('/assessments', {
         patient_id: patientId.value,
+        employee_id: form.value.employee_id,
         hospital_id: form.value.hospital_id,
         assessment_context: 'ergonomic',
         ...payload,
@@ -1385,14 +1401,14 @@ select:focus {
 .nav {
   display: flex;
   gap: 12px;
-  margin-top: 24px;
+  /* margin-top: 24px; */
   padding-top: 22px;
   border-top: 1px solid var(--line);
 }
 
 @media (min-width: 768px) {
   .nav {
-    margin-top: 36px;
+    /* margin-top: 36px; */
     padding-top: 32px;
     gap: 20px;
   }
