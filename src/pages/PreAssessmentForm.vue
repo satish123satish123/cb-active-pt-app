@@ -297,8 +297,6 @@
             </p>
           </form>
 
-
-
           <!-- SUCCESS SCREEN -->
           <div class="card success-screen" v-if="submitted">
             <div class="success-badge">
@@ -370,8 +368,6 @@ const isMinimized = computed(() => {
 //   }
 //   return map[form.value.previous_assessment] || form.value.previous_assessment
 // })
-
-
 
 const validateLink = async (companyId, hospitalId, providedKey) => {
   if (!companyId || !hospitalId || !providedKey) return false
@@ -596,9 +592,9 @@ async function createPatientInAssessmentDB(user) {
 
 async function getMcqSummary(questions) {
   const prompt = `Questions: ${questions.map((q) => `Q: ${q.question}\nA: ${q.patient_answer || 'Not answered'}`).join('\n\n')}`
-
+  console.log(prompt)
   const aiPayload = {
-    model: 'gpt-4o-mini',
+    model: 'gpt-5.2',
     input: [
       {
         role: 'system',
@@ -620,6 +616,8 @@ async function getMcqSummary(questions) {
       },
     ],
   }
+
+  console.log('AI Payload:', JSON.stringify(aiPayload, null, 2))
 
   try {
     const res = await assessment_api.post('ai/responses', aiPayload)
@@ -1546,6 +1544,4 @@ select:focus {
   color: var(--text-3);
   margin: 0;
 }
-
-
 </style>

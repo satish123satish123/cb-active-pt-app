@@ -208,19 +208,20 @@
     </div>
 
     <!-- Complete State -->
-    <div v-if="isComplete" class="complete-state animate-in">
-      <div class="success-badge">
-        <q-icon name="check" size="32px" color="white" />
+    <div v-if="isComplete" class="complete-state minimal animate-in">
+      <div class="minimal-content">
+        <q-icon name="check_circle" size="28px" color="primary" />
+        <div class="minimal-text">
+          <strong>All set!</strong>
+          <span>Review your answers.</span>
+        </div>
       </div>
-      <h3>All set!</h3>
-      <p>Please review your answers above. If everything looks good, submit your assessment.</p>
       <q-btn
-        label="Submit Assessment"
+        label="Submit"
         color="primary"
         unelevated
         rounded
-        class="q-mt-md"
-        padding="12px 32px"
+        padding="8px 24px"
         @click="showConfirmDialog = true"
       />
     </div>
@@ -1044,39 +1045,36 @@ onMounted(() => {
 }
 
 /* COMPLETE STATE */
-.complete-state {
-  flex: 1;
+.complete-state.minimal {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: white;
+  border-top: 1px solid #eef2ef;
+  flex-shrink: 0;
+}
+
+.minimal-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.minimal-text {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-  text-align: center;
 }
 
-.success-badge {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: #107e6e;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 20px;
-  box-shadow: 0 10px 20px rgba(16, 126, 110, 0.2);
-}
-
-.complete-state h3 {
-  margin: 0 0 8px;
-  font-size: 20px;
-  font-weight: 800;
+.minimal-text strong {
+  font-size: 15px;
   color: #1a1c1a;
+  line-height: 1.2;
 }
 
-.complete-state p {
-  font-size: 14px;
+.minimal-text span {
+  font-size: 13px;
   color: #6a716a;
-  max-width: 240px;
-  line-height: 1.5;
 }
 </style>
