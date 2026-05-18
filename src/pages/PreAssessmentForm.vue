@@ -50,7 +50,7 @@
           </header>
 
           <!-- STEP RAIL -->
-          <div class="step-rail" v-if="!submitted && !showSummary">
+          <div class="step-rail" v-if="!submitted">
             <div class="step-dots">
               <div
                 class="step-dot"
@@ -119,7 +119,7 @@
         </aside>
 
         <main class="content">
-          <form v-if="!submitted && !showSummary" class="card" @submit.prevent="handleSubmit">
+          <form v-if="!submitted" class="card" @submit.prevent="handleSubmit">
             <!-- STEP 1: PROFILE -->
             <section v-if="currentStep === 1" class="step active">
               <div class="step-header">
@@ -297,83 +297,7 @@
             </p>
           </form>
 
-          <!-- SUMMARY VIEW (review before final submit) -->
-          <div class="summary-view" v-if="showSummary && !submitted">
-            <div class="card summary-header">
-              <div class="summary-header-icon">
-                <q-icon name="fact_check" size="28px" color="white" />
-              </div>
-              <h5>Review your responses</h5>
-              <p>
-                Please review your assessment details below. Once everything looks good, hit submit.
-              </p>
-            </div>
 
-            <!-- Profile Summary -->
-            <div class="card summary-card">
-              <div class="summary-section-title">
-                <q-icon name="person" size="20px" color="teal-8" />
-                <span>Profile Details</span>
-              </div>
-              <div class="summary-grid">
-                <div class="summary-item">
-                  <span class="summary-label">Full Name</span>
-                  <span class="summary-value">{{ form.name }}</span>
-                </div>
-                <div class="summary-item">
-                  <span class="summary-label">Email</span>
-                  <span class="summary-value">{{ form.email }}</span>
-                </div>
-                <div class="summary-item">
-                  <span class="summary-label">Phone</span>
-                  <span class="summary-value">{{ form.phone }}</span>
-                </div>
-                <div class="summary-item">
-                  <span class="summary-label">Age</span>
-                  <span class="summary-value">{{ form.age }}</span>
-                </div>
-                <div class="summary-item" v-if="form.sex">
-                  <span class="summary-label">Gender</span>
-                  <span class="summary-value capitalize">{{ form.sex }}</span>
-                </div>
-                <!-- <div class="summary-item">
-                  <span class="summary-label">Preferred Slot</span>
-                  <span class="summary-value">{{ form.preferred_slot }}</span>
-                </div> -->
-                <!-- <div class="summary-item">
-                  <span class="summary-label">Previous Assessment</span>
-                  <span class="summary-value">{{ previousAssessmentLabel }}</span>
-                </div> -->
-              </div>
-            </div>
-
-            <!-- Assessment Responses by Section -->
-            <div class="card summary-card" v-for="(group, index) in summaryGroups" :key="index">
-              <div class="summary-section-title">
-                <q-icon :name="sectionIcon(group.section)" size="20px" color="teal-8" />
-                <span>{{ group.section }}</span>
-              </div>
-              <div class="summary-qa-list">
-                <div class="summary-qa" v-for="(item, qIdx) in group.items" :key="qIdx">
-                  <div class="qa-question" v-html="item.question"></div>
-                  <div class="qa-answer">{{ item.answer }}</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Submit Button -->
-            <div class="summary-submit-wrap">
-              <button
-                type="button"
-                class="btn primary summary-submit-btn"
-                @click="handleFinalSubmit"
-                :disabled="isSubmitting"
-              >
-                <q-spinner v-if="isSubmitting" color="white" size="20px" />
-                <span v-else>Submit Assessment</span>
-              </button>
-            </div>
-          </div>
 
           <!-- SUCCESS SCREEN -->
           <div class="card success-screen" v-if="submitted">
@@ -401,12 +325,12 @@ import { useVuelidate } from '@vuelidate/core'
 import AssessmentQuestions from 'src/components/AssessmentQuestions.vue'
 import { mapAssessmentPayload } from 'src/utils/assessmentMapper'
 import { required, email, numeric, minLength, maxLength, helpers } from '@vuelidate/validators'
+import { QUESTION_SUMMARY_SYSTEM_PROMPT } from 'src/utils/prompts.js'
 
 const $q = useQuasar()
 const route = useRoute()
 const currentStep = ref(1)
 const submitted = ref(false)
-const showSummary = ref(false)
 const isSubmitting = ref(false)
 const isValidLink = ref(true)
 const invalidMessage = ref('')
@@ -428,13 +352,13 @@ const SECTION_MAP = {
 const sectionNumber = (section) => SECTION_MAP[section] || 2
 
 const currentDisplayStep = computed(() => {
-  if (submitted.value || showSummary.value) return 7
+  if (submitted.value) return 7
   if (currentStep.value === 1) return 1
   return sectionNumber(assessmentProgress.value.section)
 })
 
 const isMinimized = computed(() => {
-  return currentStep.value === 2 && !showSummary.value && !submitted.value
+  return currentStep.value === 2 && !submitted.value
 })
 
 // const previousAssessmentLabel = computed(() => {
@@ -447,29 +371,7 @@ const isMinimized = computed(() => {
 //   return map[form.value.previous_assessment] || form.value.previous_assessment
 // })
 
-const summaryGroups = computed(() => {
-  const groups = []
-  const map = {}
-  for (const item of assessmentResponses.value) {
-    if (!map[item.section]) {
-      map[item.section] = { section: item.section, items: [] }
-      groups.push(map[item.section])
-    }
-    map[item.section].items.push(item)
-  }
-  return groups
-})
 
-const sectionIcon = (section) => {
-  const icons = {
-    'Working Conditions': 'computer',
-    'Pain & Discomfort': 'healing',
-    'Lifestyle & Women-Specific Factors': 'self_improvement',
-    'Health & Safety Information': 'health_and_safety',
-    'Goals & Additional Information': 'flag',
-  }
-  return icons[section] || 'quiz'
-}
 
 const validateLink = async (companyId, hospitalId, providedKey) => {
   if (!companyId || !hospitalId || !providedKey) return false
@@ -539,7 +441,6 @@ const profilePercent = computed(() => {
 
 const progressPercent = computed(() => {
   if (submitted.value) return 100
-  if (showSummary.value) return 100
 
   if (currentStep.value === 1) {
     // Step 1: 0% to 10%
@@ -582,11 +483,10 @@ const rules = {
 
 const v$ = useVuelidate(rules, form)
 
-const handleAssessmentComplete = (responses) => {
+const handleAssessmentComplete = async (responses) => {
   form.value.assessment_data = responses
   assessmentResponses.value = responses
-  showSummary.value = true
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  await handleFinalSubmit()
 }
 
 async function createPatient() {
@@ -695,10 +595,7 @@ async function createPatientInAssessmentDB(user) {
 }
 
 async function getMcqSummary(questions) {
-  const prompt = `Based on the following physiotherapy assessment questions and answers, provide a concise clinical summary of the patient's condition, focusing on their primary complaints, lifestyle factors, and working conditions. Return only the summary text.
-
-Questions:
-${questions.map((q) => `Q: ${q.question}\nA: ${q.patient_answer || 'Not answered'}`).join('\n\n')}`
+  const prompt = `Questions: ${questions.map((q) => `Q: ${q.question}\nA: ${q.patient_answer || 'Not answered'}`).join('\n\n')}`
 
   const aiPayload = {
     model: 'gpt-4o-mini',
@@ -708,7 +605,7 @@ ${questions.map((q) => `Q: ${q.question}\nA: ${q.patient_answer || 'Not answered
         content: [
           {
             type: 'input_text',
-            text: 'You are a helpful assistant that provides concise clinical summaries of physiotherapy assessments.',
+            text: QUESTION_SUMMARY_SYSTEM_PROMPT,
           },
         ],
       },
@@ -774,11 +671,15 @@ const handleFinalSubmit = async () => {
       backgroundColor: 'teal-10',
     })
     const mcqSummary = await getMcqSummary(payload.questions)
-    $q.loading.hide()
 
     payload.mcq_summary = mcqSummary
 
     console.log('Mapped Assessment Payload:', JSON.stringify(payload, null, 2))
+
+    $q.loading.show({
+      message: 'Saving your responses...',
+      backgroundColor: 'teal-10',
+    })
 
     // Send payload to assessment API with patient_id and hospital_id
     await assessment_api
@@ -828,10 +729,10 @@ const handleFinalSubmit = async () => {
       })
 
     submitted.value = true
-    showSummary.value = false
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } finally {
     isSubmitting.value = false
+    $q.loading.hide()
   }
 }
 </script>
@@ -1473,71 +1374,6 @@ select:focus {
   flex: 1;
 }
 
-/* SUMMARY HEADER */
-.summary-header {
-  text-align: center;
-  padding: 40px 24px 32px;
-}
-
-@media (min-width: 768px) {
-  .summary-header {
-    padding: 48px 48px 36px;
-  }
-}
-
-.summary-header h5 {
-  margin: 0 0 8px;
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--text);
-}
-
-.summary-header p {
-  margin: 0;
-  color: var(--text-2);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.summary-header-icon {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #107e6e, #0a9e8a);
-  color: #fff;
-  margin-bottom: 20px;
-  box-shadow: 0 12px 28px rgba(10, 126, 110, 0.25);
-  animation: successPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
-}
-
-/* SUBMIT BUTTON */
-.summary-submit-wrap {
-  padding: 8px 0 16px;
-}
-
-.summary-submit-btn {
-  width: 100%;
-  min-height: 56px;
-  font-size: 16px;
-  font-weight: 700;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-
-@media (min-width: 768px) {
-  .summary-submit-btn {
-    min-height: 64px;
-    font-size: 18px;
-    border-radius: 18px;
-  }
-}
-
 /* SUCCESS SCREEN */
 .success-screen {
   text-align: center;
@@ -1711,134 +1547,5 @@ select:focus {
   margin: 0;
 }
 
-/* SUMMARY VIEW */
-.summary-view {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
 
-@media (min-width: 768px) {
-  .summary-view {
-    gap: 24px;
-  }
-}
-
-.summary-card {
-  padding: 24px 20px;
-}
-
-@media (min-width: 768px) {
-  .summary-card {
-    padding: 32px;
-  }
-}
-
-.summary-section-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--brand);
-  margin-bottom: 20px;
-  padding-bottom: 14px;
-  border-bottom: 2px solid rgba(10, 126, 110, 0.1);
-  letter-spacing: 0.01em;
-}
-
-@media (min-width: 768px) {
-  .summary-section-title {
-    font-size: 18px;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-  }
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-}
-
-@media (min-width: 480px) {
-  .summary-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-}
-
-.summary-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 16px;
-  background: var(--card-2, #f6f9f8);
-  border-radius: 12px;
-  border: 1px solid var(--line);
-}
-
-.summary-label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-3);
-}
-
-.summary-value {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
-  word-break: break-word;
-}
-
-.capitalize {
-  text-transform: capitalize;
-}
-
-.summary-qa-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.summary-qa {
-  padding: 14px 16px;
-  border-radius: 12px;
-  transition: background 0.2s ease;
-}
-
-.summary-qa:nth-child(odd) {
-  background: var(--card-2, #f6f9f8);
-}
-
-.qa-question {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-2);
-  margin-bottom: 6px;
-  line-height: 1.4;
-}
-
-.qa-answer {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--brand);
-  line-height: 1.5;
-  display: inline-block;
-  padding: 4px 12px;
-  background: rgba(10, 126, 110, 0.08);
-  border-radius: 8px;
-}
-
-@media (min-width: 768px) {
-  .qa-question {
-    font-size: 14px;
-  }
-
-  .qa-answer {
-    font-size: 16px;
-  }
-}
 </style>

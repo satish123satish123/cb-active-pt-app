@@ -29,6 +29,18 @@
         class="chat-row"
         :class="[item.type, { 'section-header': item.isSection }]"
       >
+        <q-btn 
+          v-if="item.type === 'user'" 
+          icon="edit" 
+          flat 
+          round 
+          size="sm" 
+          class="edit-btn q-mr-sm self-center"
+          color="grey-5"
+          @click="handleEdit(item)" 
+        >
+          <q-tooltip>Edit answer</q-tooltip>
+        </q-btn>
         <div
           class="bubble"
           :class="{ 'section-divider': item.isSection }"
@@ -201,8 +213,37 @@
         <q-icon name="check" size="32px" color="white" />
       </div>
       <h3>All set!</h3>
-      <p>Thank you for answering. Your physio will review these details.</p>
+      <p>Please review your answers above. If everything looks good, submit your assessment.</p>
+      <q-btn
+        label="Submit Assessment"
+        color="primary"
+        unelevated
+        rounded
+        class="q-mt-md"
+        padding="12px 32px"
+        @click="showConfirmDialog = true"
+      />
     </div>
+
+    <!-- Confirmation Dialog -->
+    <q-dialog v-model="showConfirmDialog" persistent>
+      <q-card style="min-width: 300px; border-radius: 16px;">
+        <q-card-section class="q-pb-none">
+          <div class="text-h6 text-weight-bold">Ready to submit?</div>
+        </q-card-section>
+
+        <q-card-section>
+          <p class="text-body2 text-grey-8">
+            You have answered all questions. Are you sure you want to submit your assessment?
+          </p>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pt-none">
+          <q-btn flat label="Review Answers" color="primary" v-close-popup />
+          <q-btn unelevated rounded label="Submit Assessment" color="primary" @click="confirmSubmit" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -251,6 +292,7 @@ const history = ref([])
 const responses = ref([])
 const isThinking = ref(false)
 const isComplete = ref(false)
+const showConfirmDialog = ref(false)
 const textAnswer = ref('')
 const sliderValue = ref(5)
 const multiSelected = ref([])
@@ -405,12 +447,24 @@ const advanceToNext = () => {
     currentIdx.value = nextIdx
   } else {
     isComplete.value = true
-    emit('complete', responses.value)
+    showConfirmDialog.value = true
+    scrollToBottom()
   }
 }
 
 const handleAnswer = async (answer) => {
   const q = currentQuestion.value
+
+  const currentStateSnapshot = {
+    currentIdx: currentIdx.value,
+    hasNoDiscomfort: hasNoDiscomfort.value,
+    painAreasQueue: [...painAreasQueue.value],
+    activePainArea: activePainArea.value,
+    activePainStep: activePainStep.value,
+    lastSection: lastSection.value,
+    historyLength: history.value.length,
+    responsesLength: responses.value.length
+  }
 
   // After pd_1: populate pain areas queue for per-area sliders
   if (q.id === 'pd_1') {
@@ -447,7 +501,7 @@ const handleAnswer = async (answer) => {
   history.value.push({ type: 'assistant', text: q.text })
 
   // 2. Add user answer to history
-  history.value.push({ type: 'user', text: answer })
+  history.value.push({ type: 'user', text: answer, snapshot: currentStateSnapshot })
 
   // 3. Collect structured response
   responses.value.push({
@@ -481,6 +535,35 @@ const handleAnswer = async (answer) => {
     advanceToNext()
     await scrollToBottom()
   }, 800)
+}
+
+const confirmSubmit = () => {
+  showConfirmDialog.value = false
+  emit('complete', responses.value)
+}
+
+const handleEdit = (item) => {
+  if (!item.snapshot) return
+  
+  const snap = item.snapshot
+  currentIdx.value = snap.currentIdx
+  hasNoDiscomfort.value = snap.hasNoDiscomfort
+  painAreasQueue.value = [...snap.painAreasQueue]
+  activePainArea.value = snap.activePainArea
+  activePainStep.value = snap.activePainStep
+  lastSection.value = snap.lastSection
+  
+  history.value = history.value.slice(0, snap.historyLength)
+  responses.value = responses.value.slice(0, snap.responsesLength)
+  
+  isComplete.value = false
+  showConfirmDialog.value = false
+  isThinking.value = false
+  
+  multiSelected.value = []
+  selectedRadio.value = null
+  otherText.value = ''
+  sliderValue.value = 5
 }
 
 const handleTextSubmit = () => {
@@ -674,6 +757,15 @@ onMounted(() => {
   border: 1px solid #d4ece3;
   border-bottom-right-radius: 4px;
   font-weight: 500;
+}
+
+.edit-btn {
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+.chat-row.user:hover .edit-btn {
+  opacity: 1;
 }
 
 /* Section Divider */
