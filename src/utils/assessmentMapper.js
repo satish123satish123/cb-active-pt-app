@@ -243,6 +243,19 @@ export function mapAssessmentPayload(formData, assessmentResponses) {
     }
   }
 
+  // Extract "Other" patient expectations if present
+  const gi1 = assessmentResponses.find((r) => r.id === 'gi_1')
+  let patientExpectationsOther = ''
+  if (gi1) {
+    const selected = gi1.answer.split(', ').map((a) => a.trim())
+    const others = selected.filter(
+      (item) => item === 'Get a personalised exercise plan' || item === 'Prevent future issues',
+    )
+    if (others.length > 0) {
+      patientExpectationsOther = others.join(', ')
+    }
+  }
+
   return {
     age: parseInt(formData.age, 10) || 0,
     gender,
@@ -252,6 +265,7 @@ export function mapAssessmentPayload(formData, assessmentResponses) {
     chief_complaint: buildChiefComplaint(assessmentResponses),
     questions: buildQuestionsArray(assessmentResponses, formData.sex),
     patient_expectations: buildExpectations(assessmentResponses),
+    patient_expectations_other: patientExpectationsOther,
     medical_history: buildMedicalHistory(assessmentResponses),
     medical_history_other: medicalHistoryOther,
     present_past_illness: buildPresentPastIllness(assessmentResponses),
