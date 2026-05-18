@@ -534,13 +534,16 @@ async function createPatient() {
 
 async function createPatientInAssessmentDB(user) {
   try {
+    const rawSex = user.sex || form.value.sex
+    const formattedSex = rawSex ? rawSex.charAt(0).toUpperCase() + rawSex.slice(1).toLowerCase() : ''
+
     const payload = {
       id: user.id,
       name: user.name,
       email: user.email,
       phone: user.phone,
       age: user.age,
-      sex: user.sex,
+      sex: formattedSex,
       // company_id: form.value.company_id,
       hospital_id: form.value.hospital_id,
       employee_id: form.value.employee_id,
