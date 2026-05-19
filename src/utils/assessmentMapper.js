@@ -117,8 +117,6 @@ function buildPainAssessment(responses) {
   }
 
   const areas = pd1.answer.split(', ').map((a) => a.trim())
-  const durationRaw = pd3 ? pd3.answer : ''
-  const duration = DURATION_MAP[durationRaw] || durationRaw
 
   return areas
     .filter((area) => area !== 'No discomfort' && area !== 'Other')
@@ -133,10 +131,15 @@ function buildPainAssessment(responses) {
       const pd2 = responses.find((r) => r.id === `pd_2_${areaKey}`)
       const severity = pd2 ? parseInt(pd2.answer, 10) : 0
 
+      // Find per-area duration from dynamic pd_3_<key> responses
+      const pd3Area = responses.find((r) => r.id === `pd_3_${areaKey}`)
+      const durationRaw = pd3Area ? pd3Area.answer : (pd3 ? pd3.answer : '')
+      const duration = DURATION_MAP[durationRaw] || durationRaw
+
       return {
         pain_site_side: PAIN_SITE_MAP[cleanArea] || cleanArea.toLowerCase().replace(/\s+/g, '_'),
         pain_severity: severity,
-        pain_onset: 'Gradual',
+        pain_onset: '',
         pain_duration: duration,
         frequency: '',
         pain_nature: [],
@@ -272,7 +275,7 @@ export function mapAssessmentPayload(formData, assessmentResponses) {
     surgical_history: 'NA',
     personal_family_history: 'NA',
     current_medications: [],
-    red_flags: ['None'],
+    red_flags: [],
     pain_assessment: buildPainAssessment(assessmentResponses),
   }
 }
