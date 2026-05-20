@@ -327,7 +327,9 @@
           <div class="text-h6 text-weight-bold text-grey-9 dialog-title">
             Profile Already Registered
           </div>
-          <div class="text-caption text-grey-6">Patient is already registered with this email</div>
+          <div class="text-caption text-grey-6">
+            We found an existing record matching these details
+          </div>
         </div>
       </q-card-section>
 
@@ -346,23 +348,10 @@
               existingPatientName
             }}</span>
           </div>
-          <div class="row items-center justify-between">
-            <span
-              class="text-caption text-grey-7 text-uppercase text-weight-bold"
-              style="letter-spacing: 0.05em"
-              >Status</span
-            >
-            <span
-              class="text-caption text-weight-medium text-teal-8 bg-teal-1 q-px-sm q-py-xs"
-              style="border-radius: 4px"
-              >Registered Profile</span
-            >
-          </div>
         </div>
         <p class="text-body2 text-grey-8 q-mb-none" style="line-height: 1.6">
-          A profile for <strong>{{ existingPatientName }}</strong> is already registered in our
-          system. Would you like to continue using these existing details, or close this window to
-          modify the information?
+          A profile for <strong>{{ existingPatientName }}</strong> is already registered with this
+          email in our system. Would you like to continue using these existing details?
         </p>
       </q-card-section>
 
