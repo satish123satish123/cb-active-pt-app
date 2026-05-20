@@ -312,6 +312,72 @@
       </div>
     </div>
   </div>
+
+  <!-- Patient Already Exists Dialog -->
+  <q-dialog v-model="showExistsDialog" persistent>
+    <q-card
+      class="existing-profile-card"
+      style="min-width: 350px; max-width: 500px; border-radius: 20px"
+    >
+      <q-card-section class="q-pb-none row no-wrap items-center q-pt-lg q-px-lg">
+        <div class="alert-icon-container q-mr-md">
+          <q-icon name="account_circle" size="44px" color="teal-8" />
+        </div>
+        <div>
+          <div class="text-h6 text-weight-bold text-grey-9 dialog-title">
+            Profile Already Registered
+          </div>
+          <div class="text-caption text-grey-6">
+            We found an existing record matching these details
+          </div>
+        </div>
+      </q-card-section>
+
+      <q-card-section class="q-px-lg q-py-md">
+        <div
+          class="patient-details-box q-pa-md q-mb-md"
+          style="background: #f4fcf9; border-radius: 12px; border: 1px solid #d2f2e7"
+        >
+          <div class="row items-center justify-between q-mb-xs">
+            <span
+              class="text-caption text-grey-7 text-uppercase text-weight-bold"
+              style="letter-spacing: 0.05em"
+              >Patient Name</span
+            >
+            <span class="text-subtitle2 text-weight-bold text-teal-9">{{
+              existingPatientName
+            }}</span>
+          </div>
+        </div>
+        <p class="text-body2 text-grey-8 q-mb-none" style="line-height: 1.6">
+          A profile with the name <strong>{{ existingPatientName }}</strong> is already registered
+          in our system using this email address. Would you like to continue or register with a new
+          email ID?
+        </p>
+      </q-card-section>
+
+      <q-card-actions class="q-px-lg q-pb-lg q-pt-none row no-wrap justify-end gap-sm">
+        <q-btn
+          flat
+          label="Edit Details"
+          color="grey-7"
+          no-caps
+          class="text-weight-medium rounded-borders col-xs-6 col-sm-auto"
+          style="border: 1px solid #e2e8f0; padding: 8px 12px"
+          v-close-popup
+        />
+        <q-btn
+          unelevated
+          label="Continue"
+          color="primary"
+          no-caps
+          class="text-weight-medium rounded-borders col-xs-6 col-sm-auto"
+          style="padding: 8px 12px"
+          @click="handleContinueWithExisting"
+        />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
 </template>
 
 <script setup>
@@ -338,6 +404,9 @@ const assessmentProgress = ref({
   section: '',
   percent: 0,
 })
+const showExistsDialog = ref(false)
+const existingPatientName = ref('')
+const existingPatientUserObj = ref(null)
 
 const SECTION_MAP = {
   'Working Conditions': 2,
@@ -500,6 +569,14 @@ async function createPatient() {
     const res = await api.post('/assessmentSignUp', payload)
 
     if (res.data.status === 'success') {
+      if (res.data.exists) {
+        existingPatientUserObj.value = res.data.user || null
+        existingPatientName.value =
+          res.data.user?.name || res.data.user?.username || form.value.name
+        showExistsDialog.value = true
+        return false
+      }
+
       patientId.value = res.data.user.id
       return await createPatientInAssessmentDB(res.data.user)
     } else {
@@ -535,14 +612,16 @@ async function createPatient() {
 async function createPatientInAssessmentDB(user) {
   try {
     const rawSex = user.sex || form.value.sex
-    const formattedSex = rawSex ? rawSex.charAt(0).toUpperCase() + rawSex.slice(1).toLowerCase() : ''
+    const formattedSex = rawSex
+      ? rawSex.charAt(0).toUpperCase() + rawSex.slice(1).toLowerCase()
+      : ''
 
     const payload = {
       id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      age: user.age,
+      name: user.name || user.username || form.value.name,
+      email: user.email || form.value.email,
+      phone: user.phone || form.value.phone,
+      age: user.age || form.value.age,
       sex: formattedSex,
       // company_id: form.value.company_id,
       hospital_id: form.value.hospital_id,
@@ -590,6 +669,29 @@ async function createPatientInAssessmentDB(user) {
       })
     }
     return false
+  }
+}
+
+const handleContinueWithExisting = async () => {
+  showExistsDialog.value = false
+  if (existingPatientUserObj.value) {
+    $q.loading.show({
+      message: 'Linking profile...',
+      backgroundColor: 'teal-10',
+    })
+    patientId.value = existingPatientUserObj.value.id
+    const isSynced = await createPatientInAssessmentDB(existingPatientUserObj.value)
+    if (isSynced) {
+      currentStep.value++
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+    $q.loading.hide()
+  } else {
+    $q.notify({
+      type: 'negative',
+      message: 'Could not find existing patient details. Please modify your information.',
+      position: 'top',
+    })
   }
 }
 
@@ -748,6 +850,12 @@ const handleFinalSubmit = async () => {
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+@media (max-width: 599px) {
+  .dialog-title {
+    font-size: 1rem !important;
+  }
+}
 
 .pre-assessment-container {
   background: var(--bg);
