@@ -350,8 +350,9 @@
           </div>
         </div>
         <p class="text-body2 text-grey-8 q-mb-none" style="line-height: 1.6">
-          A profile for <strong>{{ existingPatientName }}</strong> is already registered with this
-          email in our system. Would you like to continue using these existing details?
+          A profile with the name <strong>{{ existingPatientName }}</strong> is already registered
+          in our system using this email address. Would you like to continue or register with a new
+          email ID?
         </p>
       </q-card-section>
 
