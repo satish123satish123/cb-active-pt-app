@@ -282,7 +282,7 @@ export function mapAssessmentPayload(formData, assessmentResponses) {
   return {
     age: parseInt(formData.age, 10) || 0,
     gender,
-    occupations: ['corporate_employee'],
+    occupations: ['Corporate Employee'],
     activities: [],
     prescription: {},
     chief_complaint: buildChiefComplaint(assessmentResponses),
