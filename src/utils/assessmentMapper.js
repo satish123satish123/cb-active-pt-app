@@ -32,6 +32,35 @@ const DURATION_MAP = {
   'Not applicable': '',
 }
 
+// ─── Pain level description and color mapping ───
+const PAIN_DESCRIPTIONS = {
+  0: 'No Pain',
+  1: 'Minimal Pain',
+  2: 'Mild Pain',
+  3: 'Mild to Moderate Pain',
+  4: 'Moderate Pain',
+  5: 'Moderate to Severe Pain',
+  6: 'Severe Pain',
+  7: 'Very Severe Pain',
+  8: 'Intense Pain',
+  9: 'Unbearable Pain',
+  10: 'Worst Pain Possible',
+}
+
+function getPainLabelColor(level) {
+  if (level === 1) return 'green-7'
+  if (level === 2) return 'green-14'
+  if (level === 3) return 'green'
+  if (level === 4) return 'light-green-6'
+  if (level === 5) return 'lime-7'
+  if (level === 6) return 'yellow-7'
+  if (level === 7) return 'amber-7'
+  if (level === 8) return 'orange-6'
+  if (level === 9) return 'deep-orange-6'
+  if (level === 10) return 'deep-orange-9'
+  return 'green-7'
+}
+
 // ─── Previous assessment option label mapping ───
 // const PREVIOUS_ASSESSMENT_OPTIONS = [
 //   { key: 'completed', label: 'Yes, I completed the assessment' },
@@ -96,15 +125,6 @@ function buildQuestionsArray(responses, gender /* , formData */) {
 }
 
 /**
- * Build occupations array from wc_1 (Primary Work Pattern) response.
- */
-function buildOccupations(responses) {
-  const wc1 = responses.find((r) => r.id === 'wc_1')
-  if (!wc1) return []
-  return [wc1.answer.trim()]
-}
-
-/**
  * Build pain_assessment array from pd_1, pd_2_* (per-area), pd_3 responses.
  * Creates one entry per selected pain area with individual severity.
  */
@@ -133,7 +153,7 @@ function buildPainAssessment(responses) {
 
       // Find per-area duration from dynamic pd_3_<key> responses
       const pd3Area = responses.find((r) => r.id === `pd_3_${areaKey}`)
-      const durationRaw = pd3Area ? pd3Area.answer : (pd3 ? pd3.answer : '')
+      const durationRaw = pd3Area ? pd3Area.answer : pd3 ? pd3.answer : ''
       const duration = DURATION_MAP[durationRaw] || durationRaw
 
       return {
@@ -148,8 +168,8 @@ function buildPainAssessment(responses) {
         referred_pain_area: [],
         aggravating_factors: [],
         relieving_factors: [],
-        pain_label: String(severity),
-        labelColor: '',
+        pain_label: `${severity} - ${PAIN_DESCRIPTIONS[severity] || 'Unknown Pain Level'}`,
+        labelColor: getPainLabelColor(severity),
       }
     })
 }
@@ -262,7 +282,7 @@ export function mapAssessmentPayload(formData, assessmentResponses) {
   return {
     age: parseInt(formData.age, 10) || 0,
     gender,
-    occupations: buildOccupations(assessmentResponses),
+    occupations: ['corporate_employee'],
     activities: [],
     prescription: {},
     chief_complaint: buildChiefComplaint(assessmentResponses),

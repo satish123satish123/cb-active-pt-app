@@ -697,7 +697,6 @@ const handleContinueWithExisting = async () => {
 
 async function getMcqSummary(questions) {
   const prompt = `Questions: ${questions.map((q) => `Q: ${q.question}\nA: ${q.patient_answer || 'Not answered'}`).join('\n\n')}`
-  console.log(prompt)
   const aiPayload = {
     model: 'gpt-5.2',
     input: [
@@ -721,8 +720,6 @@ async function getMcqSummary(questions) {
       },
     ],
   }
-
-  console.log('AI Payload:', JSON.stringify(aiPayload, null, 2))
 
   try {
     const res = await assessment_api.post('ai/responses', aiPayload)
@@ -776,8 +773,6 @@ const handleFinalSubmit = async () => {
     const mcqSummary = await getMcqSummary(payload.questions)
 
     payload.mcq_summary = mcqSummary
-
-    console.log('Mapped Assessment Payload:', JSON.stringify(payload, null, 2))
 
     $q.loading.show({
       message: 'Saving your responses...',
