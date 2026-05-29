@@ -307,6 +307,31 @@
               Your pre-assessment is saved and ready for your physio. We'll see you at your
               scheduled session.
             </p>
+            <div class="q-mt-md">
+              <a
+                type="button"
+                class="btn primary"
+                :href="getCalendlyLink()"
+                target="_blank"
+                style="text-decoration: none"
+              >
+                <span>Book Appointment Now</span>
+                <svg
+                  class="arrow"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </a>
+            </div>
           </div>
         </main>
       </div>
@@ -437,6 +462,17 @@ const isMinimized = computed(() => {
 //   }
 //   return map[form.value.previous_assessment] || form.value.previous_assessment
 // })
+
+const getCalendlyLink = () => {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  const year = tomorrow.getFullYear()
+  const month = String(tomorrow.getMonth() + 1).padStart(2, '0')
+  const day = String(tomorrow.getDate()).padStart(2, '0')
+
+  return `https://calendly.com/workplace-wellness-cbphysiotherapy/30min?month=${year}-${month}&date=${year}-${month}-${day}`
+}
 
 const validateLink = async (companyId, hospitalId, providedKey) => {
   if (!companyId || !hospitalId || !providedKey) return false
