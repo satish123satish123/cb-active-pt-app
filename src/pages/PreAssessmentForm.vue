@@ -303,19 +303,20 @@
               <q-icon name="check" size="42px" color="white" />
             </div>
             <h5>Submitted successfully</h5>
+            <p>Thank you for completing the evaluation. Please book your assessment slot.</p>
             <p>
-              Your pre-assessment is saved and ready for your physio. We'll see you at your
-              scheduled session.
+              If you have any relevant medical reports, scans, or previous treatment records related
+              to your concern, please carry them along for the assessment.
             </p>
             <div class="q-mt-md">
               <a
                 type="button"
                 class="btn primary"
-                :href="getCalendlyLink()"
+                href="https://calendly.com/workplace-wellness-cbphysiotherapy"
                 target="_blank"
                 style="text-decoration: none"
               >
-                <span>Book Appointment Now</span>
+                <span>Book Assessment Slot</span>
                 <svg
                   class="arrow"
                   width="16"
@@ -462,17 +463,6 @@ const isMinimized = computed(() => {
 //   }
 //   return map[form.value.previous_assessment] || form.value.previous_assessment
 // })
-
-const getCalendlyLink = () => {
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-
-  const year = tomorrow.getFullYear()
-  const month = String(tomorrow.getMonth() + 1).padStart(2, '0')
-  const day = String(tomorrow.getDate()).padStart(2, '0')
-
-  return `https://calendly.com/workplace-wellness-cbphysiotherapy/30min?month=${year}-${month}&date=${year}-${month}-${day}`
-}
 
 const validateLink = async (companyId, hospitalId, providedKey) => {
   if (!companyId || !hospitalId || !providedKey) return false
