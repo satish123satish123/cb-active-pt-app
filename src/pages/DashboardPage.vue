@@ -5,7 +5,7 @@
       <div class="hero-row">
         <div>
           <div class="subtle">Welcome back,</div>
-          <h5 class="q-ma-none text-weight-bold">{{ authStore.user.username }}</h5>
+          <h5 class="q-ma-none text-weight-bold">{{ authStore.user?.username }}</h5>
         </div>
         <button class="icon-btn" @click="$router.push('/support')">
           🔔<span class="pill-count">3</span>
@@ -30,7 +30,9 @@
               <div class="todo-left">
                 <div class="todo-icon">💪</div>
                 <div>
-                  <div class="todo-label">{{ exercises_data.pending_count || 0 }} exercises pending</div>
+                  <div class="todo-label">
+                    {{ exercises_data.pending_count || 0 }} exercises pending
+                  </div>
                   <div class="todo-sub">
                     Approx. {{ exercises_data.pending_exercises_time || 0 }} minutes left for today
                   </div>
@@ -135,7 +137,11 @@
             </div>
             <span
               class="badge"
-              :class="recovery_progress_data?.milestones_status === 'Needs Attention' ? 'upcoming' : 'success'"
+              :class="
+                recovery_progress_data?.milestones_status === 'Needs Attention'
+                  ? 'upcoming'
+                  : 'success'
+              "
             >
               {{ recovery_progress_data?.milestones_status || 'Doing Well' }}
             </span>
@@ -174,14 +180,18 @@
                 Track previous days, completion history, and overall adherence.
               </div>
             </div>
-            <span class="badge brand">{{ home_exercise_card_data?.days_adherence_percentage || 0 }}% Done</span>
+            <span class="badge brand"
+              >{{ home_exercise_card_data?.days_adherence_percentage || 0 }}% Done</span
+            >
           </div>
           <div class="progress-wrap">
             <div class="split">
               <span class="muted">Program adherence</span>
               <strong v-if="home_exercise_card_data?.total_days > 0"
-                >{{ home_exercise_card_data?.days_completed || 0 }}/{{ home_exercise_card_data?.total_days }} days
-                completed</strong
+                >{{ home_exercise_card_data?.days_completed || 0 }}/{{
+                  home_exercise_card_data?.total_days
+                }}
+                days completed</strong
               >
               <strong v-else>No plan data</strong>
             </div>

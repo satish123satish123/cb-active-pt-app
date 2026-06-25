@@ -217,6 +217,26 @@
                 </div>
               </div>
 
+              <div
+                v-if="String(form.company_id) === '3'"
+                class="field"
+                :class="{ 'has-error': v$.location.$error }"
+              >
+                <label class="required">Which location are you based in?</label>
+                <select v-model="form.location" @change="v$.location.$touch()" required>
+                  <option value="">Select location</option>
+                  <option value="Gurgaon office (attending in person)">
+                    Gurgaon office (attending in person)
+                  </option>
+                  <option value="Other India location (joining via broadcast)">
+                    Other India location (joining via broadcast)
+                  </option>
+                </select>
+                <div v-if="v$.location.$error" class="error-msg">
+                  {{ v$.location.$errors[0].$message }}
+                </div>
+              </div>
+
               <!-- <div class="field" :class="{ 'has-error': v$.preferred_slot.$error }">
                 <label class="required">Preferred assessment slot</label>
                 <select v-model="form.preferred_slot" @change="v$.preferred_slot.$touch()">
@@ -256,6 +276,7 @@
             <section v-if="currentStep === 2" class="step active">
               <AssessmentQuestions
                 :gender="form.sex"
+                :company-id="form.company_id"
                 @complete="handleAssessmentComplete"
                 @progress="handleAssessmentProgress"
               />
@@ -465,6 +486,8 @@ const isMinimized = computed(() => {
 // })
 
 const validateLink = async (companyId, hospitalId, providedKey) => {
+  // console.log(companyId, hospitalId, providedKey)
+  // return true
   if (!companyId || !hospitalId || !providedKey) return false
 
   try {
@@ -503,6 +526,7 @@ const form = ref({
   email: '',
   age: '',
   sex: 'female',
+  location: '',
   // preferred_slot: '',
   // previous_assessment: '',
 })
@@ -526,6 +550,9 @@ onMounted(async () => {
 
 const profilePercent = computed(() => {
   const fields = ['name', 'phone', 'email', 'age', 'sex']
+  if (String(form.value.company_id) === '3') {
+    fields.push('location')
+  }
   const filled = fields.filter((f) => !!form.value[f]).length
   return Math.round((filled / fields.length) * 100)
 })
@@ -548,29 +575,33 @@ const handleAssessmentProgress = (data) => {
   assessmentProgress.value = data
 }
 
-const rules = {
-  employee_id: { required: helpers.withMessage('Employee ID is required', required) },
-  name: { required: helpers.withMessage('Full name is required', required) },
-  phone: {
-    required: helpers.withMessage('Phone number is required', required),
-    numeric: helpers.withMessage('Enter a valid 10-digit number', numeric),
-    minLength: helpers.withMessage('Enter a valid 10-digit number', minLength(10)),
-    maxLength: helpers.withMessage('Enter a valid 10-digit number', maxLength(10)),
-  },
-  email: {
-    required: helpers.withMessage('Email address is required', required),
-    email: helpers.withMessage('Enter a valid email address', email),
-  },
-  age: {
-    required: helpers.withMessage('Age is required', required),
-  },
-  // preferred_slot: {
-  //   required: helpers.withMessage('Please select a preferred slot', required),
-  // },
-  // previous_assessment: {
-  //   required: helpers.withMessage('Please select an option', required),
-  // },
-}
+const rules = computed(() => {
+  const baseRules = {
+    employee_id: { required: helpers.withMessage('Employee ID is required', required) },
+    name: { required: helpers.withMessage('Full name is required', required) },
+    phone: {
+      required: helpers.withMessage('Phone number is required', required),
+      numeric: helpers.withMessage('Enter a valid 10-digit number', numeric),
+      minLength: helpers.withMessage('Enter a valid 10-digit number', minLength(10)),
+      maxLength: helpers.withMessage('Enter a valid 10-digit number', maxLength(10)),
+    },
+    email: {
+      required: helpers.withMessage('Email address is required', required),
+      email: helpers.withMessage('Enter a valid email address', email),
+    },
+    age: {
+      required: helpers.withMessage('Age is required', required),
+    },
+  }
+
+  if (String(form.value.company_id) === '3') {
+    baseRules.location = {
+      required: helpers.withMessage('Location is required', required),
+    }
+  }
+
+  return baseRules
+})
 
 const v$ = useVuelidate(rules, form)
 
@@ -590,6 +621,7 @@ async function createPatient() {
       hospital_id: form.value.hospital_id,
       age: form.value.age,
       sex: form.value.sex,
+      location: form.value.location,
     }
 
     const res = await api.post('/assessmentSignUp', payload)
@@ -652,6 +684,7 @@ async function createPatientInAssessmentDB(user) {
       // company_id: form.value.company_id,
       hospital_id: form.value.hospital_id,
       employee_id: form.value.employee_id,
+      location: form.value.location || user.location,
     }
 
     const res = await assessment_api.post('/patients', payload)
