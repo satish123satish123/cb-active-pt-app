@@ -846,6 +846,10 @@ const handleFinalSubmit = async () => {
         hospital_id: form.value.hospital_id,
         assessment_context: 'ergonomic',
         ...payload,
+        b2b_assessment_data: {
+          patient_id: patientId.value,
+          ...form.value,
+        }
       })
       .then((res) => {
         console.log('Assessment API Response:', res.data)
