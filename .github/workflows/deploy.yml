@@ -7,9 +7,12 @@ on:
 
 jobs:
   deploy:
+    name: Deploy app
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Get latest code
+        uses: actions/checkout@v4
 
       - name: Setup SSH
         run: |
@@ -18,12 +21,17 @@ jobs:
           chmod 600 ~/.ssh/hostinger_key
           ssh-keyscan -H -p "${{ secrets.HOSTINGER_PORT }}" "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Deploy Files
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/hostinger_key -p "${{ secrets.HOSTINGER_PORT }}" \
+          "${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}" \
+          "echo 'SSH connection successful'"
+
+      - name: Deploy files
         run: |
           rsync -avz \
             -e "ssh -i ~/.ssh/hostinger_key -p ${{ secrets.HOSTINGER_PORT }}" \
             --exclude ".git" \
             --exclude ".github" \
             --exclude ".env" \
-            ./ \
-            "${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.HOSTINGER_PATH }}/"
+            ./ "${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.HOSTINGER_PATH }}/"
