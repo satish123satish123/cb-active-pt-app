@@ -1,0 +1,24 @@
+name: Deploy to Hostinger
+on:
+ push:
+ branches:
+ - main 
+jobs:
+ deploy:
+ runs-on: ubuntu-latest
+ steps:
+ - uses: actions/checkout@v4
+ - name: Setup SSH
+ run: |
+ mkdir -p ~/.ssh
+ printf "%s\n" "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/hostinger_key
+ chmod 600 ~/.ssh/hostinger_key
+ ssh-keyscan -H -p "${{ secrets.HOSTINGER_PORT }}" "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_h - name: Deploy Files
+ run: |
+ rsync -avz \
+ -e "ssh -i ~/.ssh/hostinger_key -p ${{ secrets.HOSTINGER_PORT }}" \
+ --exclude ".git" \
+ --exclude ".github" \
+ --exclude ".env" \
+ ./ \
+ "${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:${{ secrets.HOSTINGER_PATH }}/"
