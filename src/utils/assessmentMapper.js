@@ -1,4 +1,8 @@
-import { workingConditions, lifestyleFactors, company3Questions } from 'src/data/assessmentQuestions'
+import {
+  workingConditions,
+  lifestyleFactors,
+  company2Questions,
+} from 'src/data/assessmentQuestions'
 
 // ─── Pain area → pain_site_side key mapping ───
 const PAIN_SITE_MAP = {
@@ -84,7 +88,7 @@ function buildQuestionsArray(responses, formData, companyId) {
 
   // Collect all questions that should appear in the MCQ questions array
   let mcqSources = []
-  if (String(companyId) === '3') {
+  if (String(companyId) === '2') {
     mcqSources = [
       {
         id: 'location',
@@ -95,15 +99,15 @@ function buildQuestionsArray(responses, formData, companyId) {
         ],
       },
       ...workingConditions,
-      company3Questions.pd_trigger,
-      company3Questions.pd_functional_impact,
-      company3Questions.pd_water_intake,
+      company2Questions.pd_trigger,
+      company2Questions.pd_functional_impact,
+      company2Questions.pd_water_intake,
       ...lifestyleFactors.filter((q) => q.id !== 'lf_5' && (!q.femaleOnly || gender === 'female')),
-      company3Questions.lf_sleep_quality,
-      company3Questions.hs_treatment,
-      company3Questions.gi_live_session_cover,
-      company3Questions.gi_onsite_interest,
-      company3Questions.gi_qa_question,
+      company2Questions.lf_sleep_quality,
+      company2Questions.hs_treatment,
+      company2Questions.gi_live_session_cover,
+      company2Questions.gi_onsite_interest,
+      company2Questions.gi_qa_question,
     ]
   } else {
     mcqSources = [

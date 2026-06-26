@@ -185,8 +185,8 @@ export const goalsInfo = [
   },
 ]
 
-// ─── Company 3 Specific Questions ───
-export const company3Questions = {
+// ─── Company 2 Specific Questions ───
+export const company2Questions = {
   pd_trigger: {
     id: 'pd_trigger',
     section: 'Pain & Discomfort',
@@ -211,7 +211,7 @@ export const company3Questions = {
       "No, it doesn't really affect me",
       'Mildly — I notice it but manage fine',
       'Moderately — it distracts me or slows me down',
-      'Significantly — I\'ve had to modify, pause, or miss work/activities',
+      "Significantly — I've had to modify, pause, or miss work/activities",
     ],
     skipIfNoDiscomfort: true,
   },
@@ -219,12 +219,7 @@ export const company3Questions = {
     id: 'pd_water_intake',
     text: 'What is your water intake throughout the day?',
     type: 'choice',
-    options: [
-      'Less than 1 litre',
-      '1–1.5 litres',
-      '1.5–2 litres',
-      'More than 2 litres',
-    ],
+    options: ['Less than 1 litre', '1–1.5 litres', '1.5–2 litres', 'More than 2 litres'],
   },
   lf_sleep_quality: {
     id: 'lf_sleep_quality',
@@ -236,11 +231,7 @@ export const company3Questions = {
     id: 'hs_treatment',
     text: 'Are you currently receiving any treatment or physiotherapy for pain or injury?',
     type: 'choice',
-    options: [
-      'No',
-      'Yes — ongoing',
-      'Yes — in the past 6 months',
-    ],
+    options: ['No', 'Yes — ongoing', 'Yes — in the past 6 months'],
   },
   gi_live_session_cover: {
     id: 'gi_live_session_cover',
@@ -276,18 +267,13 @@ export const company3Questions = {
   },
   gi_qa_question: {
     id: 'gi_qa_question',
-    text: 'Is there a specific question you\'d like answered during the live Q&A?',
+    text: "Is there a specific question you'd like answered during the live Q&A?",
     type: 'text',
   },
   gi_onsite_interest: {
     id: 'gi_onsite_interest',
     text: 'If CB Physiotherapy offered a personalised 1:1 physiotherapy assessment (onsite), would you be interested?',
     type: 'choice',
-    options: [
-      'Yes, I\'d like that',
-      'Maybe — tell me more',
-      'No, not right now',
-    ],
+    options: ["Yes, I'd like that", 'Maybe — tell me more', 'No, not right now'],
   },
 }
-
