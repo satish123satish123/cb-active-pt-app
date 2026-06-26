@@ -36,7 +36,7 @@
                 </div>
                 <div class="brand-divider"></div>
                 <div class="brand-logo partner-logo">
-                  <q-img :src="String(form.company_id) === '3' ? 'db_india.jpeg' : 'cars24.webp'" />
+                  <q-img :src="String(form.company_id) === '2' ? 'db_india.jpeg' : 'cars24.webp'" />
                 </div>
               </div>
               <!-- <div class="secure-chip">Secure</div> -->
@@ -218,7 +218,7 @@
               </div>
 
               <div
-                v-if="String(form.company_id) === '3'"
+                v-if="String(form.company_id) === '2'"
                 class="field"
                 :class="{ 'has-error': v$.location.$error }"
               >
@@ -550,7 +550,7 @@ onMounted(async () => {
 
 const profilePercent = computed(() => {
   const fields = ['name', 'phone', 'email', 'age', 'sex']
-  if (String(form.value.company_id) === '3') {
+  if (String(form.value.company_id) === '2') {
     fields.push('location')
   }
   const filled = fields.filter((f) => !!form.value[f]).length
@@ -594,7 +594,7 @@ const rules = computed(() => {
     },
   }
 
-  if (String(form.value.company_id) === '3') {
+  if (String(form.value.company_id) === '2') {
     baseRules.location = {
       required: helpers.withMessage('Location is required', required),
     }

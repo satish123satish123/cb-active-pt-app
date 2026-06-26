@@ -29,23 +29,19 @@
         class="chat-row"
         :class="[item.type, { 'section-header': item.isSection }]"
       >
-        <q-btn 
-          v-if="item.type === 'user'" 
-          icon="edit" 
-          flat 
-          round 
-          size="sm" 
+        <q-btn
+          v-if="item.type === 'user'"
+          icon="edit"
+          flat
+          round
+          size="sm"
           class="edit-btn q-mr-sm self-center"
           color="grey-5"
-          @click="handleEdit(item)" 
+          @click="handleEdit(item)"
         >
           <q-tooltip>Edit answer</q-tooltip>
         </q-btn>
-        <div
-          class="bubble"
-          :class="{ 'section-divider': item.isSection }"
-          v-html="item.text"
-        ></div>
+        <div class="bubble" :class="{ 'section-divider': item.isSection }" v-html="item.text"></div>
       </div>
 
       <!-- Current Question Thinking -->
@@ -228,7 +224,7 @@
 
     <!-- Confirmation Dialog -->
     <q-dialog v-model="showConfirmDialog" persistent>
-      <q-card style="min-width: 300px; border-radius: 16px;">
+      <q-card style="min-width: 300px; border-radius: 16px">
         <q-card-section class="q-pb-none">
           <div class="text-h6 text-weight-bold">Ready to submit?</div>
         </q-card-section>
@@ -241,7 +237,13 @@
 
         <q-card-actions align="right" class="q-pt-none">
           <q-btn flat label="Review Answers" color="primary" v-close-popup />
-          <q-btn unelevated rounded label="Submit Assessment" color="primary" @click="confirmSubmit" />
+          <q-btn
+            unelevated
+            rounded
+            label="Submit Assessment"
+            color="primary"
+            @click="confirmSubmit"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -270,7 +272,7 @@ import {
   lifestyleFactors,
   healthSafety,
   goalsInfo,
-  company3Questions,
+  company2Questions,
 } from 'src/data/assessmentQuestions'
 
 // ─── Build question list (filter femaleOnly questions for non-female) ───
@@ -282,21 +284,21 @@ const allQuestions = computed(() => {
     })
   }
 
-  if (String(props.companyId) === '3') {
+  if (String(props.companyId) === '2') {
     return [
       ...workingConditions,
       ...painDiscomfort,
-      company3Questions.pd_trigger,
-      company3Questions.pd_functional_impact,
-      company3Questions.pd_water_intake,
+      company2Questions.pd_trigger,
+      company2Questions.pd_functional_impact,
+      company2Questions.pd_water_intake,
       ...filterByGender(lifestyleFactors.filter((q) => q.id !== 'lf_5')),
-      company3Questions.lf_sleep_quality,
+      company2Questions.lf_sleep_quality,
       ...healthSafety,
-      company3Questions.hs_treatment,
-      company3Questions.gi_live_session_cover,
-      company3Questions.gi_1,
-      company3Questions.gi_qa_question,
-      company3Questions.gi_onsite_interest,
+      company2Questions.hs_treatment,
+      company2Questions.gi_live_session_cover,
+      company2Questions.gi_1,
+      company2Questions.gi_qa_question,
+      company2Questions.gi_onsite_interest,
     ]
   }
 
@@ -365,17 +367,15 @@ const currentQuestion = computed(() => {
         section: 'Pain & Discomfort',
         text: `How long have you been experiencing <strong>${displayArea}</strong> discomfort?`,
         type: 'choice',
-        options: String(props.companyId) === '3' ? [
-          'Less than 6 weeks (Acute)',
-          '6 weeks to 3 months (Subacute)',
-          'More than 3 months (Chronic)',
-          'Not applicable',
-        ] : [
-          'Less than 6 weeks',
-          '6 weeks to 3 months',
-          'More than 3 months',
-          'Not applicable',
-        ],
+        options:
+          String(props.companyId) === '2'
+            ? [
+                'Less than 6 weeks (Acute)',
+                '6 weeks to 3 months (Subacute)',
+                'More than 3 months (Chronic)',
+                'Not applicable',
+              ]
+            : ['Less than 6 weeks', '6 weeks to 3 months', 'More than 3 months', 'Not applicable'],
         _dynamic: true,
       }
     }
@@ -492,7 +492,7 @@ const handleAnswer = async (answer) => {
     activePainStep: activePainStep.value,
     lastSection: lastSection.value,
     historyLength: history.value.length,
-    responsesLength: responses.value.length
+    responsesLength: responses.value.length,
   }
 
   // After pd_1: populate pain areas queue for per-area sliders
@@ -573,7 +573,7 @@ const confirmSubmit = () => {
 
 const handleEdit = (item) => {
   if (!item.snapshot) return
-  
+
   const snap = item.snapshot
   currentIdx.value = snap.currentIdx
   hasNoDiscomfort.value = snap.hasNoDiscomfort
@@ -581,14 +581,14 @@ const handleEdit = (item) => {
   activePainArea.value = snap.activePainArea
   activePainStep.value = snap.activePainStep
   lastSection.value = snap.lastSection
-  
+
   history.value = history.value.slice(0, snap.historyLength)
   responses.value = responses.value.slice(0, snap.responsesLength)
-  
+
   isComplete.value = false
   showConfirmDialog.value = false
   isThinking.value = false
-  
+
   multiSelected.value = []
   selectedRadio.value = null
   otherText.value = ''
