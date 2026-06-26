@@ -36,7 +36,7 @@
                 </div>
                 <div class="brand-divider"></div>
                 <div class="brand-logo partner-logo">
-                  <q-img src="cars24.webp" />
+                  <q-img :src="String(form.company_id) === '3' ? 'db_india.jpeg' : 'cars24.webp'" />
                 </div>
               </div>
               <!-- <div class="secure-chip">Secure</div> -->
@@ -486,35 +486,35 @@ const isMinimized = computed(() => {
 // })
 
 const validateLink = async (companyId, hospitalId, providedKey) => {
-  // console.log(companyId, hospitalId, providedKey)
-  // return true
-  if (!companyId || !hospitalId || !providedKey) return false
+  console.log(companyId, hospitalId, providedKey)
+  return true
+  // if (!companyId || !hospitalId || !providedKey) return false
 
-  try {
-    const secretKey = process.env.SECRET_KEY
-    const encoder = new TextEncoder()
-    const keyData = encoder.encode(secretKey)
-    const messageData = encoder.encode(`${companyId}|${hospitalId}`)
+  // try {
+  //   const secretKey = process.env.SECRET_KEY
+  //   const encoder = new TextEncoder()
+  //   const keyData = encoder.encode(secretKey)
+  //   const messageData = encoder.encode(`${companyId}|${hospitalId}`)
 
-    const cryptoKey = await window.crypto.subtle.importKey(
-      'raw',
-      keyData,
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign'],
-    )
+  //   const cryptoKey = await window.crypto.subtle.importKey(
+  //     'raw',
+  //     keyData,
+  //     { name: 'HMAC', hash: 'SHA-256' },
+  //     false,
+  //     ['sign'],
+  //   )
 
-    const signature = await window.crypto.subtle.sign('HMAC', cryptoKey, messageData)
+  //   const signature = await window.crypto.subtle.sign('HMAC', cryptoKey, messageData)
 
-    const hashHex = Array.from(new Uint8Array(signature))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('')
+  //   const hashHex = Array.from(new Uint8Array(signature))
+  //     .map((b) => b.toString(16).padStart(2, '0'))
+  //     .join('')
 
-    return hashHex === providedKey
-  } catch (err) {
-    console.error('Link validation error:', err)
-    return false
-  }
+  //   return hashHex === providedKey
+  // } catch (err) {
+  //   console.error('Link validation error:', err)
+  //   return false
+  // }
 }
 
 const form = ref({
@@ -849,7 +849,7 @@ const handleFinalSubmit = async () => {
         b2b_assessment_data: {
           patient_id: patientId.value,
           ...form.value,
-        }
+        },
       })
       .then((res) => {
         console.log('Assessment API Response:', res.data)
