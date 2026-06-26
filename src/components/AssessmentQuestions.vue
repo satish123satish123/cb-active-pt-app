@@ -256,6 +256,10 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  companyId: {
+    type: [String, Number],
+    default: '',
+  },
 })
 
 const emit = defineEmits(['complete', 'progress'])
@@ -266,6 +270,7 @@ import {
   lifestyleFactors,
   healthSafety,
   goalsInfo,
+  company3Questions,
 } from 'src/data/assessmentQuestions'
 
 // ─── Build question list (filter femaleOnly questions for non-female) ───
@@ -275,6 +280,24 @@ const allQuestions = computed(() => {
       if (q.femaleOnly && props.gender !== 'female') return false
       return true
     })
+  }
+
+  if (String(props.companyId) === '3') {
+    return [
+      ...workingConditions,
+      ...painDiscomfort,
+      company3Questions.pd_trigger,
+      company3Questions.pd_functional_impact,
+      company3Questions.pd_water_intake,
+      ...filterByGender(lifestyleFactors.filter((q) => q.id !== 'lf_5')),
+      company3Questions.lf_sleep_quality,
+      ...healthSafety,
+      company3Questions.hs_treatment,
+      company3Questions.gi_live_session_cover,
+      company3Questions.gi_1,
+      company3Questions.gi_qa_question,
+      company3Questions.gi_onsite_interest,
+    ]
   }
 
   return [
@@ -342,7 +365,12 @@ const currentQuestion = computed(() => {
         section: 'Pain & Discomfort',
         text: `How long have you been experiencing <strong>${displayArea}</strong> discomfort?`,
         type: 'choice',
-        options: [
+        options: String(props.companyId) === '3' ? [
+          'Less than 6 weeks (Acute)',
+          '6 weeks to 3 months (Subacute)',
+          'More than 3 months (Chronic)',
+          'Not applicable',
+        ] : [
           'Less than 6 weeks',
           '6 weeks to 3 months',
           'More than 3 months',

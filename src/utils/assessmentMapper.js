@@ -1,4 +1,4 @@
-import { workingConditions, lifestyleFactors } from 'src/data/assessmentQuestions'
+import { workingConditions, lifestyleFactors, company3Questions } from 'src/data/assessmentQuestions'
 
 // ─── Pain area → pain_site_side key mapping ───
 const PAIN_SITE_MAP = {
@@ -27,8 +27,11 @@ const EXPECTATION_MAP = {
 // ─── Pain duration mapping ───
 const DURATION_MAP = {
   'Less than 6 weeks': 'Acute',
+  'Less than 6 weeks (Acute)': 'Acute',
   '6 weeks to 3 months': 'Sub-acute',
+  '6 weeks to 3 months (Subacute)': 'Sub-acute',
   'More than 3 months': 'Chronic',
+  'More than 3 months (Chronic)': 'Chronic',
   'Not applicable': '',
 }
 
@@ -74,31 +77,43 @@ function getPainLabelColor(level) {
  * and Lifestyle sections with patient answers.
  * Also prepends previous_assessment from step 1 as a MCQ question.
  */
-function buildQuestionsArray(responses, gender /* , formData */) {
+function buildQuestionsArray(responses, formData, companyId) {
+  const gender = formData.sex
   const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
   const questions = []
 
-  // 1. Prepend previous_assessment from form as MCQ
-  // if (formData.previous_assessment) {
-  //   const prevMatch = PREVIOUS_ASSESSMENT_OPTIONS.find(
-  //     (o) => o.key === formData.previous_assessment,
-  //   )
-  //   questions.push({
-  //     id: 1,
-  //     question: 'Were you part of the previous Cars24 x CB Physiotherapy assessment?',
-  //     options: PREVIOUS_ASSESSMENT_OPTIONS.map((o, i) => ({ key: ALPHABET[i], label: o.label })),
-  //     patient_answer: prevMatch ? prevMatch.label : formData.previous_assessment,
-  //   })
-  // }
-
   // Collect all questions that should appear in the MCQ questions array
-  const mcqSources = [
-    ...workingConditions,
-    ...lifestyleFactors.filter((q) => {
-      if (q.femaleOnly && gender !== 'female') return false
-      return true
-    }),
-  ]
+  let mcqSources = []
+  if (String(companyId) === '3') {
+    mcqSources = [
+      {
+        id: 'location',
+        text: 'Which location are you based in?',
+        options: [
+          'Gurgaon office (attending in person)',
+          'Other India location (joining via broadcast)',
+        ],
+      },
+      ...workingConditions,
+      company3Questions.pd_trigger,
+      company3Questions.pd_functional_impact,
+      company3Questions.pd_water_intake,
+      ...lifestyleFactors.filter((q) => q.id !== 'lf_5' && (!q.femaleOnly || gender === 'female')),
+      company3Questions.lf_sleep_quality,
+      company3Questions.hs_treatment,
+      company3Questions.gi_live_session_cover,
+      company3Questions.gi_onsite_interest,
+      company3Questions.gi_qa_question,
+    ]
+  } else {
+    mcqSources = [
+      ...workingConditions,
+      ...lifestyleFactors.filter((q) => {
+        if (q.femaleOnly && gender !== 'female') return false
+        return true
+      }),
+    ]
+  }
 
   mcqSources.forEach((q) => {
     const options = (q.options || []).map((label, i) => ({
@@ -107,10 +122,14 @@ function buildQuestionsArray(responses, gender /* , formData */) {
     }))
 
     // Find the user's answer for this question
-    const response = responses.find((r) => r.id === q.id)
     let patientAnswer = null
-    if (response) {
-      patientAnswer = response.answer
+    if (q.id === 'location') {
+      patientAnswer = formData.location
+    } else {
+      const response = responses.find((r) => r.id === q.id)
+      if (response) {
+        patientAnswer = response.answer
+      }
     }
 
     questions.push({
@@ -236,7 +255,7 @@ function buildMedicalHistory(responses) {
  * Build present_past_illness from gi_2 response.
  */
 function buildPresentPastIllness(responses) {
-  const gi2 = responses.find((r) => r.id === 'gi_2')
+  const gi2 = responses.find((r) => r.id === 'gi_2' || r.id === 'gi_qa_question')
   if (!gi2 || !gi2.answer.trim()) return 'NA'
   // Remove "Other:" prefix if it exists
   return gi2.answer.replace(/^Other:\s*/i, '').trim()
@@ -282,11 +301,12 @@ export function mapAssessmentPayload(formData, assessmentResponses) {
   return {
     age: parseInt(formData.age, 10) || 0,
     gender,
+    location: formData.location || '',
     occupations: ['Corporate Employee'],
     activities: [],
     prescription: {},
     chief_complaint: buildChiefComplaint(assessmentResponses),
-    questions: buildQuestionsArray(assessmentResponses, formData.sex),
+    questions: buildQuestionsArray(assessmentResponses, formData, formData.company_id),
     patient_expectations: buildExpectations(assessmentResponses),
     patient_expectations_other: patientExpectationsOther,
     medical_history: buildMedicalHistory(assessmentResponses),

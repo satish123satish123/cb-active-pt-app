@@ -184,3 +184,110 @@ export const goalsInfo = [
     otherOption: 'Yes',
   },
 ]
+
+// ─── Company 3 Specific Questions ───
+export const company3Questions = {
+  pd_trigger: {
+    id: 'pd_trigger',
+    section: 'Pain & Discomfort',
+    text: 'When does your discomfort usually increase the most? (select all that apply)',
+    type: 'multi_with_other',
+    otherOption: 'Other',
+    options: [
+      'During prolonged sitting',
+      'After a full workday',
+      'During workouts',
+      'After waking up',
+      'Random — no clear trigger',
+      'Other',
+    ],
+    skipIfNoDiscomfort: true,
+  },
+  pd_functional_impact: {
+    id: 'pd_functional_impact',
+    text: 'Does this discomfort affect your work or daily activities?',
+    type: 'choice',
+    options: [
+      "No, it doesn't really affect me",
+      'Mildly — I notice it but manage fine',
+      'Moderately — it distracts me or slows me down',
+      'Significantly — I\'ve had to modify, pause, or miss work/activities',
+    ],
+    skipIfNoDiscomfort: true,
+  },
+  pd_water_intake: {
+    id: 'pd_water_intake',
+    text: 'What is your water intake throughout the day?',
+    type: 'choice',
+    options: [
+      'Less than 1 litre',
+      '1–1.5 litres',
+      '1.5–2 litres',
+      'More than 2 litres',
+    ],
+  },
+  lf_sleep_quality: {
+    id: 'lf_sleep_quality',
+    text: 'How would you rate your sleep quality?',
+    type: 'choice',
+    options: ['Good', 'Average', 'Poor'],
+  },
+  hs_treatment: {
+    id: 'hs_treatment',
+    text: 'Are you currently receiving any treatment or physiotherapy for pain or injury?',
+    type: 'choice',
+    options: [
+      'No',
+      'Yes — ongoing',
+      'Yes — in the past 6 months',
+    ],
+  },
+  gi_live_session_cover: {
+    id: 'gi_live_session_cover',
+    section: 'Goals & Additional Information',
+    text: 'What would you most like our physiotherapist to cover in the live session? (select all that apply)',
+    type: 'multi_with_other',
+    otherOption: 'Other',
+    options: [
+      'Correcting posture at the desk',
+      'Neck & upper-back pain',
+      'Lower-back pain',
+      'Wrist & forearm strain (typing, mouse)',
+      'Headaches & eye strain',
+      'Simple desk stretches',
+      'Setting up an ergonomic workstation (incl. work-from-home)',
+      'Staying active in a desk-bound job',
+      'Managing an existing or old injury',
+      'Other',
+    ],
+  },
+  gi_1: {
+    id: 'gi_1',
+    text: 'What would you like help with overall? (Select all that apply)',
+    type: 'multi',
+    options: [
+      'Understand and reduce my pain',
+      'Correct my posture',
+      'Improve my strength',
+      'Move more freely',
+      'Get a personalised exercise plan',
+      'Prevent future issues',
+    ],
+  },
+  gi_qa_question: {
+    id: 'gi_qa_question',
+    text: 'Is there a specific question you\'d like answered during the live Q&A?',
+    type: 'text',
+  },
+  gi_onsite_interest: {
+    id: 'gi_onsite_interest',
+    text: 'If CB Physiotherapy offered a personalised 1:1 physiotherapy assessment (onsite), would you be interested?',
+    type: 'choice',
+    options: [
+      'Yes, I\'d like that',
+      'Maybe — tell me more',
+      'No, not right now',
+    ],
+  },
+}
+
