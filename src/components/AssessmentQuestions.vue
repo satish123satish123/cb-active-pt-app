@@ -353,11 +353,16 @@ const currentQuestion = computed(() => {
       ? activePainArea.value.replace('Other:', '').trim()
       : activePainArea.value
 
+    const lowerArea = displayArea.toLowerCase()
+    const needsPainSuffix = !['headache', 'dizziness', 'eye strain', 'dry eyes'].some(term => lowerArea.includes(term))
+
     if (activePainStep.value === 0) {
       return {
         id: `pd_2_${activePainArea.value.toLowerCase().replace(/[\s/]+/g, '_')}`,
         section: 'Pain & Discomfort',
-        text: `On a scale of 0–10, how would you rate your <strong>${displayArea}</strong> pain or discomfort?`,
+        text: needsPainSuffix
+          ? `On a scale of 0–10, how would you rate your <strong>${displayArea}</strong> pain or discomfort?`
+          : `On a scale of 0–10, how would you rate your <strong>${displayArea}</strong> or discomfort?`,
         type: 'slider',
         _dynamic: true,
       }

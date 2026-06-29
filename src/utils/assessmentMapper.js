@@ -99,7 +99,6 @@ function buildQuestionsArray(responses, formData, companyId) {
         ],
       },
       ...workingConditions,
-      company2Questions.pd_trigger,
       company2Questions.pd_functional_impact,
       company2Questions.pd_water_intake,
       ...lifestyleFactors.filter((q) => q.id !== 'lf_5' && (!q.femaleOnly || gender === 'female')),
@@ -107,7 +106,6 @@ function buildQuestionsArray(responses, formData, companyId) {
       company2Questions.hs_treatment,
       company2Questions.gi_live_session_cover,
       company2Questions.gi_onsite_interest,
-      company2Questions.gi_qa_question,
     ]
   } else {
     mcqSources = [
@@ -159,6 +157,17 @@ function buildPainAssessment(responses) {
     return []
   }
 
+  const pdTrigger = responses.find((r) => r.id === 'pd_trigger')
+  const aggravatingFactors = pdTrigger && pdTrigger.answer
+    ? pdTrigger.answer
+        .split(', ')
+        .map((item) => {
+          const cleaned = item.trim()
+          return cleaned.startsWith('Other:') ? cleaned.replace('Other:', '').trim() : cleaned
+        })
+        .filter((item) => item !== 'Other' && item !== '')
+    : []
+
   const areas = pd1.answer.split(', ').map((a) => a.trim())
 
   return areas
@@ -189,7 +198,7 @@ function buildPainAssessment(responses) {
         referral_pattern: '',
         referral_pattern_area: [],
         referred_pain_area: [],
-        aggravating_factors: [],
+        aggravating_factors: aggravatingFactors,
         relieving_factors: [],
         pain_label: `${severity} - ${PAIN_DESCRIPTIONS[severity] || 'Unknown Pain Level'}`,
         labelColor: getPainLabelColor(severity),
@@ -212,7 +221,9 @@ function buildChiefComplaint(responses) {
   return areas
     .map((a) => {
       const clean = a.startsWith('Other:') ? a.replace('Other:', '').trim() : a
-      return `${clean} pain`
+      const lowerClean = clean.toLowerCase()
+      const needsPainSuffix = !['headache', 'dizziness', 'eye strain', 'dry eyes'].some(term => lowerClean.includes(term))
+      return needsPainSuffix ? `${clean} pain` : clean
     })
     .join(', ')
 }
@@ -263,6 +274,109 @@ function buildPresentPastIllness(responses) {
   if (!gi2 || !gi2.answer.trim()) return 'NA'
   // Remove "Other:" prefix if it exists
   return gi2.answer.replace(/^Other:\s*/i, '').trim()
+}
+
+/**
+ * Build palpation_observation array.
+ */
+function buildPalpationObservation(responses) {
+  const lf2 = responses.find((r) => r.id === 'lf_2')
+  const stiffnessValue = lf2 && lf2.answer
+    ? lf2.answer.charAt(0).toUpperCase() + lf2.answer.slice(1).toLowerCase()
+    : null
+
+  return [
+    {
+      value: null,
+      label: 'swelling',
+      grade: null,
+      area: null,
+    },
+    {
+      value: stiffnessValue,
+      label: 'stiffness',
+      area: [],
+    },
+    {
+      value: null,
+      label: 'gait',
+      grade: null,
+    },
+    {
+      value: null,
+      label: 'tightness',
+      area: [],
+    },
+    {
+      value: null,
+      label: 'tenderness',
+      grade: [],
+      area: [],
+    },
+    {
+      value: null,
+      label: 'sensation',
+      grade: null,
+    },
+    {
+      value: null,
+      label: 'wound',
+      area: null,
+    },
+    {
+      value: null,
+      label: 'oedema',
+      grade: null,
+      area: null,
+    },
+    {
+      value: null,
+      label: 'muscle_wasting',
+      area: [],
+    },
+    {
+      value: null,
+      label: 'deformity',
+      area: [],
+    },
+    {
+      value: null,
+      label: 'contracture',
+      area: [],
+    },
+    {
+      value: null,
+      label: 'joint_tendon_sound',
+    },
+    {
+      value: null,
+      label: 'scar',
+    },
+    {
+      value: null,
+      label: 'behavior',
+    },
+    {
+      value: null,
+      label: 'speech',
+    },
+    {
+      value: [],
+      label: 'appearance',
+    },
+    {
+      value: null,
+      label: 'effusion',
+      grade: [],
+      area: [],
+    },
+    {
+      value: null,
+      label: 'spasm',
+      grade: [],
+      area: [],
+    },
+  ]
 }
 
 /**
@@ -321,5 +435,6 @@ export function mapAssessmentPayload(formData, assessmentResponses) {
     current_medications: [],
     red_flags: [],
     pain_assessment: buildPainAssessment(assessmentResponses),
+    palpation_observation: buildPalpationObservation(assessmentResponses),
   }
 }
