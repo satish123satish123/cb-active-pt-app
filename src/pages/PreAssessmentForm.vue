@@ -42,8 +42,12 @@
               <!-- <div class="secure-chip">Secure</div> -->
             </div>
             <span class="kicker">Corporate wellness</span>
-            <h1>Pre-Assessment</h1>
-            <p>
+            <h1 v-if="String(form.company_id) === '2'">Onboarding</h1>
+            <h1 v-else>Pre-Assessment</h1>
+            <p v-if="String(form.company_id) === '2'">
+              A short self-check before your workshop. Takes about 3 minutes.
+            </p>
+            <p v-else>
               A short self-check before your on-site physiotherapy assessment. Takes about 2
               minutes.
             </p>
@@ -540,6 +544,10 @@ onMounted(async () => {
   form.value.company_id = company_id
   form.value.hospital_id = hospital_id
   form.value.employee_id = employee_id
+
+  if (String(company_id) === '2') {
+    form.value.sex = ''
+  }
 
   const valid = await validateLink(company_id, hospital_id, key)
   if (!valid) {
