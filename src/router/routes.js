@@ -23,7 +23,7 @@ const routes = [
   {
     path: '/',
     component: () => import('layouts/AppLayout.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, requiresRole: 'Patient' },
     children: [
       {
         path: '/',
@@ -77,6 +77,29 @@ const routes = [
       {
         path: '/profile/reset-pin',
         component: () => import('pages/profile/ResetPinPage.vue'),
+      },
+    ],
+  },
+  {
+    path: '/physio',
+    component: () => import('layouts/AppLayout.vue'),
+    meta: { requiresAuth: true, requiresRole: 'Doctor' },
+    children: [
+      {
+        path: '',
+        component: () => import('pages/physio/DashboardPage.vue'),
+      },
+      {
+        path: 'patients',
+        component: () => import('pages/physio/PatientList.vue'),
+      },
+      {
+        path: 'appointments',
+        component: () => import('pages/physio/AppointmentsPage.vue'),
+      },
+      {
+        path: 'profile',
+        component: () => import('pages/physio/ProfilePage.vue'),
       },
     ],
   },

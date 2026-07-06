@@ -30,6 +30,14 @@ export const useAuthStore = defineStore('backend_auth', {
     isServeError: (state) => {
       return state.serverError ? true : false
     },
+    userRole: (state) => {
+      const baseRole = state.user?.base_role
+
+      if (baseRole === '4') {
+        return 'Doctor'
+      }
+      return 'Patient' // 5
+    },
   },
   actions: {
     login() {
@@ -46,7 +54,9 @@ export const useAuthStore = defineStore('backend_auth', {
               type: 'positive',
               message: response.data.message || 'Login successful',
             })
-            this.pushWithPromise(this.router, '/')
+            const targetRoute =
+              userData.role === 'Doctor' || userData.group === 'Doctor' ? '/physio' : '/'
+            this.pushWithPromise(this.router, targetRoute)
               .then(() => {
                 this.resetAction()
               })
