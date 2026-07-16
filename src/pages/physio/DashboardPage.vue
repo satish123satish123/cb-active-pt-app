@@ -56,8 +56,13 @@
                   <div class="subtle">Today {{ shiftStr }}</div>
                 </div>
               </div>
-              <button class="btn small" style="background: #fff; color: var(--danger); font-weight: 800" @click="checkOut">
-                Check out
+              <button
+                class="btn small"
+                style="background: #fff; color: var(--danger); font-weight: 800"
+                :disabled="checkoutBusy"
+                @click="checkOut"
+              >
+                {{ checkoutBusy ? 'Checking out…' : 'Check out' }}
               </button>
             </div>
           </div>
@@ -72,7 +77,9 @@
                   <div style="font-size: 12.5px; color: #9a7212">Today {{ shiftStr }}</div>
                 </div>
               </div>
-              <button class="btn small primary pulse" @click="checkIn">Check in</button>
+              <button class="btn small primary pulse" :disabled="checkinBusy" @click="checkIn">
+                {{ checkinBusy ? 'Checking in…' : 'Check in' }}
+              </button>
             </div>
           </div>
         </div>
@@ -251,7 +258,7 @@ import { useRouter } from 'vue-router'
 import { Notify } from 'quasar'
 import { useAuthStore } from 'src/stores/authStore'
 import { PHYSIO, PATIENTS, APPTS, STATUS, todayISO, initials } from './physioDemoData'
-import { getPhysioRoster, getPhysioTodayAppointments, resolveDoctorId } from './physioApi'
+import { getPhysioRoster, getPhysioTodayAppointments, physioCheckin, physioCheckout, resolveDoctorId } from './physioApi'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -297,7 +304,8 @@ const tomorrowRoster = ref(null)
 
 const checkedInAt = computed(() => todayRoster.value?.checkin || null)
 const checkedOutAt = computed(() => todayRoster.value?.checkout || null)
-const offToday = computed(() => !!todayRoster.value && todayRoster.value.status !== 'working')
+const OFF_STATUSES = ['leave', 'weekoff', 'week_off', 'holiday']
+const offToday = computed(() => !!todayRoster.value && OFF_STATUSES.includes(todayRoster.value.status))
 
 const OFF_LABEL = { leave: 'on leave', weekoff: 'on week off', week_off: 'on week off', holiday: 'on holiday' }
 const offLabel = computed(() => OFF_LABEL[todayRoster.value?.status] || todayRoster.value?.status || '')
@@ -317,7 +325,9 @@ const tomorrow = computed(() => {
       headline: 'See you tomorrow!',
       sub: t.scheduled_start ? `${ampm(t.scheduled_start)} – ${ampm(t.scheduled_end)}` : '',
     }
-  return { emoji: '🌴', headline: `Tomorrow you're ${OFF_LABEL[t.status] || t.status}.`, sub: 'Rest well!' }
+  if (OFF_LABEL[t.status])
+    return { emoji: '🌴', headline: `Tomorrow you're ${OFF_LABEL[t.status]}.`, sub: 'Rest well!' }
+  return { emoji: '💪', headline: 'See you tomorrow!', sub: '' }
 })
 
 async function loadRoster() {
@@ -327,8 +337,18 @@ async function loadRoster() {
     if (!doctorId) throw new Error('doctor_id not found in login user data')
     const data = await getPhysioRoster(doctorId)
     if (data?.status === 'success') {
-      todayRoster.value = data.today_roster || null
-      tomorrowRoster.value = data.tomorrow_roster || null
+      if (Array.isArray(data.roster)) {
+        // New shape: roster: [ { date, status, scheduled_start, ... }, ... ]
+        const tomorrowD = new Date(TODAY)
+        tomorrowD.setDate(tomorrowD.getDate() + 1)
+        const tomorrowISO = `${tomorrowD.getFullYear()}-${String(tomorrowD.getMonth() + 1).padStart(2, '0')}-${String(tomorrowD.getDate()).padStart(2, '0')}`
+        todayRoster.value = data.roster.find((r) => r.date === todayISO) || data.roster[0] || null
+        tomorrowRoster.value = data.roster.find((r) => r.date === tomorrowISO) || null
+      } else {
+        // Original shape: today_roster / tomorrow_roster objects
+        todayRoster.value = data.today_roster || null
+        tomorrowRoster.value = data.tomorrow_roster || null
+      }
       if (data.doctor_name) doctorName.value = data.doctor_name
     }
   } catch (e) {
@@ -339,13 +359,51 @@ async function loadRoster() {
 }
 loadRoster()
 
-/* TODO(API): swap for real check-in/check-out endpoints when backend delivers them. */
-function checkIn() {
-  if (todayRoster.value) todayRoster.value.checkin = nowHM()
-  else todayRoster.value = { status: 'working', checkin: nowHM(), checkout: '' }
+/* check-in — LIVE via physioCheckin API */
+const checkinBusy = ref(false)
+async function checkIn() {
+  if (checkinBusy.value) return
+  checkinBusy.value = true
+  try {
+    const doctorId = resolveDoctorId(authStore.user)
+    if (!doctorId) throw new Error('doctor_id not found in login user data')
+    const data = await physioCheckin(doctorId)
+    if (data?.status === 'success') {
+      const t = data.checkin || nowHM()
+      if (todayRoster.value) todayRoster.value.checkin = t
+      else todayRoster.value = { status: 'working', checkin: t, checkout: '' }
+      Notify.create({ type: 'positive', message: data.message || 'Checked in successfully.' })
+    } else {
+      Notify.create({ type: 'negative', message: data?.message || 'Check-in failed' })
+    }
+  } catch (e) {
+    console.log('physioCheckin failed:', e)
+    Notify.create({ type: 'negative', message: e.response?.data?.message || 'Check-in failed — try again' })
+  } finally {
+    checkinBusy.value = false
+  }
 }
-function checkOut() {
-  if (todayRoster.value) todayRoster.value.checkout = nowHM()
+/* check-out — LIVE via physioCheckout API */
+const checkoutBusy = ref(false)
+async function checkOut() {
+  if (checkoutBusy.value) return
+  checkoutBusy.value = true
+  try {
+    const doctorId = resolveDoctorId(authStore.user)
+    if (!doctorId) throw new Error('doctor_id not found in login user data')
+    const data = await physioCheckout(doctorId)
+    if (data?.status === 'success') {
+      if (todayRoster.value) todayRoster.value.checkout = data.checkout || nowHM()
+      Notify.create({ type: 'positive', message: data.message || 'Checked out successfully.' })
+    } else {
+      Notify.create({ type: 'negative', message: data?.message || 'Check-out failed' })
+    }
+  } catch (e) {
+    console.log('physioCheckout failed:', e)
+    Notify.create({ type: 'negative', message: e.response?.data?.message || 'Check-out failed — try again' })
+  } finally {
+    checkoutBusy.value = false
+  }
 }
 
 /* =====================================================================

@@ -8,7 +8,7 @@
             <p class="subtle">Your shifts</p>
             <h2 class="font-sora">Roster</h2>
           </div>
-          <div class="avatar">{{ physio.initials }}</div>
+          <div class="avatar">{{ avatarInitials }}</div>
         </div>
         <p class="subtle" style="margin-top: 8px">
           Next few days — tap a day to set working hours, leave, week-off or holiday. Changes need
@@ -18,15 +18,23 @@
 
       <!-- ============ DAY CARDS ============ -->
       <div class="stack section">
+        <div v-if="rosterLoading" class="card" style="text-align: center; color: var(--text-3)">
+          Loading your roster…
+        </div>
+        <div v-else-if="!roster.length" class="card" style="text-align: center; color: var(--text-3)">
+          No roster found.
+        </div>
         <div v-for="(r, i) in roster" :key="r.date" class="card">
           <div class="between">
             <div>
               <strong>{{ dayName(r.date) }}{{ r.date === todayISO ? ' · Today' : '' }}</strong>
               <div class="muted">{{ fmtDate(r.date) }}</div>
             </div>
-            <span v-if="r.kind === 'work'" class="badge success">
+            <span v-if="r.kind === 'work' && r.hasTimes" class="badge success">
               {{ ampm(r.start) }} – {{ ampm(r.end) }}
             </span>
+            <span v-else-if="r.kind === 'work'" class="badge success">Working</span>
+            <span v-else-if="r.kind === 'not_set'" class="badge muted">Not set</span>
             <span v-else class="badge" :class="dayKinds[r.kind].badge">
               {{ dayKinds[r.kind].label }}
             </span>
@@ -76,8 +84,11 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { Notify } from 'quasar'
+import { useAuthStore } from 'src/stores/authStore'
+import { getPhysioRoster, resolveDoctorId } from './physioApi'
+import { initials } from './physioDemoData'
 
 const SHIFT_HOURS = 9
 
@@ -107,8 +118,10 @@ function addHoursStr(t, h) {
   return `${String(Math.floor(tot / 60)).padStart(2, '0')}:${String(tot % 60).padStart(2, '0')}`
 }
 
-/* ---------------- physio (demo — API later) ---------------- */
-const physio = { initials: 'KN' }
+/* ---------------- physio identity ---------------- */
+const authStore = useAuthStore()
+const doctorName = ref(authStore.user?.username || 'Physio')
+const avatarInitials = computed(() => initials(String(doctorName.value).replace(/^Dr\.?\s*/i, '')) || 'PT')
 
 /* ---------------- roster demo data (API later) ---------------- */
 const dayKinds = {
@@ -117,13 +130,56 @@ const dayKinds = {
   leave: { label: 'On leave', badge: 'info', editLabel: 'Leave' },
   holiday: { label: 'Holiday', badge: 'pending' },
 }
-const roster = ref([
-  { date: isoDate(TODAY), kind: 'work', start: '09:00', end: '18:00', confirmed: true },
-  { date: isoDate(addDays(TODAY, 1)), kind: 'work', start: '09:00', end: '18:00', confirmed: false },
-  { date: isoDate(addDays(TODAY, 2)), kind: 'work', start: '12:00', end: '21:00', confirmed: false },
-  { date: isoDate(addDays(TODAY, 3)), kind: 'weekoff', start: '09:00', end: '18:00', confirmed: false },
-  { date: isoDate(addDays(TODAY, 4)), kind: 'holiday', start: '09:00', end: '18:00', confirmed: false },
-])
+const KIND_FROM_API = {
+  working: 'work',
+  work: 'work',
+  weekoff: 'weekoff',
+  week_off: 'weekoff',
+  leave: 'leave',
+  holiday: 'holiday',
+  not_set: 'not_set',
+}
+
+/* ---------------- roster — LIVE via getPhysioRoster API ---------------- */
+const rosterLoading = ref(true)
+const roster = ref([])
+
+function demoRoster() {
+  return [
+    { date: isoDate(TODAY), kind: 'work', start: '09:00', end: '18:00' },
+    { date: isoDate(addDays(TODAY, 1)), kind: 'work', start: '09:00', end: '18:00' },
+    { date: isoDate(addDays(TODAY, 2)), kind: 'work', start: '12:00', end: '21:00' },
+    { date: isoDate(addDays(TODAY, 3)), kind: 'weekoff', start: '09:00', end: '18:00' },
+    { date: isoDate(addDays(TODAY, 4)), kind: 'holiday', start: '09:00', end: '18:00' },
+  ]
+}
+
+async function loadRoster() {
+  rosterLoading.value = true
+  try {
+    const doctorId = resolveDoctorId(authStore.user)
+    if (!doctorId) throw new Error('doctor_id not found in login user data')
+    const data = await getPhysioRoster(doctorId)
+    if (data?.status !== 'success') throw new Error('bad response')
+    if (data.doctor_name) doctorName.value = data.doctor_name
+    const list = Array.isArray(data.roster)
+      ? data.roster
+      : [data.today_roster, data.tomorrow_roster].filter(Boolean)
+    roster.value = list.map((r) => ({
+      date: r.date,
+      kind: KIND_FROM_API[r.status] || 'not_set',
+      start: r.scheduled_start || '09:00',
+      end: r.scheduled_end || '18:00',
+      hasTimes: !!(r.scheduled_start && r.scheduled_end),
+    }))
+  } catch (e) {
+    console.log('getPhysioRoster failed — falling back to demo roster:', e)
+    roster.value = demoRoster()
+  } finally {
+    rosterLoading.value = false
+  }
+}
+loadRoster()
 
 /* ---------------- edit sheet (UI only — API later) ---------------- */
 const editIdx = ref(null)
@@ -145,14 +201,16 @@ function setKind(k) {
 function autoEnd() {
   if (draft.start) draft.end = addHoursStr(draft.start, SHIFT_HOURS)
 }
+/* TODO(API): call the roster-update endpoint here when backend delivers it —
+   currently saves locally only, resets on refresh. */
 function saveDay() {
   const r = roster.value[editIdx.value]
   r.kind = draft.kind
   if (draft.kind === 'work') {
     r.start = draft.start
     r.end = draft.end
+    r.hasTimes = true
   }
-  r.confirmed = draft.kind === 'work' ? r.confirmed : false
   closeEdit()
   Notify.create({ message: 'Day updated' })
 }
