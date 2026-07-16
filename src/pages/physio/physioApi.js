@@ -10,7 +10,9 @@ import { api } from 'src/boot/axios'
  * Field name may vary by backend — try the likely ones in order.
  */
 export function resolveDoctorId(user) {
-    return user?.doctor_id || user?.doctorId || user?.id || user?.user_id || null
+    // CRM login response carries the physio's doctor id in `doctor` (e.g. "561").
+    // `id`/`user_id` are the LOGIN ACCOUNT id (e.g. "10188") — only a last-resort fallback.
+    return user?.doctor || user?.doctor_id || user?.doctorId || user?.id || user?.user_id || null
 }
 
 /**
@@ -32,7 +34,26 @@ export async function getPhysioTodayAppointments(doctorId) {
     return data
 }
 
+/**
+ * physioCheckin — mark attendance start for today.
+ * Params: doctor_id
+ * Response: { status, message, checkin: "HH:MM" }
+ */
+export async function physioCheckin(doctorId) {
+    const { data } = await api.post('physioCheckin', { doctor_id: doctorId })
+    return data
+}
+
+/**
+ * physioCheckout — mark attendance end for today.
+ * Params: doctor_id
+ * Response: { status, message, checkout: "HH:MM" }
+ */
+export async function physioCheckout(doctorId) {
+    const { data } = await api.post('physioCheckout', { doctor_id: doctorId })
+    return data
+}
+
 /* TODO(API): pending endpoints from backend —
-   - physio check-in / check-out (mark attendance)
    - confirm / decline a pending appointment
    Wire them in DashboardPage when ready — TODO markers are in place. */
