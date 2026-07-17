@@ -21,6 +21,17 @@ const routes = [
     ],
   },
   {
+    path: '/physio/login',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: false },
+    children: [
+      {
+        path: '',
+        component: () => import('src/pages/auth/PhysioLoginPage.vue'),
+      },
+    ],
+  },
+  {
     path: '/',
     component: () => import('layouts/AppLayout.vue'),
     meta: { requiresAuth: true, requiresRole: 'Patient' },
@@ -92,6 +103,26 @@ const routes = [
       {
         path: 'patients',
         component: () => import('pages/physio/PatientList.vue'),
+      },
+      {
+        path: 'roster',
+        component: () => import('pages/physio/RosterPage.vue'),
+      },
+      {
+        path: 'patients/:id',
+        component: () => import('pages/physio/PatientDetailPage.vue'),
+      },
+      {
+        path: 'treatment/:id',
+        component: () => import('pages/physio/TreatmentPage.vue'),
+      },
+      {
+        path: 'invoice/:id',
+        component: () => import('pages/physio/InvoicePage.vue'),
+      },
+      {
+        path: 'followup/:id',
+        component: () => import('pages/physio/FollowupPage.vue'),
       },
       {
         path: 'appointments',
