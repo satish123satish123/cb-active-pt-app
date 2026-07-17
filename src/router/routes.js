@@ -21,17 +21,6 @@ const routes = [
     ],
   },
   {
-    path: '/physio/login',
-    component: () => import('layouts/MainLayout.vue'),
-    meta: { requiresAuth: false },
-    children: [
-      {
-        path: '',
-        component: () => import('src/pages/auth/PhysioLoginPage.vue'),
-      },
-    ],
-  },
-  {
     path: '/',
     component: () => import('layouts/AppLayout.vue'),
     meta: { requiresAuth: true, requiresRole: 'Patient' },

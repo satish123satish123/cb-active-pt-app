@@ -68,7 +68,7 @@ function checkOut() {
 
 async function logout() {
   await authStore.logout()
-  router.push('/physio/login')
+  router.push('/login')
 }
 </script>
 
