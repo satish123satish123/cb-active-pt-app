@@ -5,27 +5,33 @@
       <div class="hero" style="padding-bottom: 54px">
         <div class="hero-row">
           <div>
-            <p class="subtle">{{ physio.designation }}</p>
-            <h2 class="font-sora">{{ physio.name }}</h2>
+            <p class="subtle">Physiotherapist</p>
+            <h2 class="font-sora">{{ doctorName }}</h2>
           </div>
-          <div class="avatar">{{ physio.initials }}</div>
+          <div class="avatar">{{ avatarInitials }}</div>
         </div>
-        <p class="subtle" style="margin-top: 8px">{{ physio.clinic }}</p>
+        <p class="subtle" style="margin-top: 8px">{{ clinic }}</p>
       </div>
 
       <div class="stack section">
-        <!-- ============ ATTENDANCE ============ -->
+        <!-- ============ ATTENDANCE (live: getPhysioRoster + checkin/checkout) ============ -->
         <div class="card">
           <div class="between">
             <strong>Attendance</strong>
-            <span v-if="checkedOutAt" class="badge muted">Checked out {{ ampm(checkedOutAt) }}</span>
+            <span v-if="rosterLoading" class="badge muted">Loading…</span>
+            <span v-else-if="offToday" class="badge muted">🌴 {{ offLabel }} today</span>
+            <span v-else-if="checkedOutAt" class="badge muted">Checked out {{ ampm(checkedOutAt) }}</span>
             <span v-else-if="checkedInAt" class="badge success">On shift since {{ ampm(checkedInAt) }}</span>
             <span v-else class="badge muted">Not checked in</span>
           </div>
           <div class="tiny" style="margin-top: 8px">Today's shift: {{ shiftStr }}</div>
-          <div v-if="!checkedOutAt" class="row" style="margin-top: 12px; gap: 10px">
-            <button v-if="checkedInAt" class="btn danger grow" @click="checkOut">Check out</button>
-            <button v-else class="btn primary grow" @click="checkIn">Check in for shift</button>
+          <div v-if="!rosterLoading && !offToday && !checkedOutAt" class="row" style="margin-top: 12px; gap: 10px">
+            <button v-if="checkedInAt" class="btn danger grow" :disabled="attBusy" @click="showCheckoutConfirm = true">
+              {{ attBusy ? 'Checking out…' : 'Check out' }}
+            </button>
+            <button v-else class="btn primary grow" :disabled="attBusy" @click="checkIn">
+              {{ attBusy ? 'Checking in…' : 'Check in for shift' }}
+            </button>
           </div>
         </div>
 
@@ -37,33 +43,144 @@
         </div>
       </div>
     </div>
+
+    <!-- ============ CHECK-OUT CONFIRMATION ============ -->
+    <div v-if="showCheckoutConfirm" class="scrim scrim-center" @click="showCheckoutConfirm = false">
+      <div class="sheet dialog" @click.stop>
+        <h2 class="font-sora" style="margin: 0 0 4px; font-size: 19px">End your shift?</h2>
+        <p class="muted" style="margin: 0 0 16px">
+          You'll be checked out for the day. Make sure all your patients are done.
+        </p>
+        <div class="row" style="gap: 10px">
+          <button class="btn ghost" style="flex: none; width: 38%" @click="showCheckoutConfirm = false">
+            Cancel
+          </button>
+          <button class="btn danger grow" :disabled="attBusy" @click="confirmCheckOut">
+            {{ attBusy ? 'Checking out…' : 'Yes, check out' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { Notify } from 'quasar'
 import { useAuthStore } from 'src/stores/authStore'
-import { PHYSIO, ampm } from './physioDemoData'
+import { PHYSIO, ampm, initials } from './physioDemoData'
+import { getPhysioRoster, physioCheckin, physioCheckout, resolveDoctorId } from './physioApi'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
-const physio = PHYSIO
-const shiftStr = '9:00 AM – 6:00 PM'
+/* ---------------- identity (name live from roster API; clinic static for now) ---------------- */
+const doctorName = ref(authStore.user?.username || PHYSIO.name)
+const avatarInitials = computed(() => initials(String(doctorName.value).replace(/^Dr\.?\s*/i, '')) || 'PT')
+const clinic =
+  authStore.user?.hospital_name ||
+  (authStore.user?.hospital_id ? `Hospital #${authStore.user.hospital_id}` : PHYSIO.clinic)
 
-/* attendance (UI only — API later) */
-const checkedInAt = ref(null)
-const checkedOutAt = ref(null)
+/* ---------------- attendance — LIVE (same wiring as dashboard) ---------------- */
+const rosterLoading = ref(true)
+const todayRoster = ref(null)
+const attBusy = ref(false)
+
+const isoDate = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const todayISO = isoDate(new Date())
+
+const checkedInAt = computed(() => todayRoster.value?.checkin || null)
+const checkedOutAt = computed(() => todayRoster.value?.checkout || null)
+const OFF_LABEL = { leave: 'On leave', weekoff: 'Week off', week_off: 'Week off', holiday: 'Holiday' }
+const offToday = computed(() => !!todayRoster.value && !!OFF_LABEL[todayRoster.value.status])
+const offLabel = computed(() => OFF_LABEL[todayRoster.value?.status] || '')
+
+const shiftStr = computed(() => {
+  const r = todayRoster.value
+  if (r?.scheduled_start && r?.scheduled_end) return `${ampm(r.scheduled_start)} – ${ampm(r.scheduled_end)}`
+  return '9:00 AM – 6:00 PM'
+})
+
+async function loadRoster() {
+  rosterLoading.value = true
+  try {
+    const doctorId = resolveDoctorId(authStore.user)
+    if (!doctorId) throw new Error('doctor_id not found in login user data')
+    const data = await getPhysioRoster(doctorId)
+    if (data?.status === 'success') {
+      if (Array.isArray(data.roster)) {
+        todayRoster.value = data.roster.find((r) => r.date === todayISO) || data.roster[0] || null
+      } else {
+        todayRoster.value = data.today_roster || null
+      }
+      if (data.doctor_name) doctorName.value = data.doctor_name
+    }
+  } catch (e) {
+    console.log('getPhysioRoster failed:', e)
+  } finally {
+    rosterLoading.value = false
+  }
+}
+loadRoster()
+
 function nowHM() {
   const d = new Date()
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
-function checkIn() {
-  checkedInAt.value = nowHM()
+
+async function checkIn() {
+  const st = todayRoster.value?.status
+  if (st && st !== 'working') {
+    Notify.create({ type: 'warning', message: 'Your roster is not set for today — contact the clinic admin.' })
+    return
+  }
+  if (attBusy.value) return
+  attBusy.value = true
+  try {
+    const doctorId = resolveDoctorId(authStore.user)
+    const data = await physioCheckin(doctorId)
+    if (data?.status === 'success') {
+      const t = data.checkin || nowHM()
+      if (todayRoster.value) todayRoster.value.checkin = t
+      else todayRoster.value = { status: 'working', checkin: t, checkout: '' }
+      Notify.create({ type: 'positive', message: data.message || 'Checked in successfully.' })
+    } else {
+      Notify.create({ type: 'negative', message: data?.message || 'Check-in failed' })
+    }
+  } catch (e) {
+    console.log('physioCheckin failed:', e)
+    Notify.create({ type: 'negative', message: e.response?.data?.message || 'Check-in failed — try again' })
+  } finally {
+    attBusy.value = false
+  }
 }
-function checkOut() {
-  checkedOutAt.value = nowHM()
+
+const showCheckoutConfirm = ref(false)
+async function confirmCheckOut() {
+  showCheckoutConfirm.value = false
+  await checkOut()
+}
+
+async function checkOut() {
+  if (attBusy.value) return
+  attBusy.value = true
+  try {
+    const doctorId = resolveDoctorId(authStore.user)
+    const data = await physioCheckout(doctorId)
+    if (data?.status === 'success') {
+      if (todayRoster.value) todayRoster.value.checkout = data.checkout || nowHM()
+      Notify.create({ type: 'positive', message: data.message || 'Checked out successfully.' })
+    } else {
+      Notify.create({ type: 'negative', message: data?.message || 'Check-out failed' })
+    }
+  } catch (e) {
+    console.log('physioCheckout failed:', e)
+    Notify.create({ type: 'negative', message: e.response?.data?.message || 'Check-out failed — try again' })
+  } finally {
+    attBusy.value = false
+  }
 }
 
 async function logout() {
@@ -236,6 +353,9 @@ async function logout() {
 .btn:active {
   transform: scale(0.985);
 }
+.btn:disabled {
+  opacity: 0.65;
+}
 .btn.primary {
   background: linear-gradient(135deg, #0a7e6e 0%, #109885 100%);
   color: #fff;
@@ -252,5 +372,52 @@ async function logout() {
 }
 .btn.full {
   width: 100%;
+}
+
+/* bottom sheet */
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 33, 42, 0.45);
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: ph-fade 0.2s ease;
+}
+.sheet {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border-top-left-radius: 26px;
+  border-top-right-radius: 26px;
+  padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
+  animation: ph-slideup 0.26s ease;
+}
+@keyframes ph-slideup {
+  from { transform: translateY(40px); opacity: 0.6; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.grabber {
+  width: 40px;
+  height: 5px;
+  border-radius: 99px;
+  background: var(--line);
+  margin: 0 auto 14px;
+}
+
+/* centered dialog variant */
+.scrim-center {
+  align-items: center;
+  padding: 0 24px;
+}
+.sheet.dialog {
+  border-radius: 22px;
+  max-width: 400px;
+  animation: ph-pop 0.22s ease;
+}
+@keyframes ph-pop {
+  from { transform: scale(0.94); opacity: 0.5; }
+  to { transform: scale(1); opacity: 1; }
 }
 </style>

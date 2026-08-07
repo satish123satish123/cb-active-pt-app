@@ -24,7 +24,7 @@
         <div v-else-if="!roster.length" class="card" style="text-align: center; color: var(--text-3)">
           No roster found.
         </div>
-        <div v-for="(r, i) in roster" :key="r.date" class="card">
+        <div v-for="r in roster" :key="r.date" class="card">
           <div class="between">
             <div>
               <strong>{{ dayName(r.date) }}{{ r.date === todayISO ? ' · Today' : '' }}</strong>
@@ -39,58 +39,19 @@
               {{ dayKinds[r.kind].label }}
             </span>
           </div>
-          <div class="row" style="margin-top: 12px; gap: 8px">
-            <button class="btn ghost small grow" @click="openEdit(i)">Edit day</button>
-          </div>
         </div>
       </div>
     </div>
 
-    <!-- ============ EDIT DAY BOTTOM SHEET ============ -->
-    <div v-if="editIdx !== null" class="scrim" @click="closeEdit">
-      <div class="sheet" @click.stop>
-        <div class="grabber"></div>
-        <h2 class="font-sora" style="margin: 0 0 12px; font-size: 19px">
-          {{ dayName(roster[editIdx].date) }}, {{ fmtDate(roster[editIdx].date) }}
-        </h2>
-
-        <p class="field-label">Day type</p>
-        <div class="chips">
-          <button
-            v-for="(k, key) in dayKinds"
-            :key="key"
-            class="chip"
-            :class="{ active: draft.kind === key }"
-            @click="setKind(key)"
-          >
-            {{ k.label === 'Working' || k.label === 'Week off' ? k.label : k.editLabel || k.label }}
-          </button>
-        </div>
-
-        <template v-if="draft.kind === 'work'">
-          <p class="field-label" style="margin-top: 16px">Shift start</p>
-          <input v-model="draft.start" class="input" type="time" @change="autoEnd" />
-          <p class="field-label" style="margin-top: 14px">Shift end</p>
-          <input v-model="draft.end" class="input" type="time" />
-          <p class="tiny" style="margin-top: 8px">
-            Ends {{ SHIFT_HOURS }} hours after start automatically — adjust if needed.
-          </p>
-        </template>
-
-        <button class="btn primary full" style="margin-top: 18px" @click="saveDay">Save</button>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
-import { Notify } from 'quasar'
+import { ref, computed } from 'vue'
 import { useAuthStore } from 'src/stores/authStore'
 import { getPhysioRoster, resolveDoctorId } from './physioApi'
 import { initials } from './physioDemoData'
 
-const SHIFT_HOURS = 9
 
 /* ---------------- dates ---------------- */
 const isoDate = (d) =>
@@ -111,11 +72,6 @@ function ampm(t) {
   const ap = h >= 12 ? 'PM' : 'AM'
   const hh = ((h + 11) % 12) + 1
   return `${hh}:${String(m).padStart(2, '0')} ${ap}`
-}
-function addHoursStr(t, h) {
-  const [hh, mm] = t.split(':').map(Number)
-  const tot = (((hh * 60 + mm + h * 60) % 1440) + 1440) % 1440
-  return `${String(Math.floor(tot / 60)).padStart(2, '0')}:${String(tot % 60).padStart(2, '0')}`
 }
 
 /* ---------------- physio identity ---------------- */
@@ -181,39 +137,6 @@ async function loadRoster() {
 }
 loadRoster()
 
-/* ---------------- edit sheet (UI only — API later) ---------------- */
-const editIdx = ref(null)
-const draft = reactive({ kind: 'work', start: '09:00', end: '18:00' })
-
-function openEdit(i) {
-  const r = roster.value[i]
-  draft.kind = r.kind
-  draft.start = r.start
-  draft.end = r.end
-  editIdx.value = i
-}
-function closeEdit() {
-  editIdx.value = null
-}
-function setKind(k) {
-  draft.kind = k
-}
-function autoEnd() {
-  if (draft.start) draft.end = addHoursStr(draft.start, SHIFT_HOURS)
-}
-/* TODO(API): call the roster-update endpoint here when backend delivers it —
-   currently saves locally only, resets on refresh. */
-function saveDay() {
-  const r = roster.value[editIdx.value]
-  r.kind = draft.kind
-  if (draft.kind === 'work') {
-    r.start = draft.start
-    r.end = draft.end
-    r.hasTimes = true
-  }
-  closeEdit()
-  Notify.create({ message: 'Day updated' })
-}
 </script>
 
 <style scoped>
