@@ -74,7 +74,7 @@
                 <span style="font-size: 18px">⏰</span>
                 <div>
                   <div style="font-weight: 800; color: var(--text)">Check in to start your shift</div>
-                  <div style="font-size: 12.5px; color: #9a7212">{{ shiftStr ? 'Today ' + shiftStr : '⚠ Roster not set for today' }}</div>
+                  <div style="font-size: 12.5px; color: #9a7212">{{ shiftStr ? 'Today ' + shiftStr : '⚠ Roster not set for today ' }}</div>
                 </div>
               </div>
               <button class="btn small primary pulse" :disabled="checkinBusy" @click="checkIn">
@@ -513,7 +513,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { Notify } from 'quasar'
 import { useAuthStore } from 'src/stores/authStore'
 import { PHYSIO, PATIENTS, APPTS, STATUS, todayISO, initials } from './physioDemoData'
@@ -529,6 +529,7 @@ import {
 } from './physioApi'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 /* ---------------- clock ---------------- */
@@ -818,7 +819,15 @@ async function loadAppointments() {
     apptsLoading.value = false
   }
 }
-loadAppointments()
+loadAppointments().then(() => {
+  // Arriving from billing with ?followup=<apptId>: open the follow-up step
+  const fid = route.query.followup
+  if (fid) {
+    router.replace({ query: {} })
+    const a = live.value.find((x) => String(x.id) === String(fid))
+    if (a && !a.followUp && a.canFollowUp !== false) bookFollowUp(a)
+  }
+})
 
 const statusOf = (a) => STATUS[a.status] || STATUS.booked
 
@@ -1111,9 +1120,12 @@ function invoice(a) {
   billAppt.value = a
 }
 async function billClosed(refresh, outcome) {
-  if (outcome && billAppt.value) setApptBillingState(billAppt.value.id, outcome)
+  const a = billAppt.value
+  if (outcome && a) setApptBillingState(a.id, outcome)
   billAppt.value = null
   if (refresh) await loadAppointments()
+  // billing done → move straight to the follow-up step (prototype flow)
+  if (outcome && a && !a.followUp && a.canFollowUp !== false) bookFollowUp(a)
 }
 /* ---------------- follow-up booking — LIVE via addFollowupByPhysio ---------------- */
 const fuAppt = ref(null)

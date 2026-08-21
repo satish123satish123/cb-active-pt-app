@@ -417,6 +417,15 @@ export async function deleteInvoiceReviewReason(payload) {
   return data
 }
 
+/**
+ * addModality — attach a modality to the running session (no timer started yet).
+ * Payload: { appointment_id, patient_id, hospital_id, modality_label }
+ */
+export async function addModality(payload) {
+  const { data } = await api.post('addModality', payload)
+  return data
+}
+
 /* TODO(API): pending endpoints from backend —
    - updatePhysioRoster (edit day from Roster screen)
    - updatePhysioRoster (edit day from Roster screen) */

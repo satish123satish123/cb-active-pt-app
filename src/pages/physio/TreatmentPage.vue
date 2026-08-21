@@ -69,7 +69,7 @@
                     :disabled="liveBusyId === m.modality_id"
                     @click="liveResume(m)"
                   >
-                    {{ liveBusyId === m.modality_id ? '…' : patientHasAssessments ? 'Resume' : 'Start' }}
+                    {{ liveBusyId === m.modality_id ? '…' : 'Resume' }}
                   </button>
                   <button v-else class="btn secondary small" :disabled="liveBusyId === m.modality_id" @click="liveEnd(m)">
                     {{ liveBusyId === m.modality_id ? '…' : 'End' }}
@@ -82,14 +82,6 @@
                     <div style="font-weight: 800; font-size: 14px">{{ m.name }}</div>
                     <div class="tiny">Done · {{ liveDurLabel(m) }}</div>
                   </div>
-                  <button
-                    v-if="!isAssessName(m)"
-                    class="btn ghost small"
-                    :disabled="liveBusyId === m.modality_id"
-                    @click="liveRemove(m)"
-                  >
-                    {{ liveBusyId === m.modality_id ? '…' : 'Remove' }}
-                  </button>
                 </div>
               </template>
               <!-- planned (attached but not started) -->
@@ -271,12 +263,12 @@
             v-for="item in pickerItems"
             :key="item.id"
             class="pick"
-            :style="inLiveLog(item.id) ? 'opacity:.45' : isContra(item) ? 'border-color:#ffd28a;background:#fffaf0' : ''"
+            :style="isAdded(item.id) ? 'opacity:.45' : isContra(item) ? 'border-color:#ffd28a;background:#fffaf0' : ''"
             style="margin-bottom: 8px"
-            @click="!inLiveLog(item.id) && liveStart(item)"
+            @click="!isAdded(item.id) && addToPlan(item)"
           >
             <div class="check">
-              <span style="color: var(--text-3)">{{ inLiveLog(item.id) ? '✓' : '▶' }}</span>
+              <span style="color: var(--text-3)">{{ isAdded(item.id) ? '✓' : '+' }}</span>
             </div>
             <div class="grow">
               <div style="font-weight: 700; font-size: 14px">{{ item.name }}</div>
@@ -284,7 +276,6 @@
                 {{ item.category }}<span v-if="isContra(item)" style="color: var(--warning); font-weight: 800"> · ⚠️ Contraindicated</span>
               </div>
             </div>
-            <span v-if="liveBusyId === item.id" class="tiny">Starting…</span>
           </div>
           <div v-if="!pickerItems.length" class="tiny" style="text-align: center; padding: 14px 0">No match.</div>
         </template>
@@ -456,7 +447,7 @@
             <button
               class="btn ghost"
               style="flex: none; width: 40%"
-              @click="(setApptBillingState(liveIds.appointment_id, 'invoiced'), billDone())"
+              @click="(setApptBillingState(liveIds.appointment_id, 'invoiced'), billDoneThenFollowUp())"
             >
               Pay at counter
             </button>
@@ -556,7 +547,7 @@ import {
   liveSessions, resolveDoctorId, resolveHospitalId, nowHM as apiNowHM, nowISO,
   getPhysioTodayAppointments, startAppointment,
   getPhysioDefaultModalities, getPhysioAppointmentModalities,
-  startModality, endModality, removeModality, hasPatientAssessments,
+  startModality, endModality, hasPatientAssessments, addModality as addModalityApi,
   endSession, saveNoModalityReasonAndEndSession, getAppointmentInvoiceDetails,
   addPayment, patientDeposit, getPaidViaByPaymentMethod, encodeWithSalt, randHex32,
   saveInvoiceReviewReason, deleteInvoiceReviewReason,
@@ -850,6 +841,12 @@ function billDone() {
   showBilling.value = false
   router.push('/physio')
 }
+/** Billing finished successfully → dashboard opens the Book follow-up step */
+function billDoneThenFollowUp() {
+  discardReview()
+  showBilling.value = false
+  router.push({ path: '/physio', query: { followup: String(liveIds.appointment_id) } })
+}
 
 /** Create the invoice — package auto-settles, otherwise moves to the payment step */
 async function createInvoice(usePackage) {
@@ -892,14 +889,14 @@ async function createInvoice(usePackage) {
     if (res.is_in_package || res.next_action === 'inpackage') {
       Notify.create({ type: 'positive', message: res.message || 'Session covered under active package.' })
       setApptBillingState(liveIds.appointment_id, 'paid')
-      billDone()
+      billDoneThenFollowUp()
       return
     }
     if (!Number(res.gross_total)) {
       // Free invoice — nothing to collect
       Notify.create({ type: 'positive', message: 'Invoice created — free session, nothing to collect.' })
       setApptBillingState(liveIds.appointment_id, 'paid')
-      billDone()
+      billDoneThenFollowUp()
       return
     }
     // Direct payment required → payment step (user picks paid-to, then paid-via)
@@ -956,7 +953,7 @@ async function markPaid() {
     if (res?.status === 'success') {
       Notify.create({ type: 'positive', message: res.message || 'Payment received ✓' })
       setApptBillingState(liveIds.appointment_id, 'paid')
-      billDone()
+      billDoneThenFollowUp()
     } else {
       Notify.create({ type: 'negative', message: res?.message || 'Could not record payment' })
     }
@@ -1036,6 +1033,37 @@ const pickerItems = computed(() => {
   )
 })
 const inLiveLog = (id) => liveLog.some((m) => m.modality_id === id)
+const isAdded = (id) => inLiveLog(id) || planned.value.some((p) => p.id === id)
+/** Picker tap: attach to the session via the CRM, then show it in the list to start */
+async function addToPlan(item) {
+  if (liveBusyId.value) return
+  liveBusyId.value = item.id
+  try {
+    const res = await addModalityApi({
+      appointment_id: liveIds.appointment_id,
+      patient_id: livePatientId.value,
+      hospital_id: liveIds.hospital_id,
+      modality_label: item.name,
+    })
+    if (res?.status !== 'success') {
+      Notify.create({ type: 'negative', message: res?.message || 'Could not add modality' })
+      return
+    }
+    const id = res.modality_id || res.id || res.inserted_id || res.data?.id
+    if (id) {
+      planned.value.push({ id: Number(id), name: item.name, isAssess: /assessment/i.test(item.name || '') })
+    } else {
+      // no id returned — resync the session list from the server
+      const context = await getPhysioAppointmentModalities({ ...liveIds, patient_id: livePatientId.value })
+      if (context?.status === 'success') applySessionData({ data: context.data })
+    }
+  } catch (e) {
+    console.log('addModality failed:', e)
+    Notify.create({ type: 'negative', message: e.response?.data?.message || 'Could not add — try again' })
+  } finally {
+    liveBusyId.value = null
+  }
+}
 
 const contraList = computed(() =>
   (ctx.value?.contraindications || '').split(',').map((x) => x.trim()).filter(Boolean),
@@ -1138,30 +1166,6 @@ async function liveEnd(m) {
   }
 }
 
-async function liveRemove(m) {
-  if (liveBusyId.value) return
-  liveBusyId.value = m.modality_id
-  try {
-    const res = await removeModality({
-      ...liveIds,
-      modality_id: m.modality_id,
-      patient_id: livePatientId.value,
-    })
-    if (res?.status === 'success') {
-      const i = liveLog.findIndex((x) => x.modality_id === m.modality_id)
-      if (i >= 0) liveLog.splice(i, 1)
-      Notify.create({ message: res.message || 'Modality removed' })
-    } else {
-      Notify.create({ type: 'negative', message: res?.message || 'Could not remove modality' })
-    }
-  } catch (e) {
-    console.log('removeModality failed:', e)
-    Notify.create({ type: 'negative', message: e.response?.data?.message || 'Could not remove — try again' })
-  } finally {
-    liveBusyId.value = null
-  }
-}
-
 const elapsedLive = (m) => fmtElapsed(tick.value - new Date(m.start_at_iso).getTime())
 const liveDurLabel = (m) =>
   m.duration_ms != null ? fmtDur(m.duration_ms / 1000) : fmtDur((new Date(m.end_at_iso) - new Date(m.start_at_iso)) / 1000)
@@ -1237,7 +1241,19 @@ async function endWithReason() {
       Notify.create({ type: 'positive', message: res.message || 'Session ended' })
       showReason.value = false
       delete liveSessions[route.params.id]
-      router.push('/physio')
+      // this API also returns the billing context — open the billing page like a normal end
+      if (res.treatment_procedures) {
+        billData.value = res
+        billSel.value = res.treatment_procedures?.length === 1 ? [res.treatment_procedures[0]] : []
+        billSearch.value = ''
+        billDiscount.value = 0
+        billStep.value = 'items'
+        pkgSel.value = (res.package_details || [])[0] || null
+        showPkgItems.value = false
+        showBilling.value = true
+      } else {
+        router.push('/physio')
+      }
     } else {
       Notify.create({ type: 'negative', message: res?.message || 'Could not end session' })
     }
