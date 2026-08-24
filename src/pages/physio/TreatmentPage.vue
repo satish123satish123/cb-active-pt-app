@@ -69,7 +69,7 @@
                     :disabled="liveBusyId === m.modality_id"
                     @click="liveResume(m)"
                   >
-                    {{ liveBusyId === m.modality_id ? '…' : 'Resume' }}
+                    {{ liveBusyId === m.modality_id ? '…' : assessShowResume ? 'Resume' : 'Start' }}
                   </button>
                   <button v-else class="btn secondary small" :disabled="liveBusyId === m.modality_id" @click="liveEnd(m)">
                     {{ liveBusyId === m.modality_id ? '…' : 'End' }}
@@ -98,7 +98,7 @@
                   <div class="tiny">From treatment plan · tap to start</div>
                 </div>
                 <button v-if="pl.isAssess" class="btn primary small" :disabled="liveBusyId === pl.id">
-                  {{ liveBusyId === pl.id ? '…' : patientHasAssessments ? 'Resume' : 'Start' }}
+                  {{ liveBusyId === pl.id ? '…' : assessShowResume ? 'Resume' : 'Start' }}
                 </button>
                 <span v-else-if="liveBusyId === pl.id" class="tiny">Starting…</span>
               </div>
@@ -351,8 +351,8 @@
             </div>
           </div>
 
-          <!-- Discount (hidden when the package is covering this session) -->
-          <div v-if="!usingPackageNow" class="section" style="margin-top: 12px">
+          <!-- Discount (hidden for package-covered and consultation-only bills) -->
+          <div v-if="discountAllowed" class="section" style="margin-top: 12px">
             <div class="card">
               <div class="row" style="gap: 10px; align-items: center">
                 <span class="field-label" style="margin: 0; flex: none">Discount ₹</span>
@@ -452,7 +452,7 @@
               Pay at counter
             </button>
             <button class="btn primary grow" :disabled="billBusy || !paySel" @click="markPaid">
-              {{ billBusy ? 'Saving…' : `Mark ${inr(payInfo?.gross_total)} paid` }}
+              {{ billBusy ? 'Saving…' : freeInvoice ? 'Mark as settled →' : `Mark ${inr(payInfo?.gross_total)} paid` }}
             </button>
           </div>
         </template>
@@ -535,7 +535,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Notify } from 'quasar'
 import PhysioStepper from './PhysioStepper.vue'
@@ -547,11 +547,11 @@ import {
   liveSessions, resolveDoctorId, resolveHospitalId, nowHM as apiNowHM, nowISO,
   getPhysioTodayAppointments, startAppointment,
   getPhysioDefaultModalities, getPhysioAppointmentModalities,
-  startModality, endModality, hasPatientAssessments, addModality as addModalityApi,
+  startModality, endModality, getAssessmentResumeState, addModality as addModalityApi,
   endSession, saveNoModalityReasonAndEndSession, getAppointmentInvoiceDetails,
   addPayment, patientDeposit, getPaidViaByPaymentMethod, encodeWithSalt, randHex32,
   saveInvoiceReviewReason, deleteInvoiceReviewReason,
-  setApptBillingState,
+  setApptBillingState, getApptBillingOutcome,
 } from './physioApi'
 import { useAuthStore } from 'src/stores/authStore'
 import { reactive } from 'vue'
@@ -584,16 +584,35 @@ const PT_LINE = { Daily: 'Daily patient', InPackage: 'Package patient', NotConve
 /* Modalities attached to the session but not started yet (from the plan / auto-tracking) */
 const planned = ref([])
 
-/* Assessment tool check: any existing assessments for this patient → Resume, else Start */
-const patientHasAssessments = ref(false)
+/* Start vs Resume for the assessment row. The CRM checks the (version-aware)
+   assessment tool for us — we only need appointment_id + hospital_id, so this
+   runs on every page load/refresh, before the patient id is even known.
+   Priority: is_assessment_done === 1 wins (→ Done); otherwise this flag decides. */
+const assessShowResume = ref(false)
 async function loadAssessmentFlag() {
-  if (!livePatientId.value) return
   try {
-    patientHasAssessments.value = await hasPatientAssessments(livePatientId.value)
+    const d = await getAssessmentResumeState({ ...liveIds })
+    assessShowResume.value = d?.show_resume === true
   } catch (e) {
-    console.log('assessment-tool check failed:', e)
-    patientHasAssessments.value = false
+    console.log('getAssessmentResumeState failed:', e)
+    assessShowResume.value = false
   }
+}
+
+/* Open the assessment tool in THIS tab — ONLY for ASSESSMENT/REASSESSMENT rows.
+   The URL must come from the CRM because only it knows the assessment version
+   (v1 vs v2 host). Re-checked at click time so the URL is fresh; falls back to
+   startModality's redirect_url if the resume-state call returns nothing. */
+async function gotoAssessment(fallbackUrl) {
+  let url = fallbackUrl
+  try {
+    const d = await getAssessmentResumeState({ ...liveIds })
+    assessShowResume.value = d?.show_resume === true
+    if (d?.resume_url) url = d.resume_url
+  } catch (e) {
+    console.log('getAssessmentResumeState failed:', e)
+  }
+  if (url) window.location.href = url
 }
 
 function localIsoFromHM(hm) {
@@ -692,7 +711,21 @@ const billSearch = ref('')
 const billSel = ref([]) // multi-select of procedure objects
 const billDiscount = ref(0)
 const billBusy = ref(false)
+/* Open the billing step with a fresh billing payload (endSession /
+   saveNoModalityReason… / getAppointmentInvoiceDetails all return the same shape). */
+function applyBillData(bill) {
+  billData.value = bill
+  billSel.value = bill.treatment_procedures?.length === 1 ? [bill.treatment_procedures[0]] : []
+  billSearch.value = ''
+  billDiscount.value = 0
+  billStep.value = 'items'
+  pkgSel.value = (bill.package_details || [])[0] || null
+  showPkgItems.value = false
+  showBilling.value = true
+}
 const payInfo = ref(null) // addPayment response
+/* ₹0 invoice — created, but nothing to collect */
+const freeInvoice = computed(() => !Number(payInfo.value?.gross_total))
 const payTo = ref(null) // { label: 'Clinic', value: '0' } — who received the payment
 const payToOptions = computed(() => {
   const pm = payInfo.value?.makePayment?.payment_methods || { Clinic: '0', Company: '1', Physio: '2' }
@@ -751,11 +784,23 @@ function txCovered(t) {
   return isSel(t) && txInPackage(t) && pkgHasBalance.value
 }
 const billLineAmt = (t) => (txCovered(t) ? 0 : Number(t.c_price || 0))
-const billGrandTotal = computed(() => {
-  const sum = billSel.value.reduce((n, t) => n + billLineAmt(t), 0)
-  return Math.max(0, sum - (Number(billDiscount.value) || 0))
-})
+const billSubtotal = computed(() => billSel.value.reduce((n, t) => n + billLineAmt(t), 0))
+const billGrandTotal = computed(() =>
+  Math.max(0, billSubtotal.value - (Number(billDiscount.value) || 0)),
+)
 const usingPackageNow = computed(() => billSel.value.some((t) => txCovered(t)))
+/* No discount on: package-covered sessions, consultation-only bills (free or
+   paid), or a ₹0 bill. Clear any typed value when it becomes disallowed — a
+   hidden field must never keep affecting the total. */
+const consultationOnly = computed(
+  () => billSel.value.length > 0 && billSel.value.every((t) => /consultation/i.test(t.category || '')),
+)
+const discountAllowed = computed(
+  () => !usingPackageNow.value && !consultationOnly.value && billSubtotal.value > 0,
+)
+watch(discountAllowed, (ok) => {
+  if (!ok) billDiscount.value = 0
+})
 const inr = (v) => (Number(v) ? '₹' + Number(v).toLocaleString('en-IN') : 'Free')
 
 /* package selection + fuzzy procedure matching */
@@ -893,10 +938,13 @@ async function createInvoice(usePackage) {
       return
     }
     if (!Number(res.gross_total)) {
-      // Free invoice — nothing to collect
+      /* Free invoice (₹0 consultation): it IS an invoice, so stay on the billing
+         page and show the same step everyone else gets — minus paid-to/paid-via,
+         since there is nothing to collect (patientDeposit also rejects ₹0). */
       Notify.create({ type: 'positive', message: 'Invoice created — free session, nothing to collect.' })
       setApptBillingState(liveIds.appointment_id, 'paid')
-      billDoneThenFollowUp()
+      payInfo.value = res
+      billStep.value = 'pay'
       return
     }
     // Direct payment required → payment step (user picks paid-to, then paid-via)
@@ -928,11 +976,6 @@ async function markPaid() {
     return
   }
   const amount = Number(payInfo.value?.gross_total) || billTotal.value
-  if (!amount) {
-    Notify.create({ type: 'positive', message: 'Free invoice — nothing to collect.' })
-    billDone()
-    return
-  }
   billBusy.value = true
   try {
     const mp = payInfo.value?.makePayment || {}
@@ -954,14 +997,49 @@ async function markPaid() {
       Notify.create({ type: 'positive', message: res.message || 'Payment received ✓' })
       setApptBillingState(liveIds.appointment_id, 'paid')
       billDoneThenFollowUp()
+    } else if (!amount) {
+      settleFreeInvoice(res?.message)
     } else {
       Notify.create({ type: 'negative', message: res?.message || 'Could not record payment' })
     }
   } catch (e) {
     console.log('patientDeposit failed:', e)
-    Notify.create({ type: 'negative', message: e.response?.data?.message || 'Could not record payment — try again' })
+    if (!amount) settleFreeInvoice(e.response?.data?.message)
+    else Notify.create({ type: 'negative', message: e.response?.data?.message || 'Could not record payment — try again' })
   } finally {
     billBusy.value = false
+  }
+}
+
+/* A ₹0 invoice has nothing to collect, so a rejected deposit must not block the
+   physio — the invoice itself already exists. The CRM currently refuses ₹0
+   (`empty($deposited_amount)` is true for 0); once that validation is fixed the
+   deposit records normally and this fallback simply stops being reached. */
+function settleFreeInvoice(serverMessage) {
+  console.log('free-invoice deposit not recorded:', serverMessage || '(no message)')
+  Notify.create({ type: 'positive', message: 'Free invoice — nothing to collect.' })
+  setApptBillingState(liveIds.appointment_id, 'paid')
+  billDoneThenFollowUp()
+}
+
+/* Ended session reopened: fetch the billing context and show the billing step.
+   Already paid (or no billing data) → nothing left to do here, back to the list. */
+async function openBillingForEndedSession(apt) {
+  if (apt?.payment_status === 'paid' || getApptBillingOutcome(liveIds.appointment_id) === 'paid') {
+    router.push('/physio')
+    return
+  }
+  try {
+    const inv = await getAppointmentInvoiceDetails({
+      ...liveIds,
+      doctor_id: liveDoctorId,
+      patient_id: livePatientId.value,
+    })
+    if (inv?.status === 'success' && inv.treatment_procedures) applyBillData(inv)
+    else router.push('/physio')
+  } catch (e) {
+    console.log('getAppointmentInvoiceDetails failed:', e)
+    router.push('/physio')
   }
 }
 
@@ -985,6 +1063,15 @@ async function loadLiveData() {
       const patient = apt
         ? { id: apt.patient_id, name: apt.patient_name, line2: PT_LINE[apt.patient_status] || apt.patient_status || '' }
         : { id: null, name: 'Patient', line2: '' }
+      /* Session is already over (e.g. the page was refreshed on the billing
+         step). Never re-start it — go straight to billing, or out if it's paid. */
+      if (apt?.actual_session_end) {
+        p.name = patient.name
+        p.condition = patient.line2 || ''
+        livePatientId.value = patient.id ? Number(patient.id) : null
+        await openBillingForEndedSession(apt)
+        return
+      }
       const resp = await startAppointment({ ...liveIds, doctor_id: liveDoctorId })
       console.log('▶ startAppointment RESPONSE (copy this whole line and send it):', JSON.stringify(resp))
       if (resp?.status !== 'success') throw new Error(resp?.message || 'Could not resume session')
@@ -996,7 +1083,6 @@ async function loadLiveData() {
     p.name = sess.patient.name
     p.condition = sess.patient.line2 || ''
     livePatientId.value = sess.patient.id ? Number(sess.patient.id) : null
-    loadAssessmentFlag()
 
     applySessionData(sess.session)
 
@@ -1014,6 +1100,8 @@ async function loadLiveData() {
         applySessionData({ data: ctx.value })
       }
     }
+    // Only sessions that actually carry an ASSESSMENT/REASSESSMENT need this.
+    if (hasAssessmentSession.value) loadAssessmentFlag()
   } catch (e) {
     console.log('loadLiveData failed:', e)
     Notify.create({ type: 'negative', message: e.message || 'Could not load session' })
@@ -1099,7 +1187,9 @@ async function liveStart(item) {
       }
       planned.value = planned.value.filter((x) => x.id !== item.id)
       showPicker.value = false
-      if (res.redirect_url) window.open(res.redirect_url, '_blank')
+      // Assessment/reassessment only: opens in THIS tab (no new tab) — the
+      // treatment room recovers the running session on return.
+      if (isAssessName(item)) await gotoAssessment(res.redirect_url)
     } else {
       Notify.create({ type: 'negative', message: res?.message || 'Could not start modality' })
     }
@@ -1130,7 +1220,7 @@ async function liveResume(m) {
       started_at: apiNowHM(),
       start_at_iso: nowISO(),
     })
-    if (d?.redirect_url) window.open(d.redirect_url, '_blank')
+    if (isAssessName(m)) await gotoAssessment(d?.redirect_url)
     else if (d?.status !== 'success') Notify.create({ type: 'negative', message: d?.message || 'Could not resume' })
   } catch (e) {
     console.log('liveResume failed:', e)
@@ -1202,14 +1292,7 @@ async function finishLive() {
         }
       }
       if (bill) {
-        billData.value = bill
-        billSel.value = bill.treatment_procedures?.length === 1 ? [bill.treatment_procedures[0]] : []
-        billSearch.value = ''
-        billDiscount.value = 0
-        billStep.value = 'items'
-        pkgSel.value = (bill.package_details || [])[0] || null
-        showPkgItems.value = false
-        showBilling.value = true
+        applyBillData(bill)
       } else {
         router.push('/physio')
       }
@@ -1243,14 +1326,7 @@ async function endWithReason() {
       delete liveSessions[route.params.id]
       // this API also returns the billing context — open the billing page like a normal end
       if (res.treatment_procedures) {
-        billData.value = res
-        billSel.value = res.treatment_procedures?.length === 1 ? [res.treatment_procedures[0]] : []
-        billSearch.value = ''
-        billDiscount.value = 0
-        billStep.value = 'items'
-        pkgSel.value = (res.package_details || [])[0] || null
-        showPkgItems.value = false
-        showBilling.value = true
+        applyBillData(res)
       } else {
         router.push('/physio')
       }

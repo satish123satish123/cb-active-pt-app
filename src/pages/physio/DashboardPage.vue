@@ -202,7 +202,7 @@
                   {{ actionBusyId === a.id ? 'Starting…' : 'Start treatment →' }}
                 </button>
                 <button v-else-if="a.status === 'in_treatment'" class="btn primary small" @click.stop="start(a)">
-                  Resume →
+                  Session done →
                 </button>
                 <button v-else-if="a.status === 'done'" class="btn secondary small" @click.stop="invoice(a)">
                   Generate invoice →
@@ -718,23 +718,29 @@ function normalizeApi(a, groupStatus) {
   let status = API_STATUS_MAP[a.status] || groupStatus || 'booked'
   if (status === 'done') {
     if (a.payment_status === 'paid') status = 'paid'
-    else if (a.payment_status === 'pending') status = 'invoiced'
+    else if (a.payment_status === 'unpaid' || a.payment_status === 'pending') status = 'invoiced'
+    else if (a.payment_status === 'uninvoiced') status = 'done'
   }
   // Live-session derivation from the list API's new fields:
   // ready set → patient arrived; actual_session_start set → session running; _end set → done
   if (status === 'booked') {
     if (a.actual_session_end) {
-      status = a.payment_status === 'paid' ? 'paid' : 'done'
+      if (a.payment_status === 'paid') status = 'paid'
+      else if (a.payment_status === 'unpaid' || a.payment_status === 'pending') status = 'invoiced'
+      else status = 'done'
     } else if (a.actual_session_start) {
       status = 'in_treatment'
     } else if (a.ready) {
       status = 'checked_in'
     }
   }
-  // Just-billed appointments (until the list API reflects it)
+  // Just-billed appointments — local bridge for what the list API can't tell us yet.
+  // The API now reports invoice state itself (paid / unpaid / uninvoiced), so whenever
+  // it sends one, IT wins and the local flag is dropped: a stale 'invoiced' must never
+  // hide the "Generate invoice" button on an appointment the server calls uninvoiced.
   const billed = getApptBillingOutcome(a.id)
   if (billed) {
-    if (status === 'paid') clearApptBillingState(a.id) // server caught up
+    if (a.payment_status || status === 'paid') clearApptBillingState(a.id)
     else if (['done', 'invoiced'].includes(status)) status = billed === 'paid' ? 'paid' : 'invoiced'
   }
   const billingChip =
@@ -906,6 +912,7 @@ function slotStart(x) {
 
 
 async function openConfirm(a) {
+  if (!shiftGuard()) return
   confirmAppt.value = a
   confirmTime.value = a.time24
   confirmDuration.value = 30
@@ -985,6 +992,7 @@ async function doConfirm() {
 
 /* ---------------- decline — LIVE via cancelAppointment ---------------- */
 async function decline(a) {
+  if (!shiftGuard()) return
   if (a._demo) {
     a.status = 'declined'
     Notify.create({ message: 'Appointment declined' })
@@ -1017,6 +1025,7 @@ const cancelAppt = ref(null)
 const cancelReason = ref('')
 const cancelBusy = ref(false)
 function openCancel(a) {
+  if (!shiftGuard()) return
   cancelAppt.value = a
   cancelReason.value = ''
 }
@@ -1045,9 +1054,18 @@ async function doCancel() {
 }
 
 /* ---------------- patient check-in — LIVE via checkInPatient ---------------- */
+/* Gate for every action that changes something. Order matters: after check-out
+   the check-in time is still set, so the check-out test must come first. */
 function shiftGuard() {
   if (todayRoster.value?.status === 'not_set') {
     Notify.create({ type: 'warning', message: 'Your roster is not set for today — contact the clinic admin.' })
+    return false
+  }
+  if (checkedOutAt.value) {
+    Notify.create({
+      type: 'warning',
+      message: `You checked out at ${ampm(checkedOutAt.value)} — no further actions today.`,
+    })
     return false
   }
   if (!checkedInAt.value) {
@@ -1090,14 +1108,17 @@ async function start(a) {
     return
   }
   if (actionBusyId.value) return
+  // Re-entering a session that is already running: startAppointment is called again
+  // (that is how the backend returns the live session), but the server's "session
+  // started successfully" message would be a lie here — so don't show it.
+  const resuming = a.status === 'in_treatment'
   actionBusyId.value = a.id
   try {
     const data = await startAppointment({ appointment_id: Number(a.id), ...apiIds() })
     if (data?.status === 'success') {
-      console.log('▶ startAppointment RESPONSE (copy this whole line and send it):', JSON.stringify(data))
       liveSessions[a.id] = { patient: { ...a.patient }, session: data }
       a.status = 'in_treatment'
-      Notify.create({ type: 'positive', message: data.message || 'Session started' })
+      if (!resuming) Notify.create({ type: 'positive', message: data.message || 'Session started' })
       router.push(`/physio/treatment/${a.id}`)
     } else {
       Notify.create({ type: 'negative', message: data?.message || 'Could not start session' })
@@ -1113,6 +1134,7 @@ async function start(a) {
 /* ---------------- invoice — LIVE via billing sheet (demo keeps its page) ---------------- */
 const billAppt = ref(null)
 function invoice(a) {
+  if (!shiftGuard()) return
   if (a._demo) {
     router.push(`/physio/invoice/${a.id}`)
     return
@@ -1220,6 +1242,7 @@ function addMinutes(hm, mins) {
 }
 
 async function bookFollowUp(a) {
+  if (!shiftGuard()) return
   if (a._demo) {
     router.push(`/physio/followup/${a.id}`)
     return

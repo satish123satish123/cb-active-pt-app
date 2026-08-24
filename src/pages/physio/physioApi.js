@@ -392,16 +392,16 @@ export async function getPhysioPatientDetails(payload) {
 }
 
 /**
- * Assessment tool — does this patient already have any assessments?
- * Used to decide Start vs Resume on the ASSESSMENT modality row.
+ * getAssessmentResumeState — Start vs Resume for the ASSESSMENT/REASSESSMENT row.
+ * The CRM does the version-aware lookup itself (v1 vs v2 assessment tool), so the
+ * app must NOT query the assessment tool directly — the response's `checked_url`
+ * shows which endpoint the server actually hit.
+ * Payload: { appointment_id, hospital_id }
+ * → { show_resume, assessment_id, assessment_version, resume_url, checked_url, lookup_failed }
  */
-export const ASSESSMENT_TOOL_API_URL = 'https://assessment.cbphysiotherapy.in'
-export async function hasPatientAssessments(patientId) {
-  const url = `${ASSESSMENT_TOOL_API_URL}/api/assessments?orderBy=created_at&orderType=asc&joinWith=patient&filterBy=patient_id&filterValue=${patientId}`
-  const res = await fetch(url)
-  const data = await res.json()
-  const list = Array.isArray(data) ? data : data?.data || data?.results || []
-  return Array.isArray(list) && list.length > 0
+export async function getAssessmentResumeState(payload) {
+  const { data } = await api.post('getAssessmentResumeState', payload)
+  return data
 }
 
 /**

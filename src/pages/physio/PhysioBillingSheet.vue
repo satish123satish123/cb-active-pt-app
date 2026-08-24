@@ -72,7 +72,7 @@
         </div>
 
         <!-- Discount (hidden when the package is covering this session) -->
-        <div v-if="!usingPackageNow" class="section" style="margin-top: 12px">
+        <div v-if="discountAllowed" class="section" style="margin-top: 12px">
           <div class="card">
             <div class="row" style="gap: 10px; align-items: center">
               <span class="field-label" style="margin: 0; flex: none">Discount ₹</span>
@@ -92,7 +92,7 @@
                 <strong v-if="txCovered(t)">Included</strong>
                 <strong v-else>{{ inr(t.c_price) }}</strong>
               </div>
-              <div v-if="Number(discount) && !usingPackageNow" class="inv-row">
+              <div v-if="Number(discount) && discountAllowed" class="inv-row">
                 <span style="color: #1f8a4d">Discount</span>
                 <strong style="color: #1f8a4d">− {{ inr(discount) }}</strong>
               </div>
@@ -168,7 +168,7 @@
             Pay at counter
           </button>
           <button class="btn primary grow" :disabled="busy || !paySel" @click="markPaid">
-            {{ busy ? 'Saving…' : `Mark ${inr(payInfo?.gross_total)} paid` }}
+            {{ busy ? 'Saving…' : freeInvoice ? 'Mark as settled →' : `Mark ${inr(payInfo?.gross_total)} paid` }}
           </button>
         </div>
       </template>
@@ -279,12 +279,21 @@ function txCovered(t) {
   return isSel(t) && txInPackage(t) && pkgHasBalance.value
 }
 const lineAmt = (t) => (txCovered(t) ? 0 : Number(t.c_price || 0))
-const grandTotal = computed(() => {
-  const sum = sel.value.reduce((n, t) => n + lineAmt(t), 0)
-  const disc = usingPackageNow.value ? 0 : Number(discount.value) || 0
-  return Math.max(0, sum - disc)
-})
+const subtotal = computed(() => sel.value.reduce((n, t) => n + lineAmt(t), 0))
+const grandTotal = computed(() =>
+  Math.max(0, subtotal.value - (discountAllowed.value ? Number(discount.value) || 0 : 0)),
+)
 const usingPackageNow = computed(() => sel.value.some((t) => txCovered(t)))
+/* ₹0 invoice — created, but nothing to collect */
+const freeInvoice = computed(() => !Number(payInfo.value?.gross_total))
+/* No discount on: package-covered sessions, consultation-only bills (free or
+   paid), or a ₹0 bill. */
+const consultationOnly = computed(
+  () => sel.value.length > 0 && sel.value.every((t) => /consultation/i.test(t.category || '')),
+)
+const discountAllowed = computed(
+  () => !usingPackageNow.value && !consultationOnly.value && subtotal.value > 0,
+)
 
 /* out-of-package review: reason required before invoicing non-package items */
 const reviewId = ref(null)
@@ -394,7 +403,7 @@ async function createInvoice(usePackage) {
       hospital_id: hospitalId,
       category_id: categories.map((t) => Number(t.id)),
       quantity: categories.map(() => 1),
-      discount: usingPackageNow.value ? 0 : Number(discount.value) || 0,
+      discount: discountAllowed.value ? Number(discount.value) || 0 : 0,
       remarks: 'Invoice created from ActivPT app',
       appointment_date: todayYMD(),
     }
@@ -418,8 +427,11 @@ async function createInvoice(usePackage) {
       return
     }
     if (!Number(res.gross_total)) {
+      /* Free invoice (₹0 consultation): stay on the billing page like every other
+         invoice — just without paid-to/paid-via, since there's nothing to collect. */
       Notify.create({ type: 'positive', message: 'Invoice created — free session, nothing to collect.' })
-      emit('done', 'paid')
+      payInfo.value = res
+      billStep.value = 'pay'
       return
     }
     payInfo.value = res
@@ -464,11 +476,6 @@ async function markPaid() {
     return
   }
   const amount = Number(payInfo.value?.gross_total) || grandTotal.value
-  if (!amount) {
-    Notify.create({ type: 'positive', message: 'Free invoice — nothing to collect.' })
-    emit('done', 'paid')
-    return
-  }
   busy.value = true
   try {
     const mp = payInfo.value?.makePayment || {}
@@ -489,15 +496,28 @@ async function markPaid() {
     if (res?.status === 'success') {
       Notify.create({ type: 'positive', message: res.message || 'Payment received ✓' })
       emit('done', 'paid')
+    } else if (!amount) {
+      settleFreeInvoice(res?.message)
     } else {
       Notify.create({ type: 'negative', message: res?.message || 'Could not record payment' })
     }
   } catch (e) {
     console.log('patientDeposit failed:', e)
-    Notify.create({ type: 'negative', message: e.response?.data?.message || 'Could not record payment — try again' })
+    if (!amount) settleFreeInvoice(e.response?.data?.message)
+    else Notify.create({ type: 'negative', message: e.response?.data?.message || 'Could not record payment — try again' })
   } finally {
     busy.value = false
   }
+}
+
+/* A ₹0 invoice has nothing to collect, so a rejected deposit must not block the
+   physio — the invoice itself already exists. The CRM currently refuses ₹0
+   (`empty($deposited_amount)` is true for 0); once that validation is fixed the
+   deposit records normally and this fallback simply stops being reached. */
+function settleFreeInvoice(serverMessage) {
+  console.log('free-invoice deposit not recorded:', serverMessage || '(no message)')
+  Notify.create({ type: 'positive', message: 'Free invoice — nothing to collect.' })
+  emit('done', 'paid')
 }
 </script>
 
