@@ -12,48 +12,132 @@
         </div>
       </div>
 
-      <!-- ============ PATIENT CARDS ============ -->
+      <!-- ============ SEARCH ============ -->
       <div class="stack section">
-        <div
-          v-for="p in patientList"
-          :key="p.id"
-          class="card ph-qcard"
-          @click="$router.push(`/physio/patients/${p.id}`)"
-        >
-          <div class="ph-qavatar">{{ initials(p.name) }}</div>
-          <div class="grow">
-            <div style="font-weight: 800">
-              {{ p.name }} <span class="tiny">· {{ p.age }}{{ p.sex }}</span>
+        <input v-model="search" class="search" placeholder="Search by name or phone…" />
+
+        <div v-if="loading" class="muted" style="text-align: center; padding: 20px 0">Loading patients…</div>
+
+        <template v-else>
+          <div
+            v-for="p in filtered"
+            :key="p.id"
+            class="card ph-qcard"
+            @click="$router.push(`/physio/patients/${p.id}`)"
+          >
+            <div class="ph-qavatar">{{ initials(p.name) }}</div>
+            <div class="grow">
+              <div style="font-weight: 800">
+                {{ p.nameLine }} <span v-if="p.ageSex" class="tiny">· {{ p.ageSex }}</span>
+              </div>
+              <div v-if="p.condition" class="muted" style="font-size: 12.5px">{{ p.condition }}</div>
+              <div class="chips">
+                <span class="chip">{{ p.pkgLabel }}</span>
+                <span
+                  v-if="p.pain != null"
+                  class="chip"
+                  style="background: #fff4dd; color: var(--warning); border-color: #ffe6b0"
+                >
+                  Pain {{ p.pain }}/10
+                </span>
+                <span v-if="!p.active" class="chip" style="background: #f1f3f4; color: var(--text-3)">Inactive</span>
+              </div>
             </div>
-            <div class="muted" style="font-size: 12.5px">{{ p.condition }}</div>
-            <div class="chips">
-              <span class="chip">
-                {{ p.package ? `${p.package.used}/${p.package.total} sessions` : 'Per-visit billing' }}
-              </span>
-              <span
-                v-if="p.feedback"
-                class="chip"
-                style="background: #fff4dd; color: var(--warning); border-color: #ffe6b0"
-              >
-                Pain {{ p.feedback.pain }}/10
-              </span>
-            </div>
+            <div style="align-self: center; color: var(--text-3)">›</div>
           </div>
-          <div style="align-self: center; color: var(--text-3)">›</div>
-        </div>
+
+          <div v-if="!filtered.length" class="muted" style="text-align: center; padding: 24px 0">
+            {{ search ? 'No patients match your search.' : 'No patients yet.' }}
+          </div>
+        </template>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { PHYSIO, PATIENTS, initials } from './physioDemoData'
+import { ref, computed } from 'vue'
+import { Notify } from 'quasar'
+import { PHYSIO, initials } from './physioDemoData'
+import { getPhysioPatients, resolveDoctorId } from './physioApi'
+import { useAuthStore } from 'src/stores/authStore'
 
-const physio = PHYSIO
-const patientList = Object.values(PATIENTS)
+const authStore = useAuthStore()
+const physio = ref({ ...PHYSIO })
+
+const loading = ref(true)
+const patients = ref([])
+const search = ref('')
+
+const s = (str) => String(str || '')
+const titleCase = (str) => s(str).toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase())
+
+const SALUTATIONS = { 1: 'Mr.', 2: 'Mrs.', 3: 'Miss', 4: 'Ms.', 5: 'Baby', 6: 'Dr.', 7: 'Prof.', 8: 'Mx.', 9: 'Lt Col' }
+const salName = (v) => SALUTATIONS[Number(v)] || (typeof v === 'string' && isNaN(v) ? v : '')
+
+function stripHtml(v) {
+  const str = s(v)
+  if (!str || str === '0') return ''
+  return str.replace(/<[^>]*>/g, '').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim()
+}
+const list = computed(() =>
+  patients.value.map((p) => {
+    const name = titleCase(p.name)
+    const age = Number(p.age) || 0
+    const sex = s(p.sex).charAt(0).toUpperCase()
+    return {
+      id: p.id,
+      name,
+      nameLine: [salName(p.salutation), name].filter(Boolean).join(' '),
+      ageSex: [age > 0 ? age : null, sex].filter(Boolean).join(' '),
+      phone: s(p.phone),
+      condition: stripHtml(p.current_condition),
+      active: s(p.is_active ?? p.is_active_patient ?? '1') !== '0',
+      pain: p.pain_level != null ? p.pain_level : null,
+      pkgLabel: p.status === 'InPackage' ? 'Package' : 'Per-visit',
+    }
+  }),
+)
+const filtered = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  if (!q) return list.value
+  return list.value.filter((p) => p.name.toLowerCase().includes(q) || p.phone.includes(q))
+})
+
+async function load() {
+  loading.value = true
+  try {
+    const res = await getPhysioPatients({ doctor_id: Number(resolveDoctorId(authStore.user)) })
+    if (res?.status === 'success') {
+      patients.value = res.patients || []
+      if (res.doctor_name) physio.value.initials = initials(res.doctor_name.replace(/^Dr\.?\s*/i, ''))
+    } else {
+      Notify.create({ type: 'negative', message: res?.message || 'Could not load patients' })
+    }
+  } catch (e) {
+    console.log('getPhysioPatients failed:', e)
+    Notify.create({ type: 'negative', message: 'Could not load patients — try again' })
+  } finally {
+    loading.value = false
+  }
+}
+load()
 </script>
 
 <style scoped>
+.search {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  min-height: 46px;
+  padding: 0 14px;
+  font-size: 15px;
+  font-family: inherit;
+  background: #fff;
+  outline: none;
+  margin-bottom: 12px;
+}
+.search:focus { border-color: var(--brand); }
 .ph-page {
   --bg: #f4f8f8;
   --card: #ffffff;

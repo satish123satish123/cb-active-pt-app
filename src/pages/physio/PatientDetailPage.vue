@@ -3,56 +3,148 @@
     <div class="ph-screen">
       <!-- ============ TOPBAR ============ -->
       <div class="topbar">
-        <button class="back" @click="$router.push('/physio/patients')">←</button>
+        <button class="back" @click="$router.back()">←</button>
         <div class="grow">
-          <h2 class="font-sora">{{ p.name }}</h2>
-          <div class="muted" style="font-size: 12.5px">{{ p.age }}{{ p.sex }} · {{ p.phone }}</div>
+          <h2 class="font-sora">{{ head.name }}</h2>
+          <div class="muted" style="font-size: 12.5px">
+            {{ head.age }}{{ head.sex }}<template v-if="head.phone"> · {{ head.phone }}</template>
+          </div>
         </div>
+        <span v-if="liveData && liveData.session_number" class="badge brand">Session {{ liveData.session_number }}</span>
       </div>
 
-      <!-- ============ CONDITION + PACKAGE ============ -->
-      <div class="section">
-        <div class="card">
-          <span class="badge brand">{{ p.condition }}</span>
-          <div v-if="p.package" style="margin-top: 14px">
+      <!-- ============ LOADING / ERROR ============ -->
+      <div v-if="loading" class="section">
+        <div class="card" style="text-align: center; color: var(--text-3)">Loading patient details…</div>
+      </div>
+
+      <!-- =====================================================
+           LIVE MODE — getPatientTreatmentDetails
+      ====================================================== -->
+      <template v-else-if="liveData">
+        <!-- Condition + billing -->
+        <div class="section">
+          <div class="card">
+            <span class="badge brand">{{ liveData.patient_details.current_condition || 'Condition not set' }}</span>
+            <div v-if="liveData.patient_details.address" class="tiny" style="margin-top: 8px">
+              📍 {{ liveData.patient_details.address }}
+            </div>
+            <template v-if="billing">
+              <div style="margin-top: 14px">
+                <div class="between">
+                  <strong style="font-size: 14px">{{ billing.payment_procedure }}</strong>
+                  <span class="muted">₹{{ billing.charges_per_session }}/session</span>
+                </div>
+                <div class="muted" style="margin-top: 4px">
+                  {{ sessionsDone }} of {{ billing.total_sessions }} sessions
+                  <template v-if="billing.expired_at"> · valid till {{ billing.expired_at }}</template>
+                </div>
+                <div class="pkg-bar">
+                  <i :style="{ width: pkgPct + '%' }"></i>
+                </div>
+              </div>
+            </template>
+            <div v-else class="muted" style="margin-top: 12px">Billing: per-visit</div>
+          </div>
+        </div>
+
+        <!-- Goals / milestones -->
+        <div v-if="goals.length" class="section" style="margin-top: 12px">
+          <div class="section-title"><h3 class="font-sora">Treatment goals</h3></div>
+          <div v-for="g in goals" :key="g.id" class="card">
             <div class="between">
-              <strong style="font-size: 14px">{{ p.package.name }}</strong>
-              <span class="muted">{{ p.package.used }}/{{ p.package.total }} used</span>
+              <strong style="font-size: 13px">Sessions {{ g.session }}</strong>
+              <span class="tiny">Reassess on session {{ g.reassessment_on }}</span>
             </div>
-            <div class="pkg-bar">
-              <i :style="{ width: (p.package.used / p.package.total) * 100 + '%' }"></i>
+            <div v-for="gp in g.goal_progress" :key="gp.id" style="margin-top: 10px">
+              <div class="muted" style="font-size: 12.5px">{{ gp.written_goal }}</div>
+              <div class="between" style="margin-top: 4px">
+                <span class="tiny">{{ gp.base_value }} → {{ gp.target_value }}
+                  <template v-if="gp.achieved_value"> · achieved {{ gp.achieved_value }}</template>
+                </span>
+                <span class="badge" :class="gp.status === 'achieved' ? 'success' : 'muted'" style="min-height: 22px; font-size: 11px">
+                  {{ gp.status === 'achieved' ? '✓ Achieved' : gp.status }}
+                </span>
+              </div>
+              <div class="pkg-bar" style="margin-top: 6px">
+                <i :style="{ width: (gp.progress_percentage || 0) + '%' }"></i>
+              </div>
             </div>
           </div>
-          <div v-else class="muted" style="margin-top: 12px">Billing: per-visit</div>
         </div>
-      </div>
 
-      <!-- ============ LATEST FEEDBACK ============ -->
-      <div v-if="p.feedback" class="section" style="margin-top: 12px">
-        <div class="section-title"><h3 class="font-sora">Latest app feedback</h3></div>
-        <div class="card" style="background: var(--grad-soft); border-color: #cfeee6">
-          <div class="muted">
-            Pain <strong style="color: var(--warning)">{{ p.feedback.pain }}/10</strong> · exercises
-            felt <strong>{{ p.feedback.difficulty }}</strong> · {{ p.feedback.when }}
-          </div>
-          <div class="muted" style="margin-top: 4px; font-style: italic">"{{ p.feedback.note }}"</div>
-        </div>
-      </div>
-
-      <!-- ============ VISIT HISTORY ============ -->
-      <div class="section" style="margin-top: 12px">
-        <div class="section-title"><h3 class="font-sora">Visit history</h3></div>
-        <div v-for="a in history" :key="a.id" class="card">
-          <div class="between">
-            <div>
-              <strong>{{ a.date === todayISO ? 'Today' : fmtDate(a.date) }}, {{ a.time }}</strong>
-              <div class="tiny">{{ visitSummary(a) }}</div>
+        <!-- Visit history -->
+        <div class="section" style="margin-top: 12px">
+          <div class="section-title"><h3 class="font-sora">Visit history</h3></div>
+          <div v-for="v in visits" :key="v.id" class="card">
+            <div class="between">
+              <div>
+                <strong>{{ visitDate(v) }}<template v-if="v.s_time && v.s_time !== 'Select Timeslot'">, {{ v.s_time }}</template></strong>
+                <div class="tiny">
+                  {{ visitDoctor(v) }}<template v-if="v.session_number"> · Session {{ v.session_number }}</template>
+                  <template v-if="v.is_consultation === '1'"> · Consultation</template>
+                </div>
+              </div>
+              <span class="badge" :class="visitBadge(v.status).cls">{{ visitBadge(v.status).label }}</span>
             </div>
-            <span class="badge" :class="STATUS[a.status].cls">{{ STATUS[a.status].label }}</span>
+            <div v-if="v.actual_session_start" class="tiny" style="margin-top: 6px">
+              Session {{ v.actual_session_start }}<template v-if="v.actual_session_end"> – {{ v.actual_session_end }}</template>
+            </div>
+          </div>
+          <div v-if="!visits.length" class="card" style="text-align: center; color: var(--text-3)">No visits yet.</div>
+        </div>
+      </template>
+
+      <!-- =====================================================
+           DEMO MODE — unchanged demo patients
+      ====================================================== -->
+      <template v-else-if="demoP">
+        <div class="section">
+          <div class="card">
+            <span class="badge brand">{{ demoP.condition }}</span>
+            <div v-if="demoP.package" style="margin-top: 14px">
+              <div class="between">
+                <strong style="font-size: 14px">{{ demoP.package.name }}</strong>
+                <span class="muted">{{ demoP.package.used }}/{{ demoP.package.total }} used</span>
+              </div>
+              <div class="pkg-bar">
+                <i :style="{ width: (demoP.package.used / demoP.package.total) * 100 + '%' }"></i>
+              </div>
+            </div>
+            <div v-else class="muted" style="margin-top: 12px">Billing: per-visit</div>
           </div>
         </div>
-        <div v-if="!history.length" class="card" style="text-align: center; color: var(--text-3)">
-          No visits yet.
+
+        <div v-if="demoP.feedback" class="section" style="margin-top: 12px">
+          <div class="section-title"><h3 class="font-sora">Latest app feedback</h3></div>
+          <div class="card" style="background: var(--grad-soft); border-color: #cfeee6">
+            <div class="muted">
+              Pain <strong style="color: var(--warning)">{{ demoP.feedback.pain }}/10</strong> · exercises
+              felt <strong>{{ demoP.feedback.difficulty }}</strong> · {{ demoP.feedback.when }}
+            </div>
+            <div class="muted" style="margin-top: 4px; font-style: italic">"{{ demoP.feedback.note }}"</div>
+          </div>
+        </div>
+
+        <div class="section" style="margin-top: 12px">
+          <div class="section-title"><h3 class="font-sora">Visit history</h3></div>
+          <div v-for="a in demoHistory" :key="a.id" class="card">
+            <div class="between">
+              <div>
+                <strong>{{ a.date === todayISO ? 'Today' : fmtDate(a.date) }}, {{ a.time }}</strong>
+                <div class="tiny">{{ demoVisitSummary(a) }}</div>
+              </div>
+              <span class="badge" :class="STATUS[a.status].cls">{{ STATUS[a.status].label }}</span>
+            </div>
+          </div>
+          <div v-if="!demoHistory.length" class="card" style="text-align: center; color: var(--text-3)">No visits yet.</div>
+        </div>
+      </template>
+
+      <!-- Not found / API failed -->
+      <div v-else class="section">
+        <div class="card" style="text-align: center; color: var(--text-3)">
+          Could not load this patient's details.
         </div>
       </div>
     </div>
@@ -60,19 +152,87 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAuthStore } from 'src/stores/authStore'
 import { PATIENTS, APPTS, STATUS, todayISO, fmtDate } from './physioDemoData'
+import { getPatientTreatmentDetails, resolveHospitalId } from './physioApi'
 
 const route = useRoute()
-const p = computed(() => PATIENTS[route.params.id] || PATIENTS.p1).value
-const history = APPTS.filter((a) => a.pid === p.id)
+const authStore = useAuthStore()
 
-function visitSummary(a) {
+/* demo patient? (ids like p1..p5) */
+const demoP = PATIENTS[route.params.id] || null
+const demoHistory = demoP ? APPTS.filter((a) => a.pid === demoP.id) : []
+function demoVisitSummary(a) {
   return a.invoice && a.invoice.items
     ? a.invoice.items.map((it) => it.label.replace(' — package session', '')).join(', ')
     : '—'
 }
+
+/* ---------------- live — getPatientTreatmentDetails ---------------- */
+const loading = ref(false)
+const liveData = ref(null)
+
+async function load() {
+  if (demoP) return
+  loading.value = true
+  try {
+    const data = await getPatientTreatmentDetails({
+      patient_id: Number(route.params.id),
+      hospital_id: Number(resolveHospitalId(authStore.user)),
+    })
+    if (data?.status === 'success') liveData.value = data.data
+  } catch (e) {
+    console.log('getPatientTreatmentDetails failed:', e)
+  } finally {
+    loading.value = false
+  }
+}
+load()
+
+const head = computed(() => {
+  if (liveData.value) {
+    const pd = liveData.value.patient_details
+    return {
+      name: pd.name,
+      age: pd.age,
+      sex: (pd.sex || '').charAt(0).toUpperCase(),
+      phone: pd.phone,
+    }
+  }
+  if (demoP) return { name: demoP.name, age: demoP.age, sex: demoP.sex, phone: demoP.phone }
+  return { name: 'Patient', age: '', sex: '', phone: '' }
+})
+
+const billing = computed(() => (liveData.value?.Billing || [])[0] || null)
+const sessionsDone = computed(() => Number(liveData.value?.session_number) || 0)
+const pkgPct = computed(() => {
+  const total = Number(billing.value?.total_sessions) || 0
+  if (!total) return 0
+  return Math.min(100, Math.round((sessionsDone.value / total) * 100))
+})
+
+const goals = computed(() => liveData.value?.reassessment_details?.results?.data || [])
+const visits = computed(() => liveData.value?.visits || [])
+
+function visitDate(v) {
+  const ts = Number(v.date)
+  if (!ts) return v.add_date || ''
+  return new Date(ts * 1000).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })
+}
+function visitDoctor(v) {
+  // "Dr. Nikhil Sharma - PT-Shohini-9" → "Dr. Nikhil Sharma - PT"
+  const parts = String(v.visit || '').split('-')
+  return parts.length > 2 ? parts.slice(0, -2).join('-').trim() : v.visit || ''
+}
+const VISIT_BADGE = {
+  Treated: { label: 'Treated', cls: 'success' },
+  Cancelled: { label: 'Cancelled', cls: 'danger' },
+  Confirmed: { label: 'Confirmed', cls: 'muted' },
+  'Pending Confirmation': { label: 'To confirm', cls: 'pending' },
+}
+const visitBadge = (s) => VISIT_BADGE[s] || { label: s || '—', cls: 'muted' }
 </script>
 
 <style scoped>
@@ -108,7 +268,6 @@ function visitSummary(a) {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* topbar */
 .topbar {
   display: flex;
   align-items: center;
@@ -139,9 +298,7 @@ function visitSummary(a) {
   justify-content: center;
 }
 
-.section {
-  padding: 0 16px;
-}
+.section { padding: 0 16px; }
 .section-title {
   display: flex;
   align-items: center;
@@ -154,23 +311,10 @@ function visitSummary(a) {
   font-weight: 800;
   letter-spacing: -0.01em;
 }
-.between {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.grow {
-  flex: 1;
-}
-.muted {
-  color: var(--text-2);
-  font-size: 13px;
-}
-.tiny {
-  color: var(--text-3);
-  font-size: 12px;
-}
+.between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.grow { flex: 1; }
+.muted { color: var(--text-2); font-size: 13px; }
+.tiny { color: var(--text-3); font-size: 12px; }
 
 .card {
   background: var(--card);
@@ -179,9 +323,7 @@ function visitSummary(a) {
   padding: 16px;
   border: 1px solid rgba(220, 231, 234, 0.85);
 }
-.card + .card {
-  margin-top: 12px;
-}
+.card + .card { margin-top: 12px; }
 
 .badge {
   display: inline-flex;

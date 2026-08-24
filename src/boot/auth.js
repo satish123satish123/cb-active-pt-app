@@ -12,10 +12,11 @@ export default boot(async ({ router, store }) => {
 
     // ✅ If route requires authentication but token missing → redirect
     if (requiresAuth && !token) {
-      return to.path.startsWith('/physio') ? '/physio/login' : '/login'
+      return '/login'
     }
 
-    if ((to.path === '/login' || to.path === '/physio/login') && token) {
+    // ✅ If logged in and opening /login page → redirect to respective home screen
+    if (to.path === '/login' && token) {
       return userRole === 'Doctor' ? '/physio' : '/'
     }
 
