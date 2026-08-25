@@ -271,12 +271,12 @@
             v-for="item in pickerItems"
             :key="item.id"
             class="pick"
-            :style="isAdded(item.id) ? 'opacity:.45' : isContra(item) ? 'border-color:#ffd28a;background:#fffaf0' : ''"
+            :style="isAdded(item) ? 'opacity:.45' : isContra(item) ? 'border-color:#ffd28a;background:#fffaf0' : ''"
             style="margin-bottom: 8px"
-            @click="!isAdded(item.id) && addToPlan(item)"
+            @click="addToPlan(item)"
           >
             <div class="check">
-              <span style="color: var(--text-3)">{{ isAdded(item.id) ? '✓' : '+' }}</span>
+              <span style="color: var(--text-3)">{{ isAdded(item) ? '✓' : '+' }}</span>
             </div>
             <div class="grow">
               <div style="font-weight: 700; font-size: 14px">{{ item.name }}</div>
@@ -1152,10 +1152,18 @@ const pickerItems = computed(() => {
   )
 })
 const inLiveLog = (id) => liveLog.some((m) => m.modality_id === id)
-const isAdded = (id) => inLiveLog(id) || planned.value.some((p) => p.id === id)
+const sameName = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase()
+/* Compare by name: the catalogue item's id and the modalities_tracking row id that
+   addModality creates are different numbers, so an id match would never hit. */
+const isAdded = (item) =>
+  liveLog.some((m) => sameName(m.name, item.name)) || planned.value.some((p) => sameName(p.name, item.name))
 /** Picker tap: attach to the session via the CRM, then show it in the list to start */
 async function addToPlan(item) {
   if (liveBusyId.value) return
+  if (isAdded(item)) {
+    Notify.create({ type: 'warning', message: `${item.name} is already added` })
+    return
+  }
   liveBusyId.value = item.id
   try {
     const res = await addModalityApi({
@@ -1168,6 +1176,7 @@ async function addToPlan(item) {
       Notify.create({ type: 'negative', message: res?.message || 'Could not add modality' })
       return
     }
+    Notify.create({ type: 'positive', message: `${item.name} added` })
     const id = res.modality_id || res.id || res.inserted_id || res.data?.id
     if (id) {
       planned.value.push({
