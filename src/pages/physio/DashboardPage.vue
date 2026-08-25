@@ -129,7 +129,7 @@
             </div>
           </div>
           <div class="row" style="gap: 10px; margin-top: 12px">
-            <button class="btn ghost small" style="flex: none; width: 38%" @click="decline(a)">Decline</button>
+            <button class="btn ghost small" style="flex: none; width: 38%" @click="openCancel(a)">Decline</button>
             <button class="btn primary small grow" @click="openConfirm(a)">Confirm appointment</button>
           </div>
         </div>
@@ -412,8 +412,7 @@
         <div class="row" style="gap: 10px; margin-top: 16px">
           <button class="btn ghost" style="flex: none; width: 38%" @click="cancelAppt = null">Back</button>
           <button
-            class="btn grow"
-            style="background: #fff0f2; color: var(--danger)"
+            class="btn danger grow"
             :disabled="cancelBusy || !cancelReason.trim()"
             @click="doCancel"
           >
@@ -435,8 +434,7 @@
             Cancel
           </button>
           <button
-            class="btn grow"
-            style="background: #fff0f2; color: var(--danger)"
+            class="btn danger grow"
             :disabled="checkoutBusy"
             @click="confirmCheckOut"
           >
@@ -990,37 +988,9 @@ async function doConfirm() {
   }
 }
 
-/* ---------------- decline — LIVE via cancelAppointment ---------------- */
-async function decline(a) {
-  if (!shiftGuard()) return
-  if (a._demo) {
-    a.status = 'declined'
-    Notify.create({ message: 'Appointment declined' })
-    return
-  }
-  if (actionBusyId.value) return
-  actionBusyId.value = a.id
-  try {
-    const data = await cancelAppointment({
-      appointment_id: Number(a.id),
-      ...apiIds(),
-      remark: 'Declined by physiotherapist from ActivPT app',
-    })
-    if (data?.status === 'success') {
-      Notify.create({ message: data.message || 'Appointment declined' })
-      await loadAppointments()
-    } else {
-      Notify.create({ type: 'negative', message: data?.message || 'Could not decline appointment' })
-    }
-  } catch (e) {
-    console.log('cancelAppointment failed:', e)
-    Notify.create({ type: 'negative', message: e.response?.data?.message || 'Could not decline — try again' })
-  } finally {
-    actionBusyId.value = null
-  }
-}
-
-/* ---------------- cancel with reason (old unactioned) ---------------- */
+/* ---------------- cancel with reason — Decline and Cancel appointment ----------------
+   Both are the same CRM action (cancelAppointment), so they share one dialog: the
+   physio always states a reason before an appointment is cancelled. */
 const cancelAppt = ref(null)
 const cancelReason = ref('')
 const cancelBusy = ref(false)
@@ -1031,6 +1001,12 @@ function openCancel(a) {
 }
 async function doCancel() {
   if (cancelBusy.value) return
+  if (cancelAppt.value?._demo) {
+    cancelAppt.value.status = 'declined'
+    cancelAppt.value = null
+    Notify.create({ message: 'Appointment cancelled' })
+    return
+  }
   cancelBusy.value = true
   try {
     const data = await cancelAppointment({
@@ -1684,6 +1660,18 @@ function resetDemo() {
   background: transparent;
   color: var(--text-2);
   border: 1px solid var(--line);
+}
+.btn.danger {
+  background: var(--danger);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.btn:disabled:active {
+  transform: none;
 }
 .btn.small {
   min-height: 36px;

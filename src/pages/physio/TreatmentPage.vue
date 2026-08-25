@@ -69,7 +69,7 @@
                     :disabled="liveBusyId === m.modality_id"
                     @click="liveResume(m)"
                   >
-                    {{ liveBusyId === m.modality_id ? '…' : assessShowResume ? 'Resume' : 'Start' }}
+                    {{ liveBusyId === m.modality_id ? '…' : 'Resume' }}
                   </button>
                   <button v-else class="btn secondary small" :disabled="liveBusyId === m.modality_id" @click="liveEnd(m)">
                     {{ liveBusyId === m.modality_id ? '…' : 'End' }}
@@ -97,9 +97,16 @@
                   <div style="font-weight: 700; font-size: 14px">{{ pl.name }}</div>
                   <div class="tiny">From treatment plan · tap to start</div>
                 </div>
-                <!-- General consultation always reads Start (single shot, no resume) -->
+                <!-- Not started yet, so only a resumable ASSESSMENT may read Resume.
+                     Reassessment and general consultation always read Start. -->
                 <button v-if="pl.isAssess || pl.isConsult" class="btn primary small" :disabled="liveBusyId === pl.id">
-                  {{ liveBusyId === pl.id ? '…' : pl.isAssess && assessShowResume ? 'Resume' : 'Start' }}
+                  {{
+                    liveBusyId === pl.id
+                      ? '…'
+                      : pl.isAssess && !pl.isReassess && assessShowResume
+                        ? 'Resume'
+                        : 'Start'
+                  }}
                 </button>
                 <span v-else-if="liveBusyId === pl.id" class="tiny">Starting…</span>
               </div>
@@ -604,16 +611,26 @@ async function loadAssessmentFlag() {
    The URL must come from the CRM because only it knows the assessment version
    (v1 vs v2 host). Re-checked at click time so the URL is fresh; falls back to
    startModality's redirect_url if the resume-state call returns nothing. */
-async function gotoAssessment(fallbackUrl) {
-  let url = fallbackUrl
+async function gotoAssessment(redirectUrl) {
+  /* startModality's redirect_url is authoritative: the CRM builds it PER MODALITY
+     and already resolves the right target and version — assessment start, the
+     reassessment page (assessment_id + range + session), or consultation edit/new.
+     getAssessmentResumeState's resume_url is patient-level and always points at the
+     assessment, so it must never override a reassessment link — it is only a
+     fallback for when the CRM returned no redirect_url at all. */
+  if (redirectUrl) {
+    window.location.href = redirectUrl
+    return
+  }
   try {
     const d = await getAssessmentResumeState({ ...liveIds })
     assessShowResume.value = d?.show_resume === true
-    if (d?.resume_url) url = d.resume_url
+    if (d?.resume_url) window.location.href = d.resume_url
+    else Notify.create({ type: 'negative', message: 'No assessment link returned — try again' })
   } catch (e) {
     console.log('getAssessmentResumeState failed:', e)
+    Notify.create({ type: 'negative', message: 'Could not open the assessment tool — try again' })
   }
-  if (url) window.location.href = url
 }
 
 function localIsoFromHM(hm) {
@@ -654,7 +671,13 @@ function applySessionData(session) {
         assessDone,
       })
     } else {
-      planned.value.push({ id: m.id, name: m.modality, isAssess, isConsult: isConsultName(m) })
+      planned.value.push({
+        id: m.id,
+        name: m.modality,
+        isAssess,
+        isReassess: isReassessName(m),
+        isConsult: isConsultName(m),
+      })
     }
   }
 }
@@ -1151,6 +1174,7 @@ async function addToPlan(item) {
         id: Number(id),
         name: item.name,
         isAssess: /assessment/i.test(item.name || ''),
+        isReassess: isReassessName(item),
         isConsult: isConsultName(item),
       })
     } else {
