@@ -69,7 +69,7 @@
                     :disabled="liveBusyId === m.modality_id"
                     @click="liveResume(m)"
                   >
-                    {{ liveBusyId === m.modality_id ? '…' : assessShowResume ? 'Resume' : 'Start' }}
+                    {{ liveBusyId === m.modality_id ? '…' : 'Resume' }}
                   </button>
                   <button v-else class="btn secondary small" :disabled="liveBusyId === m.modality_id" @click="liveEnd(m)">
                     {{ liveBusyId === m.modality_id ? '…' : 'End' }}
@@ -97,8 +97,16 @@
                   <div style="font-weight: 700; font-size: 14px">{{ pl.name }}</div>
                   <div class="tiny">From treatment plan · tap to start</div>
                 </div>
-                <button v-if="pl.isAssess" class="btn primary small" :disabled="liveBusyId === pl.id">
-                  {{ liveBusyId === pl.id ? '…' : assessShowResume ? 'Resume' : 'Start' }}
+                <!-- Not started yet, so only a resumable ASSESSMENT may read Resume.
+                     Reassessment and general consultation always read Start. -->
+                <button v-if="pl.isAssess || pl.isConsult" class="btn primary small" :disabled="liveBusyId === pl.id">
+                  {{
+                    liveBusyId === pl.id
+                      ? '…'
+                      : pl.isAssess && !pl.isReassess && assessShowResume
+                        ? 'Resume'
+                        : 'Start'
+                  }}
                 </button>
                 <span v-else-if="liveBusyId === pl.id" class="tiny">Starting…</span>
               </div>
@@ -603,16 +611,26 @@ async function loadAssessmentFlag() {
    The URL must come from the CRM because only it knows the assessment version
    (v1 vs v2 host). Re-checked at click time so the URL is fresh; falls back to
    startModality's redirect_url if the resume-state call returns nothing. */
-async function gotoAssessment(fallbackUrl) {
-  let url = fallbackUrl
+async function gotoAssessment(redirectUrl) {
+  /* startModality's redirect_url is authoritative: the CRM builds it PER MODALITY
+     and already resolves the right target and version — assessment start, the
+     reassessment page (assessment_id + range + session), or consultation edit/new.
+     getAssessmentResumeState's resume_url is patient-level and always points at the
+     assessment, so it must never override a reassessment link — it is only a
+     fallback for when the CRM returned no redirect_url at all. */
+  if (redirectUrl) {
+    window.location.href = redirectUrl
+    return
+  }
   try {
     const d = await getAssessmentResumeState({ ...liveIds })
     assessShowResume.value = d?.show_resume === true
-    if (d?.resume_url) url = d.resume_url
+    if (d?.resume_url) window.location.href = d.resume_url
+    else Notify.create({ type: 'negative', message: 'No assessment link returned — try again' })
   } catch (e) {
     console.log('getAssessmentResumeState failed:', e)
+    Notify.create({ type: 'negative', message: 'Could not open the assessment tool — try again' })
   }
-  if (url) window.location.href = url
 }
 
 function localIsoFromHM(hm) {
@@ -653,7 +671,13 @@ function applySessionData(session) {
         assessDone,
       })
     } else {
-      planned.value.push({ id: m.id, name: m.modality, isAssess })
+      planned.value.push({
+        id: m.id,
+        name: m.modality,
+        isAssess,
+        isReassess: isReassessName(m),
+        isConsult: isConsultName(m),
+      })
     }
   }
 }
@@ -682,6 +706,10 @@ const reasonText = ref('')
    3. Normal session with nothing started at all */
 const allEntries = () => [...liveLog, ...planned.value]
 const isAssessName = (m) => /assessment/i.test(m.name || m.modality || '')
+/* GENERAL CONSULTATION also redirects to the assessment tool (CRM builds the URL in
+   startModality), but it is a SINGLE SHOT: start and end are recorded together, so
+   it never shows Resume and never gets a timer — just Start, then a ✓ Done tick. */
+const isConsultName = (m) => /general\s*consultation/i.test(m.name || m.modality || '')
 const isReassessName = (m) => /reassessment/i.test(m.name || m.modality || '')
 const pendingPureAssess = computed(() =>
   allEntries().some((m) => isAssessName(m) && !isReassessName(m) && !m.assessDone),
@@ -1086,17 +1114,20 @@ async function loadLiveData() {
 
     applySessionData(sess.session)
 
+    /* Always ask for the session context — including general consultations. It is
+       the freshest read of the same data startAppointment returned, so it wins;
+       an empty or failed response is ignored so it can never wipe what we have. */
     const [cat, context] = await Promise.all([
       getPhysioDefaultModalities({ hospital_id: liveIds.hospital_id }),
-      !ctx.value && livePatientId.value
+      livePatientId.value
         ? getPhysioAppointmentModalities({ ...liveIds, patient_id: livePatientId.value })
         : Promise.resolve(null),
     ])
     if (cat?.status === 'success') catalogue.value = cat.items || []
-    if (context?.status === 'success' && !ctx.value) {
-      ctx.value = context.data || null
-      // seed the modality list from the fallback context too
-      if (ctx.value?.selected_modalities && !liveLog.length && !planned.value.length) {
+    if (context?.status === 'success' && context.data) {
+      ctx.value = context.data
+      // seed the modality list from it only when the session data gave us nothing
+      if (ctx.value.selected_modalities && !liveLog.length && !planned.value.length) {
         applySessionData({ data: ctx.value })
       }
     }
@@ -1139,7 +1170,13 @@ async function addToPlan(item) {
     }
     const id = res.modality_id || res.id || res.inserted_id || res.data?.id
     if (id) {
-      planned.value.push({ id: Number(id), name: item.name, isAssess: /assessment/i.test(item.name || '') })
+      planned.value.push({
+        id: Number(id),
+        name: item.name,
+        isAssess: /assessment/i.test(item.name || ''),
+        isReassess: isReassessName(item),
+        isConsult: isConsultName(item),
+      })
     } else {
       // no id returned — resync the session list from the server
       const context = await getPhysioAppointmentModalities({ ...liveIds, patient_id: livePatientId.value })
@@ -1187,6 +1224,32 @@ async function liveStart(item) {
       }
       planned.value = planned.value.filter((x) => x.id !== item.id)
       showPicker.value = false
+      if (isConsultName(item)) {
+        /* General consultation: close it in the same breath so it lands as ✓ Done,
+           then hand over to the assessment tool. redirect_url comes from the CRM,
+           which already picks the right (edit vs new, v1 vs v2) URL.
+           endModality is called directly — liveEnd() would bail out on the busy
+           flag this function is holding. A failed end must not block the redirect. */
+        const entry = liveLog.find((x) => x.modality_id === item.id)
+        try {
+          const endRes = await endModality({
+            ...liveIds,
+            modality_id: item.id,
+            patient_id: livePatientId.value,
+            ended_at: apiNowHM(),
+            end_at_iso: nowISO(),
+          })
+          const ed = endRes?.data || {}
+          if (entry) {
+            entry.end_at_iso = ed.end_at_iso || nowISO()
+            entry.duration_ms = ed.duration_ms ?? 0
+          }
+        } catch (e2) {
+          console.log('endModality (general consultation) failed:', e2)
+        }
+        if (res.redirect_url) window.location.href = res.redirect_url
+        return
+      }
       // Assessment/reassessment only: opens in THIS tab (no new tab) — the
       // treatment room recovers the running session on return.
       if (isAssessName(item)) await gotoAssessment(res.redirect_url)
