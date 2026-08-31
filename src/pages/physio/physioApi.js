@@ -295,11 +295,24 @@ export async function getPatientTreatmentDetails(payload) {
 
 /**
  * getPhysioAppointmentSlots — available + booked slots for the confirm sheet.
- * Payload: { appointment_id, doctor_id }
+ * Payload: { appointment_id, doctor_id, date? }
+ * `date` ("MM/DD/YYYY") is optional — send it to see another day's slots, which is
+ * what the follow-up sheet needs. `doctor_id` may be any physio of the hospital.
  * → { aslots, bslots, duration, duration_options, current_value, date }
  */
 export async function getPhysioAppointmentSlots(payload) {
   const { data } = await api.post('getPhysioAppointmentSlots', payload)
+  return data
+}
+
+/**
+ * getHospitalPhysios — active physiotherapists of a hospital, for the
+ * "book the follow-up with another physio" picker.
+ * Payload: { hospital_id, doctor_id }  (doctor_id only marks is_self)
+ * → { physios: [{ id, name, is_self }] }
+ */
+export async function getHospitalPhysios(payload) {
+  const { data } = await api.post('getHospitalPhysios', payload)
   return data
 }
 
