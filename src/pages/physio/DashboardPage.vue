@@ -324,6 +324,20 @@
                 </button>
               </div>
 
+              <!-- only worth showing when the hospital actually has someone else -->
+              <template v-if="fuPhysiosLoading || fuPhysios.length > 1">
+                <p class="fu-label" style="margin-top: 16px">Physio</p>
+                <div v-if="fuPhysiosLoading" class="tiny" style="padding: 6px 2px">Loading physios…</div>
+                <select v-else v-model="fuPhysioSel" class="input">
+                  <option v-for="p in fuPhysios" :key="p.id" :value="Number(p.id)">
+                    {{ p.name }}{{ p.is_self ? ' (You)' : '' }}
+                  </option>
+                </select>
+                <p v-if="fuOtherPhysio" class="tiny" style="margin-top: 6px; color: var(--brand)">
+                  Slots below are {{ fuPhysioName }}'s.
+                </p>
+              </template>
+
               <p class="fu-label" style="margin-top: 16px">Date</p>
               <input v-model="fuDate" class="input" type="date" />
 
@@ -522,6 +536,7 @@ import {
   getPhysioRoster, getPhysioTodayAppointments, physioCheckin, physioCheckout,
   confirmAppointment, cancelAppointment, checkInPatient, startAppointment,
   getPhysioAppointmentSlots, getFollowupDetails, addFollowupByPhysio, getPhysioDefaultModalities,
+  getHospitalPhysios,
   resolveDoctorId, resolveHospitalId, liveSessions,
   setApptBillingState, clearApptBillingState, getApptBillingOutcome,
 } from './physioApi'
@@ -1137,7 +1152,19 @@ const fuBusy = ref(false)
 const fuIsConsult = ref(0)
 const fuSuggestedGap = ref(null) // days gap from suggested_session_frequency
 
-/* follow-up slots (same dropdown as confirm sheet; date sent for backend support) */
+/* follow-up physio — the visit can be booked with any physio of the hospital */
+const fuPhysios = ref([])
+const fuPhysiosLoading = ref(false)
+const fuPhysioSel = ref(null)
+const fuSelfId = computed(() => Number(resolveDoctorId(authStore.user)) || null)
+const fuPhysioName = computed(
+  () => fuPhysios.value.find((p) => Number(p.id) === Number(fuPhysioSel.value))?.name || '',
+)
+const fuOtherPhysio = computed(
+  () => !!fuPhysioSel.value && Number(fuPhysioSel.value) !== fuSelfId.value,
+)
+
+/* follow-up slots (same dropdown as confirm sheet) */
 const fuSlotsLoading = ref(false)
 const fuSlotsFailed = ref(false)
 const fuSlotOptions = ref([])
@@ -1157,8 +1184,10 @@ async function loadFuSlots() {
     const [Y, M, D] = fuDate.value.split('-')
     const data = await getPhysioAppointmentSlots({
       appointment_id: Number(fuAppt.value.id),
-      doctor_id: Number(resolveDoctorId(authStore.user)),
-      date: `${M}/${D}/${Y}`, // needs backend support; ignored until then
+      // whichever physio is selected — the backend only reuses the parent
+      // appointment's own slot when it is the same physio on the same day
+      doctor_id: Number(fuPhysioSel.value || fuSelfId.value),
+      date: `${M}/${D}/${Y}`,
     })
     if (data?.status !== 'success') throw new Error('slots failed')
     const avail = [...new Set((data.aslots || []).map(slotStart).filter(Boolean))]
@@ -1174,9 +1203,27 @@ async function loadFuSlots() {
     fuSlotsLoading.value = false
   }
 }
-watch(fuDate, () => {
+watch([fuDate, fuPhysioSel], () => {
   if (fuAppt.value) loadFuSlots()
 })
+
+async function loadFuPhysios() {
+  if (fuPhysios.value.length) return
+  fuPhysiosLoading.value = true
+  try {
+    const res = await getHospitalPhysios({
+      hospital_id: Number(resolveHospitalId(authStore.user)),
+      doctor_id: fuSelfId.value,
+    })
+    // self first, then the rest as the backend sorted them (by name)
+    const list = res?.status === 'success' ? res.physios || [] : []
+    fuPhysios.value = [...list.filter((p) => p.is_self), ...list.filter((p) => !p.is_self)]
+  } catch (e) {
+    console.log('getHospitalPhysios failed — follow-up stays with the current physio:', e)
+  } finally {
+    fuPhysiosLoading.value = false
+  }
+}
 
 function fuAddModality() {
   const v = fuModAdd.value.trim()
@@ -1235,6 +1282,7 @@ async function bookFollowUp(a) {
   fuMods.value = []
   fuModAdd.value = ''
   fuSlotSel.value = ''
+  fuPhysioSel.value = fuSelfId.value
   fuLoading.value = true
   try {
     const [res, cat] = await Promise.all([
@@ -1258,6 +1306,7 @@ async function bookFollowUp(a) {
       } else fuSuggestedGap.value = null
     }
     if (cat?.status === 'success') fuCatalogue.value = cat.items || []
+    loadFuPhysios()
   } catch (e) {
     console.log('getFollowupDetails failed:', e)
   } finally {
@@ -1281,7 +1330,7 @@ async function submitFollowUp() {
     const [Y, M, D] = fuDate.value.split('-')
     const payload = {
       patient: Number(d.patient || fuAppt.value.patient?.id),
-      doctor: Number(d.doctor || resolveDoctorId(authStore.user)),
+      doctor: Number(fuPhysioSel.value || d.doctor || fuSelfId.value),
       user_id: Number(authStore.user?.user_id || authStore.user?.id) || null,
       parent_appointment: Number(d.parent_appointment || fuAppt.value.id),
       date: `${M}/${D}/${Y}`,
@@ -1305,7 +1354,14 @@ async function submitFollowUp() {
     }
     const res = await addFollowupByPhysio(payload)
     if (res?.status === 'success') {
-      Notify.create({ type: 'positive', message: res.message || 'Follow-up added successfully.' })
+      Notify.create({
+        type: 'positive',
+        message:
+          res.message ||
+          (fuOtherPhysio.value
+            ? `Follow-up booked with ${fuPhysioName.value}.`
+            : 'Follow-up added successfully.'),
+      })
       closeFollowUp()
       await loadAppointments()
     } else {
@@ -1697,6 +1753,15 @@ function resetDemo() {
   color: var(--text);
   outline: none;
   font-size: 15px;
+}
+select.input {
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: inherit;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%235a6c76' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
 }
 .input:focus {
   border-color: var(--brand-2);
