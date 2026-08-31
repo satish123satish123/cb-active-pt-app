@@ -20,22 +20,32 @@
         <div class="section" style="margin-top: 8px">
           <p class="muted" style="margin: 0 2px">
             Tap the treatment(s) given in this session.
-            <template v-if="activePkg"> The package treatment is taken from their package automatically while sessions last.</template>
+            <template v-if="hasActivePkg"> The package treatment is taken from their package automatically while sessions last.</template>
           </p>
         </div>
 
         <!-- Package progress card -->
-        <div v-if="activePkg" class="section" style="margin-top: 6px">
-          <div class="card" :style="usingPackageNow ? 'border-color:#cfeee6' : ''">
+        <div v-if="hasActivePkg" class="section" style="margin-top: 6px">
+          <div
+            v-for="p in activePkgs"
+            :key="p.id"
+            class="card"
+            :style="[{ marginBottom: '8px' }, pkgInUse(p) ? { borderColor: '#cfeee6' } : {}]"
+          >
             <div class="between">
-              <strong style="font-size: 14px">{{ activePkg.payment_procedure }}</strong>
-              <span v-if="usingPackageNow" class="badge brand">Using 1 session</span>
+              <strong style="font-size: 14px">{{ p.payment_procedure }}</strong>
+              <span v-if="pkgInUse(p)" class="badge brand">Using 1 session</span>
               <span v-else class="badge muted">Not used today</span>
             </div>
             <div class="muted" style="margin-top: 6px">
-              {{ pkgUsed }} of {{ pkgTotal }} used · <strong>{{ pkgLeft }} left</strong>
+              {{ pkgUsed(p) }} of {{ pkgTotal(p) }} used · <strong>{{ pkgLeft(p) }} left</strong>
             </div>
-            <div class="pkg-bar"><i :style="{ width: pkgTotal ? (pkgUsed / pkgTotal * 100) + '%' : '0%' }"></i></div>
+            <div class="pkg-bar">
+              <i :style="{ width: pkgTotal(p) ? (pkgUsed(p) / pkgTotal(p)) * 100 + '%' : '0%' }"></i>
+            </div>
+          </div>
+          <div v-if="multiPkgWarning" class="tiny" style="color: #c78810; padding: 2px">
+            Two packages in one bill — the CRM suggests invoicing them separately.
           </div>
         </div>
 
@@ -254,30 +264,58 @@ function toggleSel(t) {
 function normName(x) {
   return String(x || '').toLowerCase().replace(/sessions?/g, '').replace(/[^a-z0-9]/g, '')
 }
-const activePkg = computed(() => (billData.value?.package_details || [])[0] || null)
-const pkgTotal = computed(() => Number(activePkg.value?.quantity || activePkg.value?.total_sessions || 0))
-const pkgUsed = computed(() => {
-  const p = activePkg.value
-  if (!p) return 0
-  return Number(p.expired_sessions || 0) + Number(p.refunded_sessions || 0)
-})
-const pkgLeft = computed(() => Math.max(0, pkgTotal.value - pkgUsed.value))
-const pkgHasBalance = computed(() => pkgLeft.value > 0)
+/* A patient can hold SEVERAL active packages at once — one per procedure. The CRM
+   matches every procedure against ALL of them (api.php → getPackageWithQuantity-
+   GreaterThanZero), so we do the same instead of looking at package_details[0]. */
+const activePkgs = computed(() => billData.value?.package_details || [])
+const hasActivePkg = computed(() => activePkgs.value.length > 0)
+/* `quantity` is the REMAINING balance — the CRM decrements it on every invoice —
+   while `total_sessions` is what was bought. Same arithmetic as the CRM's own
+   package card (new_medical_history.php): done = total - (refunded + left + expired). */
+function pkgTotal(p) {
+  return Number(p?.total_sessions || p?.quantity || 0)
+}
+function pkgLeft(p) {
+  return Math.max(0, Number(p?.quantity || 0))
+}
+function pkgUsed(p) {
+  const gone = Number(p?.refunded_sessions || 0) + Number(p?.expired_sessions || 0)
+  return Math.max(0, pkgTotal(p) - pkgLeft(p) - gone)
+}
+/* Which package (if any) covers this procedure? The CRM matches the procedure
+   name EXACTLY (api.php → in_array($current_item->category, $array_)), so we must
+   too: a substring test makes "Taping session" match a "General Physio + Taping"
+   package and the line would show as free while the CRM still charges for it.
+   normName() only absorbs case, spacing and a trailing "session". */
+function pkgFor(t) {
+  const name = normName(t.category)
+  if (!name) return null
+  return activePkgs.value.find((p) => normName(p.payment_procedure) === name) || null
+}
 function txInPackage(t) {
-  const list = billData.value?.package_procedures
-  if (Array.isArray(list) && list.length) {
-    return list.some((n) => normName(n) === normName(t.category))
-  }
-  if (!activePkg.value) return false
-  return (
-    normName(t.category) === normName(activePkg.value.payment_procedure) ||
-    normName(t.category).includes(normName(activePkg.value.payment_procedure)) ||
-    normName(activePkg.value.payment_procedure).includes(normName(t.category))
-  )
+  return !!pkgFor(t)
 }
+/* is this selected line covered by a package right now? */
 function txCovered(t) {
-  return isSel(t) && txInPackage(t) && pkgHasBalance.value
+  const p = pkgFor(t)
+  return isSel(t) && !!p && pkgLeft(p) > 0
 }
+/* is this package the one the current selection is drawing on? */
+function pkgInUse(p) {
+  return sel.value.some((t) => txCovered(t) && pkgFor(t)?.id === p.id)
+}
+/* The CRM posts a single package_id per invoice, so a bill spanning two packages
+   labels the patient deposit with only one of them. Pricing and the session
+   decrement are still done per procedure, so the bill itself is correct — which is
+   why the CRM warns rather than blocks. We show the same warning. */
+const multiPkgWarning = computed(() => {
+  const ids = new Set()
+  sel.value.forEach((t) => {
+    const p = pkgFor(t)
+    if (p && pkgLeft(p) > 0) ids.add(String(p.id))
+  })
+  return ids.size > 1
+})
 const lineAmt = (t) => (txCovered(t) ? 0 : Number(t.c_price || 0))
 const subtotal = computed(() => sel.value.reduce((n, t) => n + lineAmt(t), 0))
 const grandTotal = computed(() =>
@@ -301,7 +339,7 @@ const showOopReason = ref(false)
 const oopReason = ref('')
 const oopBusy = ref(false)
 const needsOopReason = computed(
-  () => !!activePkg.value && sel.value.some((t) => !txInPackage(t)),
+  () => hasActivePkg.value && sel.value.some((t) => !txInPackage(t)),
 )
 function onGenerateBill() {
   if (!sel.value.length) {
@@ -408,8 +446,11 @@ async function createInvoice(usePackage) {
       appointment_date: todayYMD(),
     }
     if (reviewId.value) payload.review_id = reviewId.value
-    if (usePackage && activePkg.value?.payment_id) {
-      payload.package_payment_id = Number(activePkg.value.payment_id)
+    if (usePackage) {
+      // the package the covered line actually belongs to — not simply the first one
+      const covered = sel.value.find((t) => txCovered(t))
+      const pid = covered ? pkgFor(covered)?.payment_id : null
+      if (pid) payload.package_payment_id = Number(pid)
     }
     const res = await addPayment(payload)
     if (res?.status === 'success') reviewId.value = null // linked server-side
