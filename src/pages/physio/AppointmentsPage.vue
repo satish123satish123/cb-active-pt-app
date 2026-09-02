@@ -39,13 +39,13 @@
         <div class="section">
           <!-- partial-data notice: only while the range endpoint is unavailable -->
           <div v-if="partial && !loading" class="notice">
-            Sirf aaj ka data mil raha hai — poori list ke liye backend update chahiye.
+            Showing today's schedule only. Past and upcoming visits will appear here soon.
           </div>
 
           <div v-if="loading" class="card empty">Loading appointments…</div>
 
           <div v-else-if="failed" class="card empty">
-            Appointments load nahi ho paaye.
+            Couldn't load appointments.
             <div style="margin-top: 10px">
               <button class="btn" @click="load">Retry</button>
             </div>
@@ -250,13 +250,13 @@ load()
 const inFilter = (a, key) =>
   key === 'all' ||
   (key === 'today' && a.date === TODAY_ISO) ||
-  (key === 'upcoming' && a.date >= TODAY_ISO) ||
+  (key === 'upcoming' && a.date > TODAY_ISO) ||
   (key === 'past' && a.date < TODAY_ISO)
 
 const counts = computed(() => {
   const c = { upcoming: 0, today: 0, past: 0, all: rows.value.length }
   for (const a of rows.value) {
-    if (a.date >= TODAY_ISO) c.upcoming++
+    if (a.date > TODAY_ISO) c.upcoming++
     if (a.date === TODAY_ISO) c.today++
     if (a.date < TODAY_ISO) c.past++
   }
@@ -285,12 +285,12 @@ const groups = computed(() => {
 })
 
 const emptyLine = computed(() => {
-  if (search.value.trim()) return `"${search.value.trim()}" ka koi appointment nahi mila.`
+  if (search.value.trim()) return `No appointments found for "${search.value.trim()}".`
   return {
-    upcoming: 'Koi aane wala appointment nahi.',
-    today: 'Aaj koi appointment nahi.',
-    past: 'Koi purana appointment nahi.',
-    all: 'Abhi koi appointment nahi.',
+    upcoming: 'No upcoming appointments.',
+    today: 'No appointments today.',
+    past: 'No past appointments.',
+    all: 'No appointments yet.',
   }[filter.value]
 })
 
