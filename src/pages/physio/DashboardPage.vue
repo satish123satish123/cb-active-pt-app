@@ -164,7 +164,9 @@
         <div class="section-title">
           <h3 class="font-sora">{{ queueTitle }}</h3>
           <span v-if="filter !== 'all'" class="link" @click="filter = 'all'">Show all</span>
-          <span v-else class="muted" style="font-size: 12px">{{ clinicShort }}</span>
+          <span v-else class="link" @click="router.push('/physio/appointments')">
+            All appointments →
+          </span>
         </div>
 
         <template v-if="shown.length">
@@ -184,6 +186,9 @@
               <div v-if="a.patient.line2" class="muted" style="font-size: 12.5px">{{ a.patient.line2 }}</div>
               <div class="chips">
                 <span class="chip">{{ a.patient.billingChip }}</span>
+                <span v-if="a.patient.duesChip" class="chip" :class="a.patient.duesChip.kind">
+                  {{ a.patient.duesChip.label }}
+                </span>
                 <span
                   v-if="a.patient.painChip"
                   class="chip"
@@ -580,7 +585,6 @@ function nowHM() {
 
 /* ---------------- physio identity (name upgraded from roster API) ---------------- */
 const doctorName = ref(authStore.user?.username || PHYSIO.name)
-const clinicShort = ref('')
 const firstNameShort = computed(() => {
   const clean = String(doctorName.value).replace(/^Dr\.?\s*/i, '')
   return clean.split(/[\s-]+/)[0] || clean
@@ -762,6 +766,16 @@ function normalizeApi(a, groupStatus) {
       : a.patient_status === 'InPackage'
         ? 'Package'
         : 'Per-visit'
+  /* The patient's whole ledger, not this one bill. The CRM settles untagged money
+     oldest-invoice-first, so a session can read 'paid' while the patient still owes
+     — and the physio has no other place to see that. Only sent for treated rows. */
+  const bal = Number(a.patient_balance)
+  const duesChip =
+    a.patient_balance_state === 'due' && bal > 0
+      ? { label: `₹${bal.toLocaleString('en-IN')} due`, kind: 'due' }
+      : a.patient_balance_state === 'advance' && bal < 0
+        ? { label: `₹${Math.abs(bal).toLocaleString('en-IN')} advance`, kind: 'advance' }
+        : null
   return {
     id: a.id,
     date: a.date,
@@ -780,6 +794,7 @@ function normalizeApi(a, groupStatus) {
       sex: (a.patient_sex || '').charAt(0).toUpperCase(),
       line2: a.current_condition || '',
       billingChip,
+      duesChip,
       painChip: null,
     },
   }
@@ -1048,7 +1063,14 @@ async function doCancel() {
 /* Gate for every action that changes something. Order matters: after check-out
    the check-in time is still set, so the check-out test must come first. */
 function shiftGuard() {
-  if (todayRoster.value?.status === 'not_set') {
+  /* The roster is the ONLY source of check-in state, and it is fetched once at load.
+     While that request is still in flight todayRoster is null, which is "not known
+     yet" — not "the physio skipped check-in". Nagging then was wrong twice over: it
+     accused the physio of something we could not see, and blocked a valid action.
+     Once the roster lands the checks below work normally; the server stays the real
+     authority either way. */
+  if (!todayRoster.value) return true
+  if (todayRoster.value.status === 'not_set') {
     Notify.create({ type: 'warning', message: 'Your roster is not set for today — contact the clinic admin.' })
     return false
   }
@@ -1677,6 +1699,16 @@ function resetDemo() {
   background: #f0f6f6;
   color: var(--text-2);
   border: 1px solid var(--line);
+}
+.chip.due {
+  background: #fff4dd;
+  color: var(--warning);
+  border-color: #ffe6b0;
+}
+.chip.advance {
+  background: #e6f7ed;
+  color: var(--success);
+  border-color: #c6ebd5;
 }
 .chips {
   display: flex;
