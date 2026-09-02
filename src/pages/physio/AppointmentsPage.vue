@@ -250,13 +250,13 @@ load()
 const inFilter = (a, key) =>
   key === 'all' ||
   (key === 'today' && a.date === TODAY_ISO) ||
-  (key === 'upcoming' && a.date >= TODAY_ISO) ||
+  (key === 'upcoming' && a.date > TODAY_ISO) ||
   (key === 'past' && a.date < TODAY_ISO)
 
 const counts = computed(() => {
   const c = { upcoming: 0, today: 0, past: 0, all: rows.value.length }
   for (const a of rows.value) {
-    if (a.date >= TODAY_ISO) c.upcoming++
+    if (a.date > TODAY_ISO) c.upcoming++
     if (a.date === TODAY_ISO) c.today++
     if (a.date < TODAY_ISO) c.past++
   }

@@ -10,7 +10,13 @@
           </div>
           <div class="row" style="gap: 10px">
             <button class="icon-btn" title="Reset demo" @click="resetDemo">↻</button>
-            <div class="avatar">{{ avatarInitials }}</div>
+            <button
+              class="avatar"
+              aria-label="Open your profile"
+              @click="router.push('/physio/profile')"
+            >
+              {{ avatarInitials }}
+            </button>
           </div>
         </div>
 
@@ -1492,6 +1498,9 @@ function resetDemo() {
 .avatar {
   width: 44px;
   height: 44px;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.2);
   display: inline-flex;

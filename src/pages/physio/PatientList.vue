@@ -8,7 +8,6 @@
             <p class="subtle">Your caseload</p>
             <h2 class="font-sora">Patients</h2>
           </div>
-          <div class="avatar">{{ physio.initials }}</div>
         </div>
       </div>
 
@@ -58,12 +57,11 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { Notify } from 'quasar'
-import { PHYSIO, initials } from './physioDemoData'
+import { initials } from './physioDemoData'
 import { getPhysioPatients, resolveDoctorId } from './physioApi'
 import { useAuthStore } from 'src/stores/authStore'
 
 const authStore = useAuthStore()
-const physio = ref({ ...PHYSIO })
 
 const loading = ref(true)
 const patients = ref([])
@@ -110,7 +108,6 @@ async function load() {
     const res = await getPhysioPatients({ doctor_id: Number(resolveDoctorId(authStore.user)) })
     if (res?.status === 'success') {
       patients.value = res.patients || []
-      if (res.doctor_name) physio.value.initials = initials(res.doctor_name.replace(/^Dr\.?\s*/i, ''))
     } else {
       Notify.create({ type: 'negative', message: res?.message || 'Could not load patients' })
     }
@@ -214,20 +211,6 @@ load()
   color: rgba(255, 255, 255, 0.84);
   font-size: 13px;
 }
-.avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 16px;
-  color: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-}
-
 .stack {
   margin-top: -52px;
   position: relative;
