@@ -141,6 +141,18 @@ export async function getPhysioTodayAppointments(doctorId) {
 }
 
 /**
+ * getPhysioAppointments — this physio's appointments across a date range, for the
+ * "All appointments" screen. Items carry the SAME shape as the today endpoint's, so
+ * both screens share one mapper.
+ * Payload: { doctor_id, from: "YYYY-MM-DD", to: "YYYY-MM-DD" }
+ * → { appointments: [ ... ] }  — flat, sorted by date then start time
+ */
+export async function getPhysioAppointments(payload) {
+  const { data } = await api.post('getPhysioAppointments', payload)
+  return data
+}
+
+/**
  * physioCheckin — mark attendance start for today.
  * Params: doctor_id
  * Response: { status, message, checkin: "HH:MM" }
