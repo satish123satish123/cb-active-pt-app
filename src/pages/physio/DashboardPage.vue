@@ -192,6 +192,7 @@
               <div v-if="a.patient.line2" class="muted" style="font-size: 12.5px">{{ a.patient.line2 }}</div>
               <div class="chips">
                 <span class="chip">{{ a.patient.billingChip }}</span>
+                <span v-if="a.patient.invoiceChip" class="chip">{{ a.patient.invoiceChip }}</span>
                 <span v-if="a.patient.duesChip" class="chip" :class="a.patient.duesChip.kind">
                   {{ a.patient.duesChip.label }}
                 </span>
@@ -218,7 +219,6 @@
                 <button v-else-if="a.status === 'done'" class="btn secondary small" @click.stop="invoice(a)">
                   Generate invoice →
                 </button>
-                <span v-else-if="a.status === 'invoiced'" class="badge warn">Awaiting payment at counter</span>
                 <button
                   v-else-if="a.status === 'booked'"
                   class="btn secondary small"
@@ -771,7 +771,15 @@ function normalizeApi(a, groupStatus) {
       ? `${a.package_quantity ?? 0}/${a.package_total_sessions} sessions`
       : a.patient_status === 'InPackage'
         ? 'Package'
-        : 'Per-visit'
+        : 'Per-visitt'
+  /* invoice_amount is THIS appointment's own invoice (payment.gross_total), so it is
+     exact. A zero-value invoice is real (a free consult) but "Bill ₹0" is noise. */
+  const invAmt = Number(a.invoice_amount)
+  const invoiceChip =
+    a.is_invoiced && Number.isFinite(invAmt) && invAmt > 0
+      ? `Bill ₹${invAmt.toLocaleString('en-IN')}`
+      : null
+
   /* The patient's whole ledger, not this one bill. The CRM settles untagged money
      oldest-invoice-first, so a session can read 'paid' while the patient still owes
      — and the physio has no other place to see that. Only sent for treated rows. */
@@ -800,6 +808,7 @@ function normalizeApi(a, groupStatus) {
       sex: (a.patient_sex || '').charAt(0).toUpperCase(),
       line2: a.current_condition || '',
       billingChip,
+      invoiceChip,
       duesChip,
       painChip: null,
     },
