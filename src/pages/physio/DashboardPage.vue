@@ -210,8 +210,9 @@
                 >
                   {{ actionBusyId === a.id ? 'Starting…' : 'Start treatment →' }}
                 </button>
+                <!-- The session is still running — this re-opens it, it does not end it. -->
                 <button v-else-if="a.status === 'in_treatment'" class="btn primary small" @click.stop="start(a)">
-                  Session done →
+                  Continue session →
                 </button>
                 <button v-else-if="a.status === 'done'" class="btn secondary small" @click.stop="invoice(a)">
                   Generate invoice →
