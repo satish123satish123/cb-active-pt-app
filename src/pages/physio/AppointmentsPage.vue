@@ -168,17 +168,14 @@ const titleCase = (s) =>
     .toLowerCase()
     .replace(/(^|\s)\S/g, (c) => c.toUpperCase())
 
-/* The badge folds CRM status and payment state into the one thing a physio scans
-   for: is this visit still ahead, done and settled, or done and owing. */
+/* The badge says where the visit stands, never where the money stands: a treated
+   visit reads 'Invoiced' once a bill exists and plain 'Treated' until then. Whether
+   that bill was collected is reception's business and is not surfaced here. */
 function stateOf(a) {
   if (a.status === 'Cancelled') return { label: 'Cancelled', cls: 'danger' }
   if (a.status === 'Pending Confirmation') return { label: 'Awaiting confirmation', cls: 'pending' }
-  if (a.status === 'Treated') {
-    if (a.payment_status === 'paid') return { label: 'Paid', cls: 'success' }
-    if (a.payment_status === 'unpaid' || a.payment_status === 'pending')
-      return { label: 'Payment due', cls: 'warn' }
-    return { label: 'Not invoiced', cls: 'info' }
-  }
+  if (a.status === 'Treated')
+    return a.is_invoiced ? { label: 'Invoiced', cls: 'brand' } : { label: 'Treated', cls: 'info' }
   return { label: 'Confirmed', cls: 'info' }
 }
 
@@ -617,6 +614,7 @@ function openPatient(a) {
   font-weight: 800;
   white-space: nowrap;
 }
+.badge.brand { background: var(--brand-3); color: var(--brand); }
 .badge.success { background: #e6f7ed; color: var(--success); }
 .badge.warn { background: #fff4dd; color: var(--warning); }
 .badge.danger { background: #fde8ec; color: var(--danger); }

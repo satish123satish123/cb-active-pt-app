@@ -193,9 +193,6 @@
               <div class="chips">
                 <span class="chip">{{ a.patient.billingChip }}</span>
                 <span v-if="a.patient.invoiceChip" class="chip">{{ a.patient.invoiceChip }}</span>
-                <span v-if="a.patient.duesChip" class="chip" :class="a.patient.duesChip.kind">
-                  {{ a.patient.duesChip.label }}
-                </span>
                 <span
                   v-if="a.patient.painChip"
                   class="chip"
@@ -238,31 +235,6 @@
             </div>
           </div>
 
-          <template v-if="completedList.length">
-            <div class="tiny" style="margin: 16px 4px 8px; color: var(--text-3); font-weight: 800; letter-spacing: 0.05em">
-              COMPLETED
-            </div>
-            <div v-for="a in completedList" :key="a.id" class="card q-card-ph" @click="openPatient(a)">
-              <div class="q-avatar-ph">{{ initials(a.patient.name) }}</div>
-              <div class="grow">
-                <div class="between">
-                  <div class="ph-time">{{ a.timeLabel }}</div>
-                  <span class="badge success"><span class="ph-dot" style="background: #1f8a4d"></span>Paid</span>
-                </div>
-                <div style="font-weight: 800; margin-top: 2px">
-                  {{ a.patient.nameLine }}
-                  <span class="tiny">· {{ a.patient.age }} {{ a.patient.sex }}</span>
-                </div>
-                <div v-if="a.patient.line2" class="muted" style="font-size: 12.5px">{{ a.patient.line2 }}</div>
-                <div class="row" style="margin-top: 12px; gap: 8px; flex-wrap: wrap">
-                  <span class="badge success">✓ Complete</span>
-                  <button v-if="!a.followUp && a.canFollowUp" class="btn secondary small" @click.stop="bookFollowUp(a)">
-                    Book follow-up →
-                  </button>
-                </div>
-              </div>
-            </div>
-          </template>
         </template>
 
         <div v-else-if="apptsLoading" class="card" style="text-align: center; color: var(--text-3)">
@@ -591,9 +563,12 @@ function nowHM() {
 
 /* ---------------- physio identity (name upgraded from roster API) ---------------- */
 const doctorName = ref(authStore.user?.username || PHYSIO.name)
+/* Greeting stays "Dr. <first name>": the title is stripped first so a name that
+   already carries it doesn't come back as "Dr. Dr.", then put back on every time. */
 const firstNameShort = computed(() => {
   const clean = String(doctorName.value).replace(/^Dr\.?\s*/i, '')
-  return clean.split(/[\s-]+/)[0] || clean
+  const first = clean.split(/[\s-]+/)[0] || clean
+  return first ? `Dr. ${first}` : first
 })
 const avatarInitials = computed(() => initials(String(doctorName.value).replace(/^Dr\.?\s*/i, '')) || 'PT')
 
@@ -772,24 +747,10 @@ function normalizeApi(a, groupStatus) {
       : a.patient_status === 'InPackage'
         ? 'Package'
         : 'Per-visitt'
-  /* invoice_amount is THIS appointment's own invoice (payment.gross_total), so it is
-     exact. A zero-value invoice is real (a free consult) but "Bill ₹0" is noise. */
-  const invAmt = Number(a.invoice_amount)
-  const invoiceChip =
-    a.is_invoiced && Number.isFinite(invAmt) && invAmt > 0
-      ? `Bill ₹${invAmt.toLocaleString('en-IN')}`
-      : null
-
-  /* The patient's whole ledger, not this one bill. The CRM settles untagged money
-     oldest-invoice-first, so a session can read 'paid' while the patient still owes
-     — and the physio has no other place to see that. Only sent for treated rows. */
-  const bal = Number(a.patient_balance)
-  const duesChip =
-    a.patient_balance_state === 'due' && bal > 0
-      ? { label: `₹${bal.toLocaleString('en-IN')} due`, kind: 'due' }
-      : a.patient_balance_state === 'advance' && bal < 0
-        ? { label: `₹${Math.abs(bal).toLocaleString('en-IN')} advance`, kind: 'advance' }
-        : null
+  /* The physio's card carries no money. Amounts, payment state and the patient's
+     ledger are reception's business — the only billing fact a physio needs here is
+     whether this visit has been invoiced yet. Nothing shown until it has. */
+  const invoiceChip = a.is_invoiced ? 'Invoiced' : null
   return {
     id: a.id,
     date: a.date,
@@ -809,7 +770,6 @@ function normalizeApi(a, groupStatus) {
       line2: a.current_condition || '',
       billingChip,
       invoiceChip,
-      duesChip,
       painChip: null,
     },
   }
@@ -897,15 +857,12 @@ const shown = computed(() => {
   let s = todays.value.slice()
   if (filter.value === 'waiting') s = s.filter((a) => a.status === 'checked_in')
   else if (filter.value === 'seen') s = s.filter((a) => ['done', 'invoiced', 'paid'].includes(a.status))
-  s.sort((a, b) => {
-    const ca = a.status === 'paid' ? 1 : 0
-    const cb = b.status === 'paid' ? 1 : 0
-    return ca !== cb ? ca - cb : a.time24.localeCompare(b.time24)
-  })
+  s.sort((a, b) => a.time24.localeCompare(b.time24))
   return s
 })
-const activeList = computed(() => shown.value.filter((a) => a.status !== 'paid'))
-const completedList = computed(() => shown.value.filter((a) => a.status === 'paid'))
+/* Paid and unpaid rows sit together in one time-ordered queue: the physio is not
+   shown who has settled, so a separate "completed" group would give it away. */
+const activeList = computed(() => shown.value)
 const queueTitle = computed(() =>
   filter.value === 'waiting'
     ? 'Patients Waiting At Frontdesk'
@@ -1717,16 +1674,6 @@ function resetDemo() {
   background: #f0f6f6;
   color: var(--text-2);
   border: 1px solid var(--line);
-}
-.chip.due {
-  background: #fff4dd;
-  color: var(--warning);
-  border-color: #ffe6b0;
-}
-.chip.advance {
-  background: #e6f7ed;
-  color: var(--success);
-  border-color: #c6ebd5;
 }
 .chips {
   display: flex;
