@@ -100,8 +100,10 @@ export const STATUS = {
     checked_in: { label: 'Checked in', cls: 'warn', color: '#c78810' },
     in_treatment: { label: 'In treatment', cls: 'info', color: '#2563eb' },
     done: { label: 'Treatment done', cls: 'brand', color: '#0a7e6e' },
-    invoiced: { label: 'Payment pending', cls: 'warn', color: '#c78810' },
-    paid: { label: 'Paid', cls: 'success', color: '#1f8a4d' },
+    /* Invoiced is as far as a physio's view of money goes — whether the bill was
+       collected is reception's, so 'paid' deliberately reads the same as 'invoiced'. */
+    invoiced: { label: 'Invoiced', cls: 'brand', color: '#0a7e6e' },
+    paid: { label: 'Invoiced', cls: 'brand', color: '#0a7e6e' },
     declined: { label: 'Declined', cls: 'danger', color: '#d9485f' },
 }
 
