@@ -1,3 +1,17 @@
+import { ROLE } from 'src/stores/authStore'
+
+/**
+ * The lead-manager screens are a UI-only preview: the app has no lead-manager
+ * login or endpoints yet, so the routes are left open for the team to review.
+ *
+ * Flip this to `false` the day the lead-manager login goes live — the guard
+ * then turns on with no other change anywhere.
+ */
+const LEAD_MANAGER_UI_PREVIEW = true
+const LEAD_MANAGER_META = LEAD_MANAGER_UI_PREVIEW
+  ? { requiresAuth: false }
+  : { requiresAuth: true, requiresRole: ROLE.LEAD_MANAGER }
+
 const routes = [
   {
     path: '/corporate-assessment',
@@ -23,7 +37,7 @@ const routes = [
   {
     path: '/',
     component: () => import('layouts/AppLayout.vue'),
-    meta: { requiresAuth: true, requiresRole: 'Patient' },
+    meta: { requiresAuth: true, requiresRole: ROLE.PATIENT },
     children: [
       {
         path: '/',
@@ -83,7 +97,7 @@ const routes = [
   {
     path: '/physio',
     component: () => import('layouts/AppLayout.vue'),
-    meta: { requiresAuth: true, requiresRole: 'Doctor' },
+    meta: { requiresAuth: true, requiresRole: ROLE.DOCTOR },
     children: [
       {
         path: '',
@@ -120,6 +134,52 @@ const routes = [
       {
         path: 'profile',
         component: () => import('pages/physio/ProfilePage.vue'),
+      },
+    ],
+  },
+  {
+    path: '/lead-manager',
+    component: () => import('layouts/LeadManagerLayout.vue'),
+    meta: LEAD_MANAGER_META,
+    children: [
+      {
+        path: '',
+        meta: { title: 'Dashboard' },
+        component: () => import('pages/lead-manager/DashboardPage.vue'),
+      },
+      {
+        path: 'leads',
+        meta: { title: 'Leads' },
+        component: () => import('pages/lead-manager/LeadsPage.vue'),
+      },
+      {
+        path: 'leads/:id',
+        meta: { title: 'Lead Details' },
+        component: () => import('pages/lead-manager/LeadDetailPage.vue'),
+      },
+      {
+        path: 'feedback',
+        meta: { title: 'Patient Feedbacks' },
+        component: () => import('pages/lead-manager/FeedbackPage.vue'),
+      },
+      {
+        path: 'communications',
+        redirect: '/lead-manager/communications/queries',
+      },
+      {
+        path: 'communications/queries',
+        meta: { title: 'Queries' },
+        component: () => import('pages/lead-manager/QueriesPage.vue'),
+      },
+      {
+        path: 'communications/exophones',
+        meta: { title: 'Exophones' },
+        component: () => import('pages/lead-manager/ExophonesPage.vue'),
+      },
+      {
+        path: 'profile',
+        meta: { title: 'Profile' },
+        component: () => import('pages/lead-manager/ProfilePage.vue'),
       },
     ],
   },

@@ -17,7 +17,9 @@ export default defineConfig((ctx) => {
     boot: ['i18n', 'axios', 'auth'],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
-    css: ['app.scss', 'style.scss'],
+    // 'lead-manager.css' is fully namespaced under `.lm-page` — it cannot
+    // affect the patient or physio screens.
+    css: ['app.scss', 'style.scss', 'lead-manager.css'],
 
     // https://github.com/quasarframework/quasar/tree/dev/extras
     extras: [

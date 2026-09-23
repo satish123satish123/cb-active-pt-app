@@ -2,6 +2,66 @@ import { defineStore } from 'pinia'
 import { Loading, LocalStorage, Notify } from 'quasar'
 import { api } from 'src/boot/axios'
 
+/**
+ * `base_role` codes as returned by the CRM login response.
+ *
+ * TODO(api): LEAD_MANAGER is a placeholder. In the CRM a lead manager is the
+ * Ion Auth group `Lead-manager`, not a numeric code — confirm with Satish what
+ * the login API returns. Until then the label check in resolveRole() is what
+ * actually matches a lead manager.
+ */
+export const BASE_ROLE = {
+  DOCTOR: '4',
+  PATIENT: '5',
+  LEAD_MANAGER: '6',
+}
+
+/** Roles the app routes on. */
+export const ROLE = {
+  DOCTOR: 'Doctor',
+  PATIENT: 'Patient',
+  LEAD_MANAGER: 'LeadManager',
+}
+
+/** Landing screen for each role — the single place redirects are decided. */
+export const ROLE_HOME = {
+  [ROLE.DOCTOR]: '/physio',
+  [ROLE.PATIENT]: '/',
+  [ROLE.LEAD_MANAGER]: '/lead-manager',
+}
+
+const LABEL_TO_ROLE = {
+  doctor: ROLE.DOCTOR,
+  patient: ROLE.PATIENT,
+  leadmanager: ROLE.LEAD_MANAGER,
+}
+
+/**
+ * Work out a user's role from whatever the backend sent. Login responses carry
+ * a `role`/`group` label and the stored user carries a numeric `base_role`, so
+ * both are checked here rather than at every call site. Labels are normalised,
+ * so the CRM's `Lead-manager` group matches.
+ *
+ * @param {object|null} user
+ * @returns {string} one of ROLE.*
+ */
+export function resolveRole(user) {
+  if (!user) return ROLE.PATIENT
+
+  const label = String(user.role || user.group || '')
+    .toLowerCase()
+    .replace(/[^a-z]/g, '')
+  if (LABEL_TO_ROLE[label]) return LABEL_TO_ROLE[label]
+
+  const code = String(user.base_role ?? '')
+  if (code === BASE_ROLE.DOCTOR) return ROLE.DOCTOR
+  if (code === BASE_ROLE.LEAD_MANAGER) return ROLE.LEAD_MANAGER
+  return ROLE.PATIENT
+}
+
+/** Home path for a user object. Falls back to the patient app. */
+export const homeForUser = (user) => ROLE_HOME[resolveRole(user)] || ROLE_HOME[ROLE.PATIENT]
+
 let token_id = LocalStorage.getItem('token_id') ? LocalStorage.getItem('token_id') : null
 let bearer = LocalStorage.getItem('bearer') ? LocalStorage.getItem('bearer') : null
 let user = LocalStorage.getItem('user') ? JSON.parse(LocalStorage.getItem('user')) : null
@@ -30,14 +90,7 @@ export const useAuthStore = defineStore('backend_auth', {
     isServeError: (state) => {
       return state.serverError ? true : false
     },
-    userRole: (state) => {
-      const baseRole = state.user?.base_role
-
-      if (baseRole === '4') {
-        return 'Doctor'
-      }
-      return 'Patient' // 5
-    },
+    userRole: (state) => resolveRole(state.user),
   },
   actions: {
     login() {
@@ -54,9 +107,7 @@ export const useAuthStore = defineStore('backend_auth', {
               type: 'positive',
               message: response.data.message || 'Login successful',
             })
-            const targetRoute =
-              userData.role === 'Doctor' || userData.group === 'Doctor' ? '/physio' : '/'
-            this.pushWithPromise(this.router, targetRoute)
+            this.pushWithPromise(this.router, homeForUser(userData))
               .then(() => {
                 this.resetAction()
               })
