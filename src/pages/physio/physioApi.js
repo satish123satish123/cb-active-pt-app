@@ -408,11 +408,25 @@ export async function getPhysioPatients(payload) {
 }
 
 /**
- * getPhysioPatientDetails — one patient's profile, package, latest feedback, visits.
- * Payload: { doctor_id, patient_id }
+ * getPhysioPatientDetails — one patient's full profile for the detail screen.
+ * Payload: { patient_id, hospital_id }  (hospital_id scopes visits + feedback)
+ * → { data: { patient, package, account, stats, next_appointment,
+ *            visits[], feedback[], programme } }
  */
 export async function getPhysioPatientDetails(payload) {
   const { data } = await api.post('getPhysioPatientDetails', payload)
+  return data
+}
+
+/**
+ * addPhysioPatientComment — add a timeline comment on a patient, the same
+ * list the CRM shows under Timeline on patient/medicalHistory.
+ * Payload: { patient_id, doctor_id, comment, hospital_id, unique_identifier }
+ * `unique_identifier` makes a repeated submit a no-op on the server.
+ * → { data: { comment, comments[] } }  comment is the row just created
+ */
+export async function addPhysioPatientComment(payload) {
+  const { data } = await api.post('addPhysioPatientComment', payload)
   return data
 }
 

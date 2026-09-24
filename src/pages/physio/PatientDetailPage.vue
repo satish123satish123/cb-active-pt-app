@@ -3,150 +3,265 @@
     <div class="ph-screen">
       <!-- ============ TOPBAR ============ -->
       <div class="topbar">
-        <button class="back" @click="$router.back()">←</button>
+        <button class="back" aria-label="Back" @click="$router.back()">←</button>
         <div class="grow">
-          <h2 class="font-sora">{{ head.name }}</h2>
+          <h2 class="font-sora">{{ headName }}</h2>
           <div class="muted" style="font-size: 12.5px">
-            {{ head.age }}{{ head.sex }}<template v-if="head.phone"> · {{ head.phone }}</template>
+            <template v-if="p">
+              {{ [p.age ? p.age + 'y' : null, p.sex, p.phone].filter(Boolean).join(' · ') }}
+            </template>
           </div>
         </div>
-        <span v-if="liveData && liveData.session_number" class="badge brand">Session {{ liveData.session_number }}</span>
+        <span v-if="p" class="badge" :class="p.billing_type === 'InPackage' ? 'brand' : 'muted'">
+          {{ p.billing_type === 'InPackage' ? 'Package' : 'Per-visit' }}
+        </span>
       </div>
 
       <!-- ============ LOADING / ERROR ============ -->
       <div v-if="loading" class="section">
-        <div class="card" style="text-align: center; color: var(--text-3)">Loading patient details…</div>
+        <div class="card" style="text-align: center; color: var(--text-3)">
+          Loading patient details…
+        </div>
       </div>
 
-      <!-- =====================================================
-           LIVE MODE — getPatientTreatmentDetails
-      ====================================================== -->
-      <template v-else-if="liveData">
-        <!-- Condition + billing -->
+      <div v-else-if="error" class="section">
+        <div class="card" style="text-align: center">
+          <div class="muted">{{ error }}</div>
+          <button class="retry" @click="load">Try again</button>
+        </div>
+      </div>
+
+      <template v-else-if="data">
+        <!-- ============ PROFILE ============ -->
         <div class="section">
           <div class="card">
-            <span class="badge brand">{{ liveData.patient_details.current_condition || 'Condition not set' }}</span>
-            <div v-if="liveData.patient_details.address" class="tiny" style="margin-top: 8px">
-              📍 {{ liveData.patient_details.address }}
+            <span class="badge brand">{{ p.condition || 'Condition not set' }}</span>
+            <div class="kv">
+              <div v-for="row in profileRows" :key="row[0]" class="kv-row">
+                <span class="kv-k">{{ row[0] }}</span>
+                <span class="kv-v">{{ row[1] }}</span>
+              </div>
             </div>
-            <template v-if="billing">
-              <div style="margin-top: 14px">
-                <div class="between">
-                  <strong style="font-size: 14px">{{ billing.payment_procedure }}</strong>
-                  <span class="muted">₹{{ billing.charges_per_session }}/session</span>
-                </div>
-                <div class="muted" style="margin-top: 4px">
-                  {{ sessionsDone }} of {{ billing.total_sessions }} sessions
-                  <template v-if="billing.expired_at"> · valid till {{ billing.expired_at }}</template>
-                </div>
-                <div class="pkg-bar">
-                  <i :style="{ width: pkgPct + '%' }"></i>
-                </div>
+          </div>
+        </div>
+
+        <!-- ============ BILLING ============ -->
+        <div class="section" style="margin-top: 12px">
+          <div class="section-title"><h3 class="font-sora">Billing</h3></div>
+          <div class="card">
+            <template v-if="pkg">
+              <div class="between">
+                <strong style="font-size: 14px">{{ pkg.payment_procedure }}</strong>
+                <span v-if="pkg.charges_per_session" class="muted">
+                  ₹{{ pkg.charges_per_session }}/session
+                </span>
+              </div>
+              <!-- some active packages carry no session quota in the CRM, so only
+                   show a count out of a total when there really is one -->
+              <div class="muted" style="margin-top: 4px">
+                <template v-if="pkg.total_sessions > 0">
+                  {{ pkg.sessions_used }} of {{ pkg.total_sessions }} sessions used ·
+                  {{ pkg.sessions_left }} left
+                </template>
+                <template v-else>
+                  {{ pkg.sessions_used }} session{{ pkg.sessions_used === 1 ? '' : 's' }} used · no
+                  session limit set
+                </template>
+              </div>
+              <div v-if="pkg.total_sessions > 0" class="pkg-bar">
+                <i :style="{ width: pkgPct + '%' }"></i>
+              </div>
+              <div class="tiny" style="margin-top: 6px">
+                Started {{ fmtDay(pkg.started_on) }}
+                <template v-if="pkg.is_subscription"> · subscription</template>
               </div>
             </template>
-            <div v-else class="muted" style="margin-top: 12px">Billing: per-visit</div>
-          </div>
-        </div>
+            <div v-else class="muted">Per-visit billing — no active package.</div>
 
-        <!-- Goals / milestones -->
-        <div v-if="goals.length" class="section" style="margin-top: 12px">
-          <div class="section-title"><h3 class="font-sora">Treatment goals</h3></div>
-          <div v-for="g in goals" :key="g.id" class="card">
-            <div class="between">
-              <strong style="font-size: 13px">Sessions {{ g.session }}</strong>
-              <span class="tiny">Reassess on session {{ g.reassessment_on }}</span>
-            </div>
-            <div v-for="gp in g.goal_progress" :key="gp.id" style="margin-top: 10px">
-              <div class="muted" style="font-size: 12.5px">{{ gp.written_goal }}</div>
-              <div class="between" style="margin-top: 4px">
-                <span class="tiny">{{ gp.base_value }} → {{ gp.target_value }}
-                  <template v-if="gp.achieved_value"> · achieved {{ gp.achieved_value }}</template>
-                </span>
-                <span class="badge" :class="gp.status === 'achieved' ? 'success' : 'muted'" style="min-height: 22px; font-size: 11px">
-                  {{ gp.status === 'achieved' ? '✓ Achieved' : gp.status }}
-                </span>
-              </div>
-              <div class="pkg-bar" style="margin-top: 6px">
-                <i :style="{ width: (gp.progress_percentage || 0) + '%' }"></i>
-              </div>
+            <div class="between acct">
+              <span class="muted">Account</span>
+              <span class="badge" :class="acctBadge.cls">{{ acctBadge.label }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Visit history -->
+        <!-- ============ AT A GLANCE ============ -->
         <div class="section" style="margin-top: 12px">
-          <div class="section-title"><h3 class="font-sora">Visit history</h3></div>
-          <div v-for="v in visits" :key="v.id" class="card">
+          <div class="section-title"><h3 class="font-sora">At a glance</h3></div>
+          <div class="stat-grid">
+            <div v-for="s in statTiles" :key="s.label" class="card stat">
+              <div class="stat-v">{{ s.value }}</div>
+              <div class="tiny">{{ s.label }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ NEXT APPOINTMENT ============ -->
+        <div v-if="data.next_appointment" class="section" style="margin-top: 12px">
+          <div class="section-title"><h3 class="font-sora">Next appointment</h3></div>
+          <div class="card">
             <div class="between">
               <div>
-                <strong>{{ visitDate(v) }}<template v-if="v.s_time && v.s_time !== 'Select Timeslot'">, {{ v.s_time }}</template></strong>
+                <strong>{{ fmtDay(data.next_appointment.date) }}</strong>
                 <div class="tiny">
-                  {{ visitDoctor(v) }}<template v-if="v.session_number"> · Session {{ v.session_number }}</template>
-                  <template v-if="v.is_consultation === '1'"> · Consultation</template>
+                  {{ data.next_appointment.s_time || 'Time not set' }}
+                  <template v-if="data.next_appointment.physio">
+                    · {{ data.next_appointment.physio }}
+                  </template>
                 </div>
               </div>
-              <span class="badge" :class="visitBadge(v.status).cls">{{ visitBadge(v.status).label }}</span>
-            </div>
-            <div v-if="v.actual_session_start" class="tiny" style="margin-top: 6px">
-              Session {{ v.actual_session_start }}<template v-if="v.actual_session_end"> – {{ v.actual_session_end }}</template>
+              <span class="badge" :class="visitBadge(data.next_appointment.status).cls">
+                {{ visitBadge(data.next_appointment.status).label }}
+              </span>
             </div>
           </div>
-          <div v-if="!visits.length" class="card" style="text-align: center; color: var(--text-3)">No visits yet.</div>
         </div>
-      </template>
 
-      <!-- =====================================================
-           DEMO MODE — unchanged demo patients
-      ====================================================== -->
-      <template v-else-if="demoP">
-        <div class="section">
+        <!-- ============ LATEST FEEDBACK ============ -->
+        <div v-if="data.feedback.length" class="section" style="margin-top: 12px">
+          <div class="section-title"><h3 class="font-sora">Patient feedback</h3></div>
+          <div v-for="f in data.feedback" :key="f.id" class="card">
+            <div class="between">
+              <span class="stars">
+                <span v-for="n in 5" :key="n" :class="{ off: n > f.stars }">★</span>
+                <span class="muted" style="margin-left: 6px">{{ f.rating_text }}</span>
+              </span>
+              <span class="tiny">{{ fmtDay(f.created_at) }}</span>
+            </div>
+            <div v-if="f.suggestion" class="muted" style="margin-top: 6px; font-style: italic">
+              "{{ f.suggestion }}"
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ EXERCISE PROGRAMME ============ -->
+        <div v-if="data.programme" class="section" style="margin-top: 12px">
+          <div class="section-title"><h3 class="font-sora">Exercise programme</h3></div>
           <div class="card">
-            <span class="badge brand">{{ demoP.condition }}</span>
-            <div v-if="demoP.package" style="margin-top: 14px">
-              <div class="between">
-                <strong style="font-size: 14px">{{ demoP.package.name }}</strong>
-                <span class="muted">{{ demoP.package.used }}/{{ demoP.package.total }} used</span>
-              </div>
-              <div class="pkg-bar">
-                <i :style="{ width: (demoP.package.used / demoP.package.total) * 100 + '%' }"></i>
-              </div>
+            <div class="between">
+              <strong style="font-size: 14px">{{ data.programme.name }}</strong>
+              <span class="badge" :class="data.programme.is_active ? 'success' : 'muted'">
+                {{ data.programme.is_active ? 'Active' : 'Inactive' }}
+              </span>
             </div>
-            <div v-else class="muted" style="margin-top: 12px">Billing: per-visit</div>
+            <div class="muted" style="margin-top: 4px">
+              {{ fmtDay(data.programme.start_date) }} – {{ fmtDay(data.programme.end_date) }}
+            </div>
+            <div v-if="data.programme.instructions" class="tiny" style="margin-top: 6px">
+              {{ data.programme.instructions }}
+            </div>
           </div>
         </div>
 
-        <div v-if="demoP.feedback" class="section" style="margin-top: 12px">
-          <div class="section-title"><h3 class="font-sora">Latest app feedback</h3></div>
-          <div class="card" style="background: var(--grad-soft); border-color: #cfeee6">
-            <div class="muted">
-              Pain <strong style="color: var(--warning)">{{ demoP.feedback.pain }}/10</strong> · exercises
-              felt <strong>{{ demoP.feedback.difficulty }}</strong> · {{ demoP.feedback.when }}
-            </div>
-            <div class="muted" style="margin-top: 4px; font-style: italic">"{{ demoP.feedback.note }}"</div>
-          </div>
-        </div>
-
+        <!-- ============ TIMELINE ============ -->
         <div class="section" style="margin-top: 12px">
-          <div class="section-title"><h3 class="font-sora">Visit history</h3></div>
-          <div v-for="a in demoHistory" :key="a.id" class="card">
+          <div class="section-title">
+            <h3 class="font-sora">Timeline</h3>
+            <span class="tiny">{{ comments.length }} entries</span>
+          </div>
+
+          <div class="card">
+            <textarea
+              v-model="newComment"
+              class="comment-box"
+              rows="3"
+              aria-label="Add a comment"
+              placeholder="Add a comment about this patient…"
+            ></textarea>
+            <div v-if="commentError" class="tiny" style="color: var(--danger); margin-top: 6px">
+              {{ commentError }}
+            </div>
+            <button class="post-btn" :disabled="!newComment.trim() || posting" @click="postComment">
+              {{ posting ? 'Posting…' : 'Post comment' }}
+            </button>
+          </div>
+
+          <div v-for="c in shownComments" :key="c.id" class="card">
+            <div class="between">
+              <span class="badge muted">{{ c.type }}</span>
+              <span class="tiny">{{ fmtDay(c.created_at) }}</span>
+            </div>
+            <div style="margin-top: 8px; font-size: 13.5px">{{ c.remarks }}</div>
+            <div v-if="c.author" class="tiny" style="margin-top: 6px">
+              {{ c.author }}<template v-if="c.author_role"> · {{ c.author_role }}</template>
+            </div>
+          </div>
+
+          <button
+            v-if="comments.length > shownComments.length"
+            class="retry"
+            @click="showAllComments = true"
+          >
+            Show all {{ comments.length }} entries
+          </button>
+
+          <div
+            v-if="!comments.length"
+            class="card"
+            style="text-align: center; color: var(--text-3)"
+          >
+            No timeline entries yet.
+          </div>
+        </div>
+
+        <!-- ============ VISIT HISTORY ============ -->
+        <div class="section" style="margin-top: 12px">
+          <div class="section-title">
+            <h3 class="font-sora">Visit history</h3>
+            <span class="tiny">{{ data.visits.length }} total</span>
+          </div>
+
+          <div v-for="v in shownVisits" :key="v.id" class="card">
             <div class="between">
               <div>
-                <strong>{{ a.date === todayISO ? 'Today' : fmtDate(a.date) }}, {{ a.time }}</strong>
-                <div class="tiny">{{ demoVisitSummary(a) }}</div>
+                <strong>
+                  {{ fmtDay(v.date) }}<template v-if="v.s_time">, {{ v.s_time }}</template>
+                </strong>
+                <div class="tiny">
+                  {{ v.physio || 'Physio not set' }}
+                  <template v-if="v.session_number"> · Session {{ v.session_number }}</template>
+                  <template v-if="v.is_consultation"> · Consultation</template>
+                </div>
               </div>
-              <span class="badge" :class="STATUS[a.status].cls">{{ STATUS[a.status].label }}</span>
+              <span class="badge" :class="visitBadge(v.status).cls">
+                {{ visitBadge(v.status).label }}
+              </span>
+            </div>
+
+            <div v-if="v.actual_session_start" class="tiny" style="margin-top: 6px">
+              Session {{ v.actual_session_start
+              }}<template v-if="v.actual_session_end"> – {{ v.actual_session_end }}</template>
+            </div>
+
+            <div v-if="v.payment_status" class="tiny" style="margin-top: 4px">
+              <span
+                :style="{
+                  color: v.payment_status === 'paid' ? 'var(--success)' : 'var(--warning)',
+                }"
+              >
+                {{ v.payment_status === 'paid' ? 'Paid' : 'Unpaid' }}
+              </span>
+              <template v-if="v.invoice_amount"> · ₹{{ v.invoice_amount }}</template>
             </div>
           </div>
-          <div v-if="!demoHistory.length" class="card" style="text-align: center; color: var(--text-3)">No visits yet.</div>
+
+          <button
+            v-if="data.visits.length > shownVisits.length"
+            class="retry"
+            @click="showAll = true"
+          >
+            Show all {{ data.visits.length }} visits
+          </button>
+
+          <div
+            v-if="!data.visits.length"
+            class="card"
+            style="text-align: center; color: var(--text-3)"
+          >
+            No visits yet.
+          </div>
         </div>
       </template>
-
-      <!-- Not found / API failed -->
-      <div v-else class="section">
-        <div class="card" style="text-align: center; color: var(--text-3)">
-          Could not load this patient's details.
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -155,82 +270,166 @@
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from 'src/stores/authStore'
-import { PATIENTS, APPTS, STATUS, todayISO, fmtDate } from './physioDemoData'
-import { getPatientTreatmentDetails, resolveHospitalId } from './physioApi'
+import {
+  addPhysioPatientComment,
+  getPhysioPatientDetails,
+  randHex32,
+  resolveDoctorId,
+  resolveHospitalId,
+} from './physioApi'
 
 const route = useRoute()
 const authStore = useAuthStore()
 
-/* demo patient? (ids like p1..p5) */
-const demoP = PATIENTS[route.params.id] || null
-const demoHistory = demoP ? APPTS.filter((a) => a.pid === demoP.id) : []
-function demoVisitSummary(a) {
-  return a.invoice && a.invoice.items
-    ? a.invoice.items.map((it) => it.label.replace(' — package session', '')).join(', ')
-    : '—'
+const loading = ref(true)
+const error = ref('')
+const data = ref(null)
+const showAll = ref(false)
+
+const VISIT_PREVIEW = 8
+const COMMENT_PREVIEW = 5
+
+/* ---------------- timeline comments ---------------- */
+const newComment = ref('')
+const posting = ref(false)
+const commentError = ref('')
+const showAllComments = ref(false)
+
+const comments = computed(() => data.value?.comments || [])
+const shownComments = computed(() =>
+  showAllComments.value ? comments.value : comments.value.slice(0, COMMENT_PREVIEW),
+)
+
+async function postComment() {
+  const text = newComment.value.trim()
+  if (!text || posting.value) return
+
+  posting.value = true
+  commentError.value = ''
+  try {
+    const res = await addPhysioPatientComment({
+      patient_id: Number(route.params.id),
+      doctor_id: Number(resolveDoctorId(authStore.user)) || undefined,
+      hospital_id: Number(resolveHospitalId(authStore.user)) || undefined,
+      comment: text,
+      // a repeated submit with the same id is ignored server-side
+      unique_identifier: randHex32(),
+    })
+    if (res?.status === 'success') {
+      // the server returns the refreshed list, so the new entry lands in order
+      data.value.comments = res.data?.comments || comments.value
+      newComment.value = ''
+    } else {
+      commentError.value = res?.message || 'Could not save the comment.'
+    }
+  } catch (e) {
+    console.log('addPhysioPatientComment failed:', e)
+    commentError.value = 'Could not save the comment — try again.'
+  } finally {
+    posting.value = false
+  }
 }
 
-/* ---------------- live — getPatientTreatmentDetails ---------------- */
-const loading = ref(false)
-const liveData = ref(null)
-
 async function load() {
-  if (demoP) return
   loading.value = true
+  error.value = ''
   try {
-    const data = await getPatientTreatmentDetails({
+    const res = await getPhysioPatientDetails({
       patient_id: Number(route.params.id),
-      hospital_id: Number(resolveHospitalId(authStore.user)),
+      hospital_id: Number(resolveHospitalId(authStore.user)) || undefined,
     })
-    if (data?.status === 'success') liveData.value = data.data
+    if (res?.status === 'success') {
+      data.value = res.data
+    } else {
+      error.value = res?.message || 'Could not load this patient.'
+    }
   } catch (e) {
-    console.log('getPatientTreatmentDetails failed:', e)
+    console.log('getPhysioPatientDetails failed:', e)
+    error.value = 'Could not load this patient — check your connection and try again.'
   } finally {
     loading.value = false
   }
 }
 load()
 
-const head = computed(() => {
-  if (liveData.value) {
-    const pd = liveData.value.patient_details
-    return {
-      name: pd.name,
-      age: pd.age,
-      sex: (pd.sex || '').charAt(0).toUpperCase(),
-      phone: pd.phone,
-    }
-  }
-  if (demoP) return { name: demoP.name, age: demoP.age, sex: demoP.sex, phone: demoP.phone }
-  return { name: 'Patient', age: '', sex: '', phone: '' }
+const p = computed(() => data.value?.patient || null)
+const pkg = computed(() => data.value?.package || null)
+
+const headName = computed(() => {
+  if (!p.value) return 'Patient'
+  return [p.value.salutation, p.value.name].filter(Boolean).join(' ')
 })
 
-const billing = computed(() => (liveData.value?.Billing || [])[0] || null)
-const sessionsDone = computed(() => Number(liveData.value?.session_number) || 0)
+/** "2024-04-24" / "2025-11-14 11:03:00" → "Wed, 24 Apr 24" */
+function fmtDay(value) {
+  if (!value) return '—'
+  const d = new Date(String(value).replace(' ', 'T'))
+  if (Number.isNaN(d.getTime())) return value
+  return d.toLocaleDateString('en-IN', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: '2-digit',
+  })
+}
+
+const profileRows = computed(() => {
+  const x = p.value
+  if (!x) return []
+  return [
+    ['Physio', x.physio || '—'],
+    ['Clinic', x.hospital_name || '—'],
+    ['Patient ID', x.patient_code || x.id],
+    ['Address', [x.address, x.zip_code].filter(Boolean).join(', ') || '—'],
+    ['Registered', fmtDay(x.registered_on)],
+  ]
+})
+
 const pkgPct = computed(() => {
-  const total = Number(billing.value?.total_sessions) || 0
-  if (!total) return 0
-  return Math.min(100, Math.round((sessionsDone.value / total) * 100))
+  if (!pkg.value?.total_sessions) return 0
+  return Math.min(100, Math.round((pkg.value.sessions_used / pkg.value.total_sessions) * 100))
 })
 
-const goals = computed(() => liveData.value?.reassessment_details?.results?.data || [])
-const visits = computed(() => liveData.value?.visits || [])
+/** balance > 0 is money the patient owes; < 0 is credit sitting with the clinic. */
+const acctBadge = computed(() => {
+  const a = data.value?.account
+  if (!a) return { label: '—', cls: 'muted' }
+  const amount = '₹' + Math.abs(a.balance).toLocaleString('en-IN')
+  if (a.state === 'due') return { label: amount + ' due', cls: 'warn' }
+  if (a.state === 'advance') return { label: amount + ' advance', cls: 'info' }
+  return { label: 'Settled', cls: 'success' }
+})
 
-function visitDate(v) {
-  const ts = Number(v.date)
-  if (!ts) return v.add_date || ''
-  return new Date(ts * 1000).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })
+const statTiles = computed(() => {
+  const s = data.value?.stats
+  if (!s) return []
+  return [
+    { label: 'Sessions done', value: s.treated },
+    { label: 'Cancelled', value: s.cancelled },
+    { label: 'First visit', value: fmtShort(s.first_visit) },
+    { label: 'Last visit', value: fmtShort(s.last_visit) },
+  ]
+})
+
+/** Compact date for the stat tiles: "24 Apr 24". */
+function fmtShort(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' })
 }
-function visitDoctor(v) {
-  // "Dr. Nikhil Sharma - PT-Shohini-9" → "Dr. Nikhil Sharma - PT"
-  const parts = String(v.visit || '').split('-')
-  return parts.length > 2 ? parts.slice(0, -2).join('-').trim() : v.visit || ''
-}
+
+const shownVisits = computed(() => {
+  const all = data.value?.visits || []
+  return showAll.value ? all : all.slice(0, VISIT_PREVIEW)
+})
+
 const VISIT_BADGE = {
   Treated: { label: 'Treated', cls: 'success' },
   Cancelled: { label: 'Cancelled', cls: 'danger' },
-  Confirmed: { label: 'Confirmed', cls: 'muted' },
+  Confirmed: { label: 'Confirmed', cls: 'info' },
   'Pending Confirmation': { label: 'To confirm', cls: 'pending' },
+  Closed: { label: 'Closed', cls: 'muted' },
 }
 const visitBadge = (s) => VISIT_BADGE[s] || { label: s || '—', cls: 'muted' }
 </script>
@@ -250,7 +449,6 @@ const visitBadge = (s) => VISIT_BADGE[s] || { label: s || '—', cls: 'muted' }
   --info: #2563eb;
   --danger: #d9485f;
   --shadow-sm: 0 6px 16px rgba(16, 33, 42, 0.06);
-  --grad-soft: linear-gradient(135deg, #edf9f6 0%, #e5f3f5 100%);
 
   background: var(--bg);
   max-width: 460px;
@@ -264,8 +462,14 @@ const visitBadge = (s) => VISIT_BADGE[s] || { label: s || '—', cls: 'muted' }
   animation: ph-fade 0.25s ease;
 }
 @keyframes ph-fade {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .topbar {
@@ -296,12 +500,15 @@ const visitBadge = (s) => VISIT_BADGE[s] || { label: s || '—', cls: 'muted' }
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: none;
 }
 
-.section { padding: 0 16px; }
+.section {
+  padding: 0 16px;
+}
 .section-title {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   margin: 18px 4px 10px;
 }
@@ -311,10 +518,24 @@ const visitBadge = (s) => VISIT_BADGE[s] || { label: s || '—', cls: 'muted' }
   font-weight: 800;
   letter-spacing: -0.01em;
 }
-.between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.grow { flex: 1; }
-.muted { color: var(--text-2); font-size: 13px; }
-.tiny { color: var(--text-3); font-size: 12px; }
+.between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+.muted {
+  color: var(--text-2);
+  font-size: 13px;
+}
+.tiny {
+  color: var(--text-3);
+  font-size: 12px;
+}
 
 .card {
   background: var(--card);
@@ -323,7 +544,57 @@ const visitBadge = (s) => VISIT_BADGE[s] || { label: s || '—', cls: 'muted' }
   padding: 16px;
   border: 1px solid rgba(220, 231, 234, 0.85);
 }
-.card + .card { margin-top: 12px; }
+.card + .card {
+  margin-top: 12px;
+}
+
+.kv {
+  margin-top: 14px;
+}
+.kv-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+}
+.kv-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.kv-k {
+  color: var(--text-2);
+  font-size: 12.5px;
+  flex: none;
+}
+.kv-v {
+  font-weight: 700;
+  font-size: 13px;
+  text-align: right;
+  word-break: break-word;
+}
+
+.acct {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.stat {
+  padding: 14px;
+}
+.stat-v {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 2px;
+}
 
 .badge {
   display: inline-flex;
@@ -336,13 +607,43 @@ const visitBadge = (s) => VISIT_BADGE[s] || { label: s || '—', cls: 'muted' }
   font-weight: 700;
   white-space: nowrap;
 }
-.badge.brand { background: var(--brand-3); color: var(--brand); }
-.badge.success { background: #e6f7ed; color: var(--success); }
-.badge.warn { background: #fff4dd; color: var(--warning); }
-.badge.danger { background: #fde8ec; color: var(--danger); }
-.badge.info { background: #e6efff; color: var(--info); }
-.badge.pending { background: #efeaff; color: #6d4bff; }
-.badge.muted { background: #eef3f4; color: var(--text-2); }
+.badge.brand {
+  background: var(--brand-3);
+  color: var(--brand);
+}
+.badge.success {
+  background: #e6f7ed;
+  color: var(--success);
+}
+.badge.warn {
+  background: #fff4dd;
+  color: var(--warning);
+}
+.badge.danger {
+  background: #fde8ec;
+  color: var(--danger);
+}
+.badge.info {
+  background: #e6efff;
+  color: var(--info);
+}
+.badge.pending {
+  background: #efeaff;
+  color: #6d4bff;
+}
+.badge.muted {
+  background: #eef3f4;
+  color: var(--text-2);
+}
+
+.stars {
+  color: #e0a800;
+  letter-spacing: 1px;
+  font-size: 13px;
+}
+.stars .off {
+  color: #d3e2e0;
+}
 
 .pkg-bar {
   height: 8px;
@@ -356,5 +657,56 @@ const visitBadge = (s) => VISIT_BADGE[s] || { label: s || '—', cls: 'muted' }
   height: 100%;
   background: linear-gradient(135deg, #0a7e6e 0%, #109885 100%);
   border-radius: 99px;
+}
+
+.retry {
+  width: 100%;
+  margin-top: 12px;
+  min-height: 42px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text-2);
+  font: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.retry:hover {
+  background: #f7fbfa;
+}
+
+.comment-box {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+  resize: vertical;
+}
+.comment-box:focus {
+  border-color: var(--brand);
+}
+.post-btn {
+  width: 100%;
+  margin-top: 10px;
+  min-height: 42px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #0a7e6e 0%, #109885 100%);
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.post-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>
