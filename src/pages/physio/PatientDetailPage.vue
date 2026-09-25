@@ -35,7 +35,7 @@
         <!-- ============ PROFILE ============ -->
         <div class="section">
           <div class="card">
-            <span class="badge brand">{{ p.condition || 'Condition not set' }}</span>
+            <span class="badge brand wrap">{{ p.condition || 'Condition not set' }}</span>
             <div class="kv">
               <div v-for="row in profileRows" :key="row[0]" class="kv-row">
                 <span class="kv-k">{{ row[0] }}</span>
@@ -68,6 +68,19 @@
                   session limit set
                 </template>
               </div>
+              <!-- the CRM lists these separately; without them used + left
+                   does not add up to the total and the card looks wrong -->
+              <div
+                v-if="pkg.refunded_sessions || pkg.expired_sessions"
+                class="tiny"
+                style="margin-top: 4px; color: var(--danger)"
+              >
+                <template v-if="pkg.refunded_sessions">
+                  {{ pkg.refunded_sessions }} refunded
+                </template>
+                <template v-if="pkg.refunded_sessions && pkg.expired_sessions"> · </template>
+                <template v-if="pkg.expired_sessions">{{ pkg.expired_sessions }} expired</template>
+              </div>
               <div v-if="pkg.total_sessions > 0" class="pkg-bar">
                 <i :style="{ width: pkgPct + '%' }"></i>
               </div>
@@ -77,12 +90,47 @@
               </div>
             </template>
             <div v-else class="muted">Per-visit billing — no active package.</div>
-
-            <div class="between acct">
-              <span class="muted">Account</span>
-              <span class="badge" :class="acctBadge.cls">{{ acctBadge.label }}</span>
-            </div>
           </div>
+
+          <!-- an older API build has no billing block; showing zeroes
+               would claim the patient has none, which is not the same thing -->
+          <template v-if="billing">
+            <!-- the four figures the CRM shows on its Payments tab -->
+            <div class="bill-grid">
+              <div v-for="t in billTiles" :key="t.label" class="card bill">
+                <div class="tiny">{{ t.label }}</div>
+                <div class="bill-v" :style="t.style">{{ t.value }}</div>
+              </div>
+            </div>
+
+            <div class="section-title">
+              <h3 class="font-sora" style="font-size: 14px">Transactions</h3>
+              <span class="tiny">{{ transactions.length }} total</span>
+            </div>
+
+            <div v-if="transactions.length" class="scroll-box">
+              <div v-for="t in transactions" :key="t.id" class="card">
+                <div class="between">
+                  <strong style="font-size: 13.5px">{{ t.remarks }}</strong>
+                  <span class="tiny">{{ fmtDay(t.date) }}</span>
+                </div>
+                <div class="between" style="margin-top: 8px">
+                  <span class="tiny">
+                    {{ [t.paid_to, t.paid_via].filter(Boolean).join(' · ') || '—' }}
+                  </span>
+                  <span>
+                    <span v-if="t.is_paid && t.credit" class="amt paid">
+                      + {{ rupees(t.credit) }}
+                    </span>
+                    <span v-if="t.debit" class="amt">{{ rupees(t.debit) }}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div v-else class="card" style="text-align: center; color: var(--text-3)">
+              No transactions yet.
+            </div>
+          </template>
         </div>
 
         <!-- ============ AT A GLANCE ============ -->
@@ -176,24 +224,18 @@
             </button>
           </div>
 
-          <div v-for="c in shownComments" :key="c.id" class="card">
-            <div class="between">
-              <span class="badge muted">{{ c.type }}</span>
-              <span class="tiny">{{ fmtDay(c.created_at) }}</span>
-            </div>
-            <div style="margin-top: 8px; font-size: 13.5px">{{ c.remarks }}</div>
-            <div v-if="c.author" class="tiny" style="margin-top: 6px">
-              {{ c.author }}<template v-if="c.author_role"> · {{ c.author_role }}</template>
+          <div v-if="comments.length" class="scroll-box">
+            <div v-for="c in comments" :key="c.id" class="card">
+              <div class="between">
+                <span class="badge muted wrap">{{ c.type }}</span>
+                <span class="tiny">{{ fmtDay(c.created_at) }}</span>
+              </div>
+              <div style="margin-top: 8px; font-size: 13.5px">{{ c.remarks }}</div>
+              <div v-if="c.author" class="tiny" style="margin-top: 6px">
+                {{ c.author }}<template v-if="c.author_role"> · {{ c.author_role }}</template>
+              </div>
             </div>
           </div>
-
-          <button
-            v-if="comments.length > shownComments.length"
-            class="retry"
-            @click="showAllComments = true"
-          >
-            Show all {{ comments.length }} entries
-          </button>
 
           <div
             v-if="!comments.length"
@@ -211,47 +253,41 @@
             <span class="tiny">{{ data.visits.length }} total</span>
           </div>
 
-          <div v-for="v in shownVisits" :key="v.id" class="card">
-            <div class="between">
-              <div>
-                <strong>
-                  {{ fmtDay(v.date) }}<template v-if="v.s_time">, {{ v.s_time }}</template>
-                </strong>
-                <div class="tiny">
-                  {{ v.physio || 'Physio not set' }}
-                  <template v-if="v.session_number"> · Session {{ v.session_number }}</template>
-                  <template v-if="v.is_consultation"> · Consultation</template>
+          <div v-if="data.visits.length" class="scroll-box">
+            <div v-for="v in data.visits" :key="v.id" class="card">
+              <div class="between">
+                <div>
+                  <strong>
+                    {{ fmtDay(v.date) }}<template v-if="v.s_time">, {{ v.s_time }}</template>
+                  </strong>
+                  <div class="tiny">
+                    {{ v.physio || 'Physio not set' }}
+                    <template v-if="v.session_number"> · Session {{ v.session_number }}</template>
+                    <template v-if="v.is_consultation"> · Consultation</template>
+                  </div>
                 </div>
+                <span class="badge" :class="visitBadge(v.status).cls">
+                  {{ visitBadge(v.status).label }}
+                </span>
               </div>
-              <span class="badge" :class="visitBadge(v.status).cls">
-                {{ visitBadge(v.status).label }}
-              </span>
-            </div>
 
-            <div v-if="v.actual_session_start" class="tiny" style="margin-top: 6px">
-              Session {{ v.actual_session_start
-              }}<template v-if="v.actual_session_end"> – {{ v.actual_session_end }}</template>
-            </div>
+              <div v-if="v.actual_session_start" class="tiny" style="margin-top: 6px">
+                Session {{ v.actual_session_start
+                }}<template v-if="v.actual_session_end"> – {{ v.actual_session_end }}</template>
+              </div>
 
-            <div v-if="v.payment_status" class="tiny" style="margin-top: 4px">
-              <span
-                :style="{
-                  color: v.payment_status === 'paid' ? 'var(--success)' : 'var(--warning)',
-                }"
-              >
-                {{ v.payment_status === 'paid' ? 'Paid' : 'Unpaid' }}
-              </span>
-              <template v-if="v.invoice_amount"> · ₹{{ v.invoice_amount }}</template>
+              <div v-if="v.payment_status" class="tiny" style="margin-top: 4px">
+                <span
+                  :style="{
+                    color: v.payment_status === 'paid' ? 'var(--success)' : 'var(--warning)',
+                  }"
+                >
+                  {{ v.payment_status === 'paid' ? 'Paid' : 'Unpaid' }}
+                </span>
+                <template v-if="v.invoice_amount"> · ₹{{ v.invoice_amount }}</template>
+              </div>
             </div>
           </div>
-
-          <button
-            v-if="data.visits.length > shownVisits.length"
-            class="retry"
-            @click="showAll = true"
-          >
-            Show all {{ data.visits.length }} visits
-          </button>
 
           <div
             v-if="!data.visits.length"
@@ -284,21 +320,13 @@ const authStore = useAuthStore()
 const loading = ref(true)
 const error = ref('')
 const data = ref(null)
-const showAll = ref(false)
-
-const VISIT_PREVIEW = 8
-const COMMENT_PREVIEW = 5
 
 /* ---------------- timeline comments ---------------- */
 const newComment = ref('')
 const posting = ref(false)
 const commentError = ref('')
-const showAllComments = ref(false)
 
 const comments = computed(() => data.value?.comments || [])
-const shownComments = computed(() =>
-  showAllComments.value ? comments.value : comments.value.slice(0, COMMENT_PREVIEW),
-)
 
 async function postComment() {
   const text = newComment.value.trim()
@@ -390,14 +418,26 @@ const pkgPct = computed(() => {
   return Math.min(100, Math.round((pkg.value.sessions_used / pkg.value.total_sessions) * 100))
 })
 
-/** balance > 0 is money the patient owes; < 0 is credit sitting with the clinic. */
-const acctBadge = computed(() => {
-  const a = data.value?.account
-  if (!a) return { label: '—', cls: 'muted' }
-  const amount = '₹' + Math.abs(a.balance).toLocaleString('en-IN')
-  if (a.state === 'due') return { label: amount + ' due', cls: 'warn' }
-  if (a.state === 'advance') return { label: amount + ' advance', cls: 'info' }
-  return { label: 'Settled', cls: 'success' }
+const billing = computed(() => data.value?.billing || null)
+const transactions = computed(() => billing.value?.transactions || [])
+
+const rupees = (n) => '₹' + Number(n || 0).toLocaleString('en-IN')
+
+/** The CRM's four Payments figures. balance > 0 is owed, < 0 sits as credit. */
+const billTiles = computed(() => {
+  const b = billing.value
+  if (!b) return []
+  const owed = b.state === 'due'
+  return [
+    { label: 'Invoiced', value: rupees(b.invoiced) },
+    { label: 'Paid', value: rupees(b.paid), style: { color: 'var(--success)' } },
+    { label: 'Refunded', value: rupees(b.refunded) },
+    {
+      label: b.state === 'advance' ? 'Advance' : 'Due',
+      value: rupees(Math.abs(b.balance)),
+      style: { color: owed ? 'var(--warning)' : 'var(--success)' },
+    },
+  ]
 })
 
 const statTiles = computed(() => {
@@ -418,11 +458,6 @@ function fmtShort(iso) {
   if (Number.isNaN(d.getTime())) return '—'
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' })
 }
-
-const shownVisits = computed(() => {
-  const all = data.value?.visits || []
-  return showAll.value ? all : all.slice(0, VISIT_PREVIEW)
-})
 
 const VISIT_BADGE = {
   Treated: { label: 'Treated', cls: 'success' },
@@ -575,12 +610,6 @@ const visitBadge = (s) => VISIT_BADGE[s] || { label: s || '—', cls: 'muted' }
   word-break: break-word;
 }
 
-.acct {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-}
-
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -606,6 +635,16 @@ const visitBadge = (s) => VISIT_BADGE[s] || { label: s || '—', cls: 'muted' }
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
+}
+/* long text (a full diagnosis, a timeline caption) has to wrap inside the
+   card instead of running off the edge, so it drops the pill's nowrap */
+.badge.wrap {
+  white-space: normal;
+  text-align: left;
+  line-height: 1.4;
+  padding: 6px 12px;
+  border-radius: 14px;
+  max-width: 100%;
 }
 .badge.brand {
   background: var(--brand-3);
@@ -708,5 +747,51 @@ const visitBadge = (s) => VISIT_BADGE[s] || { label: s || '—', cls: 'muted' }
 .post-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+/* CRM keeps its Timeline in a fixed-height scroller; the long lists here do
+   the same so the rest of the screen stays reachable */
+.scroll-box {
+  max-height: 420px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* breathing room so the cards' shadows are not clipped */
+  padding: 2px;
+  margin: 0 -2px;
+}
+.bill-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+/* these tiles sit in a grid, where the stacked-card margin knocks every tile
+   after the first out of line and makes the row heights uneven */
+.bill-grid .card + .card,
+.stat-grid .card + .card {
+  margin-top: 0;
+}
+/* keep all four reading as one set even when a value wraps */
+.bill,
+.stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 74px;
+}
+.bill {
+  padding: 14px;
+}
+.bill-v {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 4px;
+}
+.amt {
+  font-weight: 700;
+  font-size: 13px;
+}
+.amt.paid {
+  color: var(--success);
 }
 </style>
