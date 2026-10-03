@@ -34,23 +34,16 @@
                 <div class="brand-logo cb-logo">
                   <q-img src="cb_white.webp" />
                 </div>
-                <div class="brand-divider"></div>
-                <div class="brand-logo partner-logo">
-                  <q-img :src="String(form.company_id) === '2' ? 'db_india.jpeg' : 'cars24.webp'" />
+                <div v-if="company.logo" class="brand-divider"></div>
+                <div v-if="company.logo" class="brand-logo partner-logo">
+                  <q-img :src="company.logo" :alt="company.name" />
                 </div>
               </div>
               <!-- <div class="secure-chip">Secure</div> -->
             </div>
             <span class="kicker">Corporate wellness</span>
-            <h1 v-if="String(form.company_id) === '2'">Onboarding</h1>
-            <h1 v-else>Pre-Assessment</h1>
-            <p v-if="String(form.company_id) === '2'">
-              A short self-check before your workshop. Takes about 3 minutes.
-            </p>
-            <p v-else>
-              A short self-check before your on-site physiotherapy assessment. Takes about 2
-              minutes.
-            </p>
+            <h1>{{ company.title }}</h1>
+            <p>{{ company.description }}</p>
           </header>
 
           <!-- STEP RAIL -->
@@ -79,6 +72,7 @@
                 </div>
               </div>
               <div
+                v-if="!isGymContext"
                 class="step-dot"
                 :class="{ active: currentStep === 2, complete: currentStep > 2 }"
               >
@@ -115,7 +109,9 @@
                 <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
               </div>
               <div class="progress-meta">
-                <span class="step-counter">Section {{ currentDisplayStep }} of 7</span>
+                <span class="step-counter"
+                  >Section {{ currentDisplayStep }} of {{ isGymContext ? 1 : 7 }}</span
+                >
                 <span class="percent">{{ progressPercent }}% complete</span>
               </div>
             </div>
@@ -134,146 +130,51 @@
                 </p>
               </div>
 
-              <div class="field" :class="{ 'has-error': v$.name.$error }">
-                <label class="required">Full name</label>
-                <input
-                  type="text"
-                  v-model="form.name"
-                  @blur="v$.name.$touch()"
-                  placeholder="e.g. Aarav Sharma"
-                  required
-                />
-                <div v-if="v$.name.$error" class="error-msg">
-                  {{ v$.name.$errors[0].$message }}
-                </div>
-              </div>
-
-              <div class="field" :class="{ 'has-error': v$.employee_id.$error }">
-                <label class="required">Employee ID</label>
-                <input
-                  type="text"
-                  v-model="form.employee_id"
-                  @blur="v$.employee_id.$touch()"
-                  placeholder="Enter Employee ID"
-                  required
-                />
-                <div v-if="v$.employee_id.$error" class="error-msg">
-                  {{ v$.employee_id.$errors[0].$message }}
-                </div>
-              </div>
-
               <div class="grid-2">
-                <div class="field" :class="{ 'has-error': v$.phone.$error }">
-                  <label class="required">Phone number</label>
-                  <input
-                    type="tel"
-                    v-model="form.phone"
-                    @blur="v$.phone.$touch()"
-                    placeholder="10-digit mobile"
-                    required
-                  />
-                  <div v-if="v$.phone.$error" class="error-msg">
-                    {{ v$.phone.$errors[0].$message }}
-                  </div>
-                </div>
-
-                <div class="field" :class="{ 'has-error': v$.email.$error }">
-                  <label class="required">Email address</label>
-                  <input
-                    type="email"
-                    v-model="form.email"
-                    @blur="v$.email.$touch()"
-                    placeholder="you@company.com"
-                    required
-                  />
-                  <div v-if="v$.email.$error" class="error-msg">
-                    {{ v$.email.$errors[0].$message }}
-                  </div>
-                </div>
-              </div>
-
-              <div class="grid-2">
-                <div class="field" :class="{ 'has-error': v$.age.$error }">
-                  <label class="required">Age</label>
-                  <input
-                    type="number"
-                    v-model="form.age"
-                    @blur="v$.age.$touch()"
-                    min="18"
-                    max="80"
-                    placeholder="e.g. 32"
-                    required
-                  />
-                  <div v-if="v$.age.$error" class="error-msg">
-                    {{ v$.age.$errors[0].$message }}
-                  </div>
-                </div>
-
-                <div class="field">
-                  <label>Gender</label>
-                  <select v-model="form.sex">
-                    <option value="">Select</option>
-                    <option value="female">Female</option>
-                    <option value="male">Male</option>
-                    <option value="other">Other</option>
-                    <option value="prefer_not_to_say">Prefer not to say</option>
+                <div
+                  v-for="field in company.profileFields"
+                  :key="field.name"
+                  class="field"
+                  :class="{
+                    'has-error': v$[field.name].$error,
+                    'full-width-field': field.fullWidth,
+                  }"
+                >
+                  <label :for="`profile-${field.name}`" :class="{ required: field.required }">{{
+                    field.label
+                  }}</label>
+                  <select
+                    v-if="field.type === 'select'"
+                    :id="`profile-${field.name}`"
+                    v-model="form[field.name]"
+                    :required="field.required"
+                    @change="v$[field.name].$touch()"
+                  >
+                    <option value="">{{ field.placeholder || 'Select' }}</option>
+                    <option
+                      v-for="option in field.options"
+                      :key="option.value ?? option"
+                      :value="option.value ?? option"
+                    >
+                      {{ option.label ?? option }}
+                    </option>
                   </select>
+                  <input
+                    v-else
+                    :id="`profile-${field.name}`"
+                    v-model="form[field.name]"
+                    :type="field.type || 'text'"
+                    :placeholder="field.placeholder"
+                    :required="field.required"
+                    :min="field.min"
+                    :max="field.max"
+                    @blur="v$[field.name].$touch()"
+                  />
+                  <div v-if="v$[field.name].$error" class="error-msg">
+                    {{ v$[field.name].$errors[0].$message }}
+                  </div>
                 </div>
               </div>
-
-              <div
-                v-if="String(form.company_id) === '2'"
-                class="field"
-                :class="{ 'has-error': v$.location.$error }"
-              >
-                <label class="required">Which location are you based in?</label>
-                <select v-model="form.location" @change="v$.location.$touch()" required>
-                  <option value="">Select location</option>
-                  <option value="Gurgaon office (attending in person)">
-                    Gurgaon office (attending in person)
-                  </option>
-                  <option value="Other India location (joining via broadcast)">
-                    Other India location (joining via broadcast)
-                  </option>
-                </select>
-                <div v-if="v$.location.$error" class="error-msg">
-                  {{ v$.location.$errors[0].$message }}
-                </div>
-              </div>
-
-              <!-- <div class="field" :class="{ 'has-error': v$.preferred_slot.$error }">
-                <label class="required">Preferred assessment slot</label>
-                <select v-model="form.preferred_slot" @change="v$.preferred_slot.$touch()">
-                  <option value="">Select a slot</option>
-                  <option>Morning (09:00 - 12:00)</option>
-                  <option>Afternoon (12:00 - 15:00)</option>
-                  <option>Evening (15:00 - 18:00)</option>
-                </select>
-                <div v-if="v$.preferred_slot.$error" class="error-msg">
-                  {{ v$.preferred_slot.$errors[0].$message }}
-                </div>
-              </div> -->
-
-              <!-- <div class="field" :class="{ 'has-error': v$.previous_assessment.$error }">
-                <label class="required"
-                  >Were you part of the previous Cars24 x CB Physiotherapy assessment?</label
-                >
-                <select
-                  v-model="form.previous_assessment"
-                  @change="v$.previous_assessment.$touch()"
-                >
-                  <option value="">Select an option</option>
-                  <option value="completed">Yes, I completed the assessment</option>
-                  <option value="registered_incomplete">
-                    I registered but could not complete the assessment
-                  </option>
-                  <option value="first_time">No, this is my first time</option>
-                  <option value="not_sure">Not sure</option>
-                </select>
-                <div v-if="v$.previous_assessment.$error" class="error-msg">
-                  {{ v$.previous_assessment.$errors[0].$message }}
-                </div>
-              </div> -->
             </section>
 
             <!-- STEP 2: SEQUENTIAL QUESTIONS -->
@@ -328,20 +229,17 @@
               <q-icon name="check" size="42px" color="white" />
             </div>
             <h5>Submitted successfully</h5>
-            <p>Thank you for completing the evaluation. Please book your assessment slot.</p>
-            <p>
-              If you have any relevant medical reports, scans, or previous treatment records related
-              to your concern, please carry them along for the assessment.
-            </p>
-            <div class="q-mt-md">
+            <p>{{ company.successMessage }}</p>
+            <p v-if="company.successNote">{{ company.successNote }}</p>
+            <div v-if="company.bookingUrl" class="q-mt-md">
               <a
                 type="button"
                 class="btn primary"
-                href="https://calendly.com/workplace-wellness-cbphysiotherapy"
+                :href="company.bookingUrl"
                 target="_blank"
                 style="text-decoration: none"
               >
-                <span>Book Assessment Slot</span>
+                <span>{{ company.bookingLabel }}</span>
                 <svg
                   class="arrow"
                   width="16"
@@ -433,6 +331,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { getCompanyConfig } from 'src/config/companies'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { api, assessment_api } from 'src/boot/axios'
@@ -444,6 +343,7 @@ import { QUESTION_SUMMARY_SYSTEM_PROMPT } from 'src/utils/prompts.js'
 
 const $q = useQuasar()
 const route = useRoute()
+const isGymContext = computed(() => route.query.ctx === 'gym')
 const currentStep = ref(1)
 const submitted = ref(false)
 const isSubmitting = ref(false)
@@ -535,6 +435,8 @@ const form = ref({
   // previous_assessment: '',
 })
 
+const company = computed(() => getCompanyConfig(form.value.company_id))
+
 onMounted(async () => {
   const company_id = route.query.company_id || ''
   const hospital_id = route.query.hospital_id || ''
@@ -545,8 +447,8 @@ onMounted(async () => {
   form.value.hospital_id = hospital_id
   form.value.employee_id = employee_id
 
-  if (String(company_id) === '2') {
-    form.value.sex = ''
+  for (const field of company.value.profileFields) {
+    form.value[field.name] = field.name === 'employee_id' ? employee_id : (field.defaultValue ?? '')
   }
 
   const valid = await validateLink(company_id, hospital_id, key)
@@ -557,10 +459,10 @@ onMounted(async () => {
 })
 
 const profilePercent = computed(() => {
-  const fields = ['name', 'phone', 'email', 'age', 'sex']
-  if (String(form.value.company_id) === '2') {
-    fields.push('location')
-  }
+  const fields = company.value.profileFields
+    .filter((field) => field.progress !== false)
+    .map((field) => field.name)
+  if (!fields.length) return 100
   const filled = fields.filter((f) => !!form.value[f]).length
   return Math.round((filled / fields.length) * 100)
 })
@@ -569,6 +471,8 @@ const progressPercent = computed(() => {
   if (submitted.value) return 100
 
   if (currentStep.value === 1) {
+    if (isGymContext.value) return profilePercent.value
+
     // Step 1: 0% to 10%
     return Math.round(profilePercent.value * 0.1)
   }
@@ -584,28 +488,22 @@ const handleAssessmentProgress = (data) => {
 }
 
 const rules = computed(() => {
-  const baseRules = {
-    employee_id: { required: helpers.withMessage('Employee ID is required', required) },
-    name: { required: helpers.withMessage('Full name is required', required) },
-    phone: {
-      required: helpers.withMessage('Phone number is required', required),
-      numeric: helpers.withMessage('Enter a valid 10-digit number', numeric),
-      minLength: helpers.withMessage('Enter a valid 10-digit number', minLength(10)),
-      maxLength: helpers.withMessage('Enter a valid 10-digit number', maxLength(10)),
-    },
-    email: {
-      required: helpers.withMessage('Email address is required', required),
-      email: helpers.withMessage('Enter a valid email address', email),
-    },
-    age: {
-      required: helpers.withMessage('Age is required', required),
-    },
-  }
-
-  if (String(form.value.company_id) === '2') {
-    baseRules.location = {
-      required: helpers.withMessage('Location is required', required),
+  const baseRules = {}
+  for (const field of company.value.profileFields) {
+    const validators = {}
+    if (field.required)
+      validators.required = helpers.withMessage(
+        field.requiredMessage || `${field.label} is required`,
+        required,
+      )
+    if (field.validation === 'email')
+      validators.email = helpers.withMessage('Enter a valid email address', email)
+    if (field.validation === 'phone') {
+      validators.numeric = helpers.withMessage('Enter a valid 10-digit number', numeric)
+      validators.minLength = helpers.withMessage('Enter a valid 10-digit number', minLength(10))
+      validators.maxLength = helpers.withMessage('Enter a valid 10-digit number', maxLength(10))
     }
+    baseRules[field.name] = validators
   }
 
   return baseRules
@@ -629,7 +527,9 @@ async function createPatient() {
       hospital_id: form.value.hospital_id,
       age: form.value.age,
       sex: form.value.sex,
-      location: form.value.location,
+      ...Object.fromEntries(
+        company.value.profileFields.map((field) => [field.name, form.value[field.name]]),
+      ),
     }
 
     const res = await api.post('/assessmentSignUp', payload)
@@ -749,7 +649,11 @@ const handleContinueWithExisting = async () => {
     patientId.value = existingPatientUserObj.value.id
     const isSynced = await createPatientInAssessmentDB(existingPatientUserObj.value)
     if (isSynced) {
-      currentStep.value++
+      if (isGymContext.value) {
+        await handleFinalSubmit()
+      } else {
+        currentStep.value++
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
     $q.loading.hide()
@@ -810,7 +714,11 @@ const handleNext = async () => {
       })
       const isCreated = await createPatient()
       if (isCreated) {
-        currentStep.value++
+        if (isGymContext.value) {
+          await handleFinalSubmit()
+        } else {
+          currentStep.value++
+        }
         window.scrollTo({ top: 0, behavior: 'smooth' })
       }
       $q.loading.hide()
@@ -829,76 +737,79 @@ const handleSubmit = async () => {
 const handleFinalSubmit = async () => {
   isSubmitting.value = true
   try {
-    // Build structured payload from form data + assessment responses
-    const payload = mapAssessmentPayload(form.value, assessmentResponses.value)
+    let payload
+    if (isGymContext.value) {
+      payload = {
+        age: parseInt(form.value.age, 10) || 0,
+        gender: form.value.sex
+          ? form.value.sex.charAt(0).toUpperCase() + form.value.sex.slice(1)
+          : '',
+        location: form.value.location || '',
+        occupations: ['Corporate Employee'],
+      }
+    } else {
+      payload = mapAssessmentPayload(form.value, assessmentResponses.value)
 
-    // Get MCQ Summary from AI
+      $q.loading.show({
+        message: 'Generating clinical summary...',
+        backgroundColor: 'teal-10',
+      })
+      payload.mcq_summary = await getMcqSummary(payload.questions)
+    }
+
     $q.loading.show({
-      message: 'Generating clinical summary...',
+      message: isGymContext.value ? 'Completing your registration...' : 'Saving your responses...',
       backgroundColor: 'teal-10',
     })
-    const mcqSummary = await getMcqSummary(payload.questions)
 
-    payload.mcq_summary = mcqSummary
-
-    $q.loading.show({
-      message: 'Saving your responses...',
-      backgroundColor: 'teal-10',
-    })
-
-    // Send payload to assessment API with patient_id and hospital_id
-    await assessment_api
-      .post('/assessments', {
+    const profileData = Object.fromEntries(
+      company.value.profileFields.map((field) => [field.name, form.value[field.name]]),
+    )
+    const res = await assessment_api.post('/assessments', {
+      patient_id: patientId.value,
+      employee_id: form.value.employee_id,
+      hospital_id: form.value.hospital_id,
+      assessment_context: isGymContext.value ? 'gym' : 'ergonomics',
+      ...payload,
+      b2b_assessment_data: {
         patient_id: patientId.value,
-        employee_id: form.value.employee_id,
-        hospital_id: form.value.hospital_id,
-        assessment_context: 'ergonomic',
-        ...payload,
-        b2b_assessment_data: {
-          patient_id: patientId.value,
-          ...form.value,
-        },
+        ...(isGymContext.value ? profileData : form.value),
+      },
+    })
+    if (res.data.error) {
+      $q.notify({
+        type: 'negative',
+        message: res.data.message || 'Failed to sync with assessment database',
+        position: 'top',
+        html: true,
       })
-      .then((res) => {
-        console.log('Assessment API Response:', res.data)
-        if (res.data.error) {
-          $q.notify({
-            type: 'negative',
-            message: res.data.message || 'Failed to sync with assessment database',
-            position: 'top',
-            html: true,
-          })
-          return false
-        }
-        $q.notify({
-          type: 'positive',
-          message: res.data.message || 'Assessment sync successful',
-          position: 'top',
-        })
-        return true
-      })
-      .catch((err) => {
-        console.error('Assessment API Error:', err)
-        const data = err.response?.data
-        if (data?.results && typeof data.results === 'object') {
-          Object.values(data.results)
-            .flat()
-            .forEach((msg) => {
-              $q.notify({ type: 'negative', message: msg, position: 'top', html: true })
-            })
-        } else {
-          $q.notify({
-            type: 'negative',
-            message: data?.message || 'Failed to sync with assessment database',
-            position: 'top',
-            html: true,
-          })
-        }
-        return false
-      })
+      return
+    }
 
+    $q.notify({
+      type: 'positive',
+      message: res.data.message || 'Assessment sync successful',
+      position: 'top',
+    })
     submitted.value = true
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  } catch (err) {
+    console.error('Assessment API Error:', err)
+    const data = err.response?.data
+    if (data?.results && typeof data.results === 'object') {
+      Object.values(data.results)
+        .flat()
+        .forEach((msg) => {
+          $q.notify({ type: 'negative', message: msg, position: 'top', html: true })
+        })
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: data?.message || 'Failed to sync with assessment database',
+        position: 'top',
+        html: true,
+      })
+    }
   } finally {
     isSubmitting.value = false
     $q.loading.hide()
@@ -1408,6 +1319,9 @@ const handleFinalSubmit = async () => {
 }
 
 /* FIELDS */
+.full-width-field {
+  grid-column: 1 / -1;
+}
 .field {
   margin-bottom: 20px;
 }

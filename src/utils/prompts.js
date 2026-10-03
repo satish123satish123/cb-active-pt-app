@@ -57,7 +57,7 @@ Return the response in this exact JSON structure:
     "Flag 1",
     "Flag 2"
   ]
-	}
+}
 
 If no relevant flags are found in a category, return an empty array for that category.
 

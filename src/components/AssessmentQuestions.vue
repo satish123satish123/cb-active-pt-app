@@ -266,50 +266,10 @@ const props = defineProps({
 
 const emit = defineEmits(['complete', 'progress'])
 
-import {
-  workingConditions,
-  painDiscomfort,
-  lifestyleFactors,
-  healthSafety,
-  goalsInfo,
-  company2Questions,
-} from 'src/data/assessmentQuestions'
+import { getCompanyConfig, getCompanyQuestions } from 'src/config/companies'
 
-// ─── Build question list (filter femaleOnly questions for non-female) ───
-const allQuestions = computed(() => {
-  const filterByGender = (questions) => {
-    return questions.filter((q) => {
-      if (q.femaleOnly && props.gender !== 'female') return false
-      return true
-    })
-  }
-
-  if (String(props.companyId) === '2') {
-    return [
-      ...workingConditions,
-      ...painDiscomfort,
-      company2Questions.pd_trigger,
-      company2Questions.pd_functional_impact,
-      company2Questions.pd_water_intake,
-      ...filterByGender(lifestyleFactors.filter((q) => q.id !== 'lf_5')),
-      company2Questions.lf_sleep_quality,
-      ...healthSafety,
-      company2Questions.hs_treatment,
-      company2Questions.gi_live_session_cover,
-      company2Questions.gi_1,
-      company2Questions.gi_qa_question,
-      company2Questions.gi_onsite_interest,
-    ]
-  }
-
-  return [
-    ...workingConditions,
-    ...painDiscomfort,
-    ...filterByGender(lifestyleFactors),
-    ...healthSafety,
-    ...goalsInfo,
-  ]
-})
+const company = computed(() => getCompanyConfig(props.companyId))
+const allQuestions = computed(() => getCompanyQuestions(props.companyId, props.gender))
 
 const totalQuestions = computed(() => allQuestions.value.length)
 
@@ -354,7 +314,9 @@ const currentQuestion = computed(() => {
       : activePainArea.value
 
     const lowerArea = displayArea.toLowerCase()
-    const needsPainSuffix = !['headache', 'dizziness', 'eye strain', 'dry eyes'].some(term => lowerArea.includes(term))
+    const needsPainSuffix = !['headache', 'dizziness', 'eye strain', 'dry eyes'].some((term) =>
+      lowerArea.includes(term),
+    )
 
     if (activePainStep.value === 0) {
       return {
@@ -372,15 +334,7 @@ const currentQuestion = computed(() => {
         section: 'Pain & Discomfort',
         text: `How long have you been experiencing <strong>${displayArea}</strong> discomfort?`,
         type: 'choice',
-        options:
-          String(props.companyId) === '2'
-            ? [
-                'Less than 6 weeks (Acute)',
-                '6 weeks to 3 months (Subacute)',
-                'More than 3 months (Chronic)',
-                'Not applicable',
-              ]
-            : ['Less than 6 weeks', '6 weeks to 3 months', 'More than 3 months', 'Not applicable'],
+        options: company.value.painDurationOptions,
         _dynamic: true,
       }
     }

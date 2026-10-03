@@ -1,8 +1,4 @@
-import {
-  workingConditions,
-  lifestyleFactors,
-  company2Questions,
-} from 'src/data/assessmentQuestions'
+import { getCompanyConfig, getCompanyQuestions } from '../config/companies.js'
 
 // ─── Pain area → pain_site_side key mapping ───
 const PAIN_SITE_MAP = {
@@ -87,35 +83,15 @@ function buildQuestionsArray(responses, formData, companyId) {
   const questions = []
 
   // Collect all questions that should appear in the MCQ questions array
-  let mcqSources = []
-  if (String(companyId) === '2') {
-    mcqSources = [
-      {
-        id: 'location',
-        text: 'Which location are you based in?',
-        options: [
-          'Gurgaon office (attending in person)',
-          'Other India location (joining via broadcast)',
-        ],
-      },
-      ...workingConditions,
-      company2Questions.pd_functional_impact,
-      company2Questions.pd_water_intake,
-      ...lifestyleFactors.filter((q) => q.id !== 'lf_5' && (!q.femaleOnly || gender === 'female')),
-      company2Questions.lf_sleep_quality,
-      company2Questions.hs_treatment,
-      company2Questions.gi_live_session_cover,
-      company2Questions.gi_onsite_interest,
-    ]
-  } else {
-    mcqSources = [
-      ...workingConditions,
-      ...lifestyleFactors.filter((q) => {
-        if (q.femaleOnly && gender !== 'female') return false
-        return true
-      }),
-    ]
-  }
+  const profileSources = getCompanyConfig(companyId)
+    .profileFields.filter((field) => field.includeInSummary)
+    .map((field) => ({
+      id: field.name,
+      text: field.label,
+      options: (field.options || []).map((option) => option.label ?? option),
+      profileField: true,
+    }))
+  const mcqSources = [...profileSources, ...getCompanyQuestions(companyId, gender, true)]
 
   mcqSources.forEach((q) => {
     const options = (q.options || []).map((label, i) => ({
@@ -125,8 +101,8 @@ function buildQuestionsArray(responses, formData, companyId) {
 
     // Find the user's answer for this question
     let patientAnswer = null
-    if (q.id === 'location') {
-      patientAnswer = formData.location
+    if (q.profileField) {
+      patientAnswer = formData[q.id]
     } else {
       const response = responses.find((r) => r.id === q.id)
       if (response) {
@@ -158,15 +134,16 @@ function buildPainAssessment(responses) {
   }
 
   const pdTrigger = responses.find((r) => r.id === 'pd_trigger')
-  const aggravatingFactors = pdTrigger && pdTrigger.answer
-    ? pdTrigger.answer
-        .split(', ')
-        .map((item) => {
-          const cleaned = item.trim()
-          return cleaned.startsWith('Other:') ? cleaned.replace('Other:', '').trim() : cleaned
-        })
-        .filter((item) => item !== 'Other' && item !== '')
-    : []
+  const aggravatingFactors =
+    pdTrigger && pdTrigger.answer
+      ? pdTrigger.answer
+          .split(', ')
+          .map((item) => {
+            const cleaned = item.trim()
+            return cleaned.startsWith('Other:') ? cleaned.replace('Other:', '').trim() : cleaned
+          })
+          .filter((item) => item !== 'Other' && item !== '')
+      : []
 
   const areas = pd1.answer.split(', ').map((a) => a.trim())
 
@@ -222,7 +199,9 @@ function buildChiefComplaint(responses) {
     .map((a) => {
       const clean = a.startsWith('Other:') ? a.replace('Other:', '').trim() : a
       const lowerClean = clean.toLowerCase()
-      const needsPainSuffix = !['headache', 'dizziness', 'eye strain', 'dry eyes'].some(term => lowerClean.includes(term))
+      const needsPainSuffix = !['headache', 'dizziness', 'eye strain', 'dry eyes'].some((term) =>
+        lowerClean.includes(term),
+      )
       return needsPainSuffix ? `${clean} pain` : clean
     })
     .join(', ')
@@ -281,9 +260,10 @@ function buildPresentPastIllness(responses) {
  */
 function buildPalpationObservation(responses) {
   const lf2 = responses.find((r) => r.id === 'lf_2')
-  const stiffnessValue = lf2 && lf2.answer
-    ? lf2.answer.charAt(0).toUpperCase() + lf2.answer.slice(1).toLowerCase()
-    : null
+  const stiffnessValue =
+    lf2 && lf2.answer
+      ? lf2.answer.charAt(0).toUpperCase() + lf2.answer.slice(1).toLowerCase()
+      : null
 
   return [
     {
