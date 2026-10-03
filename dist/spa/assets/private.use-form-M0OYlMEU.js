@@ -1,0 +1,1 @@
+import{m as e,w as t}from"./vue.runtime.esm-bundler-BTopOv_K.js";var n={name:String};function r(e={}){return(n,r,i)=>{n[r](t(`input`,{class:`hidden`+(i||``),...e.value}))}}function i(t){return e(()=>t.name||t.for)}export{i as n,n as r,r as t};
