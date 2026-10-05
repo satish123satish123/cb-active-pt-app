@@ -769,7 +769,7 @@ const handleFinalSubmit = async () => {
       patient_id: patientId.value,
       employee_id: form.value.employee_id,
       hospital_id: form.value.hospital_id,
-      assessment_context: isGymContext.value ? 'gym' : 'ergonomics',
+      assessment_context: isGymContext.value ? 'gym' : 'ergonomic',
       ...payload,
       b2b_assessment_data: {
         patient_id: patientId.value,
