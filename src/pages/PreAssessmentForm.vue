@@ -231,11 +231,11 @@
             <h5>Submitted successfully</h5>
             <p>{{ company.successMessage }}</p>
             <p v-if="company.successNote">{{ company.successNote }}</p>
-            <div v-if="company.bookingUrl" class="q-mt-md">
+            <div v-if="bookingUrl" class="q-mt-md">
               <a
                 type="button"
                 class="btn primary"
-                :href="company.bookingUrl"
+                :href="bookingUrl"
                 target="_blank"
                 style="text-decoration: none"
               >
@@ -436,6 +436,11 @@ const form = ref({
 })
 
 const company = computed(() => getCompanyConfig(form.value.company_id))
+const bookingUrl = computed(() =>
+  isGymContext.value
+    ? 'https://calendly.com/activpt-cbphysiotherapy/in-person-session'
+    : company.value.bookingUrl,
+)
 
 onMounted(async () => {
   const company_id = route.query.company_id || ''
