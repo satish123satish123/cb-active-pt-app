@@ -509,6 +509,20 @@
       </div>
     </div>
 
+    <!-- ============ LIVE: EARLY END REASON SHEET ============ -->
+    <div v-if="showEarlyEnd" class="scrim" @click="showEarlyEnd = false">
+      <div class="sheet" @click.stop>
+        <div class="grabber"></div>
+        <h2 class="font-sora" style="margin: 0 0 4px; font-size: 19px">Ending session early</h2>
+        <p class="muted" style="margin: 0 0 14px">{{ earlyEndPrompt }}</p>
+        <p class="field-label">Reason</p>
+        <textarea v-model="earlyEndText" class="textarea" placeholder="e.g. Patient had to leave, equipment unavailable…"></textarea>
+        <button class="btn primary full" style="margin-top: 16px" :disabled="finishBusy" @click="submitEarlyEnd">
+          {{ finishBusy ? 'Ending…' : 'End session' }}
+        </button>
+      </div>
+    </div>
+
     <!-- ============ ADD TREATMENT SHEET ============ -->
     <div v-if="showAddMod" class="scrim" @click="showAddMod = false">
       <div class="sheet" @click.stop>
@@ -566,7 +580,7 @@ import {
   getPhysioTodayAppointments, startAppointment,
   getPhysioDefaultModalities, getPhysioAppointmentModalities,
   startModality, endModality, getAssessmentResumeState, addModality as addModalityApi,
-  endSession, saveNoModalityReasonAndEndSession, getAppointmentInvoiceDetails,
+  endSession, saveNoModalityReasonAndEndSession, getSessionEndCheck, getAppointmentInvoiceDetails,
   addPayment, patientDeposit, getPaidViaByPaymentMethod, encodeWithSalt, randHex32,
   saveInvoiceReviewReason, deleteInvoiceReviewReason,
   setApptBillingState, getApptBillingOutcome,
@@ -709,6 +723,28 @@ const pickerSearch = ref('')
 const pickerCat = ref('All')
 const showReason = ref(false)
 const reasonText = ref('')
+
+/* Ending before the minimum session time needs its OWN reason, separate from the
+   no-modality one. The server decides what counts as early and writes the whole
+   sentence, so no minutes are compared or kept here — they would go stale the day
+   the CRM's limits change.
+   Fails open: if the check cannot be made, End behaves exactly as before. */
+const earlyEnd = ref(null)
+const showEarlyEnd = ref(false)
+const earlyEndText = ref('')
+
+const earlyEndPrompt = computed(() => earlyEnd.value?.message || '')
+const needsEarlyEndReason = () => !!earlyEnd.value?.is_early && !earlyEndText.value.trim()
+
+async function loadEarlyEnd() {
+  try {
+    const res = await getSessionEndCheck({ ...liveIds, doctor_id: liveDoctorId })
+    earlyEnd.value = res?.status === 'success' ? res.early_end : null
+  } catch (e) {
+    console.log('getSessionEndCheck failed:', e)
+    earlyEnd.value = null
+  }
+}
 
 /* When must End session ask for a reason (→ saveNoModalityReasonAndEndSession)?
    1. ASSESSMENT present but is_assessment_done still 0
@@ -1374,15 +1410,30 @@ const liveDurLabel = (m) =>
 
 async function finishLive() {
   if (finishBusy.value) return
+  await loadEarlyEnd()
+  // same order as the CRM: the no-modality reason is asked first, early-end after it
   if (needsReason.value) {
     showReason.value = true
     return
   }
+  if (needsEarlyEndReason()) {
+    showEarlyEnd.value = true
+    return
+  }
+  await runEndSession()
+}
+
+async function runEndSession() {
+  if (finishBusy.value) return
   finishBusy.value = true
   try {
     // end anything still running first
     for (const m of liveLog.filter((x) => !x.end_at_iso)) await liveEnd(m)
-    const res = await endSession({ ...liveIds, doctor_id: liveDoctorId })
+    const res = await endSession({
+      ...liveIds,
+      doctor_id: liveDoctorId,
+      early_end_reason: earlyEndText.value.trim(),
+    })
     if (res?.status === 'success') {
       Notify.create({
         type: 'positive',
@@ -1424,6 +1475,12 @@ async function endWithReason() {
     Notify.create({ type: 'negative', message: 'Please enter a reason' })
     return
   }
+  // a short session needs the early-end reason too; collect it before ending
+  if (needsEarlyEndReason()) {
+    showReason.value = false
+    showEarlyEnd.value = true
+    return
+  }
   if (finishBusy.value) return
   finishBusy.value = true
   try {
@@ -1431,6 +1488,7 @@ async function endWithReason() {
       ...liveIds,
       doctor_id: liveDoctorId,
       reason: reasonText.value.trim(),
+      early_end_reason: earlyEndText.value.trim(),
     })
     if (res?.status === 'success') {
       Notify.create({ type: 'positive', message: res.message || 'Session ended' })
@@ -1451,6 +1509,17 @@ async function endWithReason() {
   } finally {
     finishBusy.value = false
   }
+}
+
+async function submitEarlyEnd() {
+  if (!earlyEndText.value.trim()) {
+    Notify.create({ type: 'negative', message: 'Please enter a reason' })
+    return
+  }
+  showEarlyEnd.value = false
+  // back to the call this session needs; reasonText is set only by the no-modality popup
+  if (reasonText.value.trim()) await endWithReason()
+  else await runEndSession()
 }
 
 // default: whole plan confirmed
