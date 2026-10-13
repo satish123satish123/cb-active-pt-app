@@ -277,8 +277,22 @@ export async function removeModality(payload) {
 }
 
 /**
- * endSession — finish the treatment session.
+ * getSessionEndCheck — has this session run its minimum time?
  * Payload: { appointment_id, doctor_id, hospital_id }
+ * → { early_end: { is_early, elapsed_minutes, min_minutes, session_type, message } }
+ * Read-only. The minimums live in the CRM (MIN_ASSESSMENT_SESSION_MINUTES /
+ * MIN_SESSION_MINUTES) and the server writes the whole sentence in `message`,
+ * so never restate or compare the minutes here — they would go stale.
+ */
+export async function getSessionEndCheck(payload) {
+  const { data } = await api.post('getSessionEndCheck', payload)
+  return data
+}
+
+/**
+ * endSession — finish the treatment session.
+ * Payload: { appointment_id, doctor_id, hospital_id, early_end_reason? }
+ * Send early_end_reason when getSessionEndCheck reported is_early.
  * → { actual_session_end, redirect_url (CRM finance page) }
  */
 export async function endSession(payload) {
@@ -288,7 +302,9 @@ export async function endSession(payload) {
 
 /**
  * saveNoModalityReasonAndEndSession — end session when no modality was given.
- * Payload: { appointment_id, doctor_id, hospital_id, reason }
+ * Payload: { appointment_id, doctor_id, hospital_id, reason, early_end_reason? }
+ * `reason` (no modality) and `early_end_reason` (ended before the minimum) are
+ * separate questions; a short session with no modality needs both.
  */
 export async function saveNoModalityReasonAndEndSession(payload) {
   const { data } = await api.post('saveNoModalityReasonAndEndSession', payload)
