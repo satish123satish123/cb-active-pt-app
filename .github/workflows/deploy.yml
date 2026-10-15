@@ -4,11 +4,14 @@ on:
   push:
     branches:
       - main
+      - staging
 
 jobs:
   deploy:
     name: Deploy app
     runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.ref_name == 'staging' && 'staging' || 'production' }}
 
     steps:
       - name: Get latest code
