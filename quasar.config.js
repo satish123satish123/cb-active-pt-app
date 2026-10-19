@@ -4,7 +4,19 @@
 import { defineConfig } from '#q-app/wrappers'
 import { fileURLToPath } from 'node:url'
 import { config } from 'dotenv'
-const env = config().parsed
+
+const envName = process.env.APP_ENV ?? 'local'
+const { parsed: appEnv, error } = config({
+  path: `.env.${envName}`,
+})
+
+if (error) {
+  throw error
+}
+
+if (!appEnv) {
+  throw new Error(`No environment variables found in .env.${envName}`)
+}
 
 export default defineConfig((ctx) => {
   return {
@@ -49,7 +61,7 @@ export default defineConfig((ctx) => {
 
       // publicPath: '/',
       // analyze: true,
-      env: env.parsed,
+      env: appEnv,
       // rawDefine: {}
       // ignorePublicFolder: true,
       // minify: false,
